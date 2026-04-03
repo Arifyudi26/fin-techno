@@ -3,7 +3,6 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
-import Link from "next/link";
 import useAuthStore from "@/store/authStore";
 
 export default function UserDropdown() {

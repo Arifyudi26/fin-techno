@@ -4,9 +4,6 @@ import PageMeta from "@components/common/PageMeta";
 import Link from "next/link";
 import Badge from "@components/ui/badge/Badge";
 
-const formatIDR = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
-
 const reports = [
   { id: "1", name: "Rekonsiliasi April 2025", period: "1 Apr – 30 Apr 2025", status: "MERGED", totalCredit: 48_500_000, totalDebit: 31_200_000, txCount: 24, createdAt: "2025-04-30" },
   { id: "2", name: "Rekonsiliasi Maret 2025", period: "1 Mar – 31 Mar 2025", status: "MERGED", totalCredit: 41_000_000, totalDebit: 27_000_000, txCount: 19, createdAt: "2025-03-31" },

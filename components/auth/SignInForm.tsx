@@ -37,10 +37,10 @@ export default function SignInForm() {
       useAuthStore.getState().setRole(role);
       Swal.fire({ title: "Login Successful!", icon: "success", timer: 1500, showConfirmButton: false })
         .then(() => router.push("/"));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Swal.fire({
         title: "Login Failed!",
-        text: error.response?.data?.message || "Please check your email/password.",
+        text: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Please check your email/password.",
         icon: "error",
         confirmButtonText: "Try Again",
       });
@@ -93,12 +93,12 @@ export default function SignInForm() {
               <div className="space-y-6">
                 <div>
                   <Label>Email <span className="text-error-500">*</span></Label>
-                  <Input type="email" placeholder="info@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input type="email" placeholder="info@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)}  />
                 </div>
                 <div>
                   <Label>Password <span className="text-error-500">*</span></Label>
                   <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)}  />
                     <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                       {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                     </span>
