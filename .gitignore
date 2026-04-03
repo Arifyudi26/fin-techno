@@ -41,6 +41,3 @@ yarn-error.log*
 next-env.d.ts
 
 /noted.txt
-
-# React template source (reference only)
-/free-react-tailwind-admin-dashboard-main
