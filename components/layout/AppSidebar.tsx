@@ -61,11 +61,7 @@ const navItems: NavItem[] = [
   {
     icon: <WalletIcon />,
     name: "Transaksi",
-    subItems: [
-      { name: "Semua Transaksi", path: "/transactions" },
-      { name: "Pemasukan", path: "/transactions/income" },
-      { name: "Pengeluaran", path: "/transactions/expense" },
-    ],
+    path: "/transactions",
   },
   {
     icon: <UploadIcon />,
@@ -109,19 +105,30 @@ const AppSidebar: React.FC = () => {
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // exact match untuk highlight item
   const isActive = useCallback((path: string) => router.pathname === path, [router.pathname]);
+
+  // true jika pathname berada di bawah basePath (misal /reconciliation/create → /reconciliation)
+  const isActiveGroup = useCallback(
+    (basePath: string) => router.pathname === basePath || router.pathname.startsWith(basePath + "/"),
+    [router.pathname]
+  );
 
   useEffect(() => {
     let matched = false;
     (["main", "others"] as const).forEach((menuType) => {
       const items = menuType === "main" ? navItems : othersItems;
       items.forEach((nav, index) => {
-        nav.subItems?.forEach((sub) => {
-          if (isActive(sub.path)) {
+        if (nav.subItems) {
+          // aktif jika salah satu sub-item exact match ATAU pathname starts with sub-item path
+          const anyActive = nav.subItems.some(
+            (sub) => router.pathname === sub.path || router.pathname.startsWith(sub.path + "/")
+          );
+          if (anyActive) {
             setOpenSubmenu({ type: menuType, index });
             matched = true;
           }
-        });
+        }
       });
     });
     if (!matched) setOpenSubmenu(null);
@@ -161,8 +168,8 @@ const AppSidebar: React.FC = () => {
             </button>
           ) : (
             nav.path && (
-              <Link href={nav.path} className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}>
-                <span className={`menu-item-icon-size ${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
+              <Link href={nav.path} className={`menu-item group ${isActiveGroup(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}>
+                <span className={`menu-item-icon-size ${isActiveGroup(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
                   {nav.icon}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && <span className="menu-item-text">{nav.name}</span>}
@@ -178,7 +185,7 @@ const AppSidebar: React.FC = () => {
               <ul className="mt-2 space-y-1 ml-9">
                 {nav.subItems.map((sub) => (
                   <li key={sub.name}>
-                    <Link href={sub.path} className={`menu-dropdown-item ${isActive(sub.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}>
+                    <Link href={sub.path} className={`menu-dropdown-item ${isActiveGroup(sub.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}>
                       {sub.name}
                     </Link>
                   </li>
