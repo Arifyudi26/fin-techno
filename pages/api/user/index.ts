@@ -12,7 +12,7 @@ export default async function handler(
   try {
     const users = await db.user.findMany({
       where: {
-        role: "USER",
+        role: "user",
       },
       select: {
         id: true,
@@ -23,7 +23,7 @@ export default async function handler(
     });
 
     if (users.length === 0) {
-      return res.status(404).json({ message: "No users found with role USER" });
+      return res.status(404).json({ message: "No users found with role user" });
     }
 
     return res.status(200).json({
