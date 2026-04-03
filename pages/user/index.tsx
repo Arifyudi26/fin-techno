@@ -10,9 +10,9 @@ import {
   CardProps,
   TaskItem,
 } from "@/lib/types";
-import Navbar from "../../components/Navbar/Navbar";
+import Navbar from "@components/Navbar/Navbar";
 import axiosGlobal from "@/services/AxiosGlobal";
-import { formatDate } from "../../lib/formatter/FormatDate";
+import { formatDate } from "@lib/formatter/FormatDate";
 import { TaskStatus } from "@prisma/client";
 import ModalTask from "./components/modal/ModalTask";
 

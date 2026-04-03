@@ -1,14 +1,14 @@
 import { useState } from "react";
-import ComponentCard from "../../common/ComponentCard";
-import Label from "../Label";
-import Input from "../input/InputField";
-import Select from "../Select";
+import ComponentCard from "@components/common/ComponentCard";
+import Label from "@components/form/Label";
+import Input from "@components/form/input/InputField";
+import Select from "@components/form/Select";
 import {
   CalenderIcon,
   EyeCloseIcon,
   EyeIcon,
   TimeIcon,
-} from "../../../components/icons";
+} from "@components/icons";
 import Flatpickr from "react-flatpickr";
 
 export default function DefaultInputs() {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Image from "next/image";
-import { ThemeToggleButton } from "../common/ThemeToggleButton";
+import { ThemeToggleButton } from "@components/common/ThemeToggleButton";
 import NotificationDropdown from "./NotificationDropdown";
 import UserDropdown from "./UserDropdown";
 import Link from "next/link";

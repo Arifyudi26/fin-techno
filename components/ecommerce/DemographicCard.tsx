@@ -2,9 +2,9 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 
 import { useState } from "react";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { MoreDotIcon } from "../icons";
+import { Dropdown } from "@components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
+import { MoreDotIcon } from "@components/icons";
 
 const CountryMapWrapper = dynamic(() => import("./CountryMapClient"), {
   ssr: false,

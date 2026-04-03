@@ -1,4 +1,4 @@
-import { SidebarProvider, useSidebar } from "../../lib/context/SidebarContext";
+import { SidebarProvider, useSidebar } from "@lib/context/SidebarContext";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";

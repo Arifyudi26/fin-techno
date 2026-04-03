@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Image from "next/image";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { Dropdown } from "@components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import Link from "next/link";
 
 export default function NotificationDropdown() {

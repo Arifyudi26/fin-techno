@@ -15,7 +15,12 @@
     "incremental": true,
     "useUnknownInCatchVariables": false,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@components/*": ["./components/*"],
+      "@pages/*": ["./pages/*"],
+      "@lib/*": ["./lib/*"],
+      "@icons/*": ["./components/icons/*"],
+      "@ui/*": ["./components/ui/*"]
     }
   },
   "include": ["next-env.d.ts", "styles.d.ts", "**/*.ts", "**/*.tsx"],
