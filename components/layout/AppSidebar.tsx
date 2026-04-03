@@ -4,20 +4,14 @@ import { useRouter } from "next/router";
 
 // Assume these icons are imported from an icon library
 import {
-  BoxCubeIcon,
   CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
   PieChartIcon,
-  PlugInIcon,
-  TableIcon,
   UserCircleIcon,
 } from "@components/icons";
 import { useSidebar } from "@lib/context/SidebarContext";
-import SidebarWidget from "@components/layout/SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -42,24 +36,6 @@ const navItems: NavItem[] = [
     name: "User Profile",
     path: "/profile",
   },
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements" }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables" }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank" },
-      { name: "404 Error", path: "/error-404" },
-    ],
-  },
 ];
 
 const othersItems: NavItem[] = [
@@ -69,26 +45,6 @@ const othersItems: NavItem[] = [
     subItems: [
       { name: "Line Chart", path: "/line-chart" },
       { name: "Bar Chart", path: "/bar-chart" },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts" },
-      { name: "Avatar", path: "/avatars" },
-      { name: "Badge", path: "/badge" },
-      { name: "Buttons", path: "/buttons" },
-      { name: "Images", path: "/images" },
-      { name: "Videos", path: "/videos" },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin" },
-      { name: "Sign Up", path: "/signup" },
     ],
   },
 ];
@@ -308,13 +264,30 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
+              <img
+                className="dark:hidden"
+                src="/images/logo/logo.svg"
+                alt="Logo"
+                width={150}
+                height={40}
+              />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
+              <img
+                className="hidden dark:block"
+                src="/images/logo/logo-dark.svg"
+                alt="Logo"
+                width={150}
+                height={40}
+              />
             </>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/images/logo/logo-icon.svg" alt="Logo" width={32} height={32} />
+            <img
+              src="/images/logo/logo-icon.svg"
+              alt="Logo"
+              width={32}
+              height={32}
+            />
           )}
         </Link>
       </div>
@@ -355,7 +328,6 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
       </div>
     </aside>
   );
