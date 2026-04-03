@@ -16,16 +16,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   } else {
-    if (["/auth/login", "/auth/register"].includes(pathname)) {
-      return NextResponse.redirect(new URL("/", req.url));
-
-      // const roles = role?.toLowerCase();
-      // if (roles === "admin") {
-      //   return NextResponse.redirect(new URL("/admin", req.url));
-      // } else {
-      //   return NextResponse.redirect(new URL("/user", req.url));
-      // }
-    }
+    // if (["/auth/login", "/auth/register"].includes(pathname)) {
+    //   return NextResponse.redirect(new URL("/", req.url));
+    // const roles = role?.toLowerCase();
+    // if (roles === "admin") {
+    //   return NextResponse.redirect(new URL("/admin", req.url));
+    // } else {
+    //   return NextResponse.redirect(new URL("/user", req.url));
+    // }
+    // }
   }
 
   return NextResponse.next();
