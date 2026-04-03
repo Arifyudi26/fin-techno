@@ -27,7 +27,7 @@ export default function Login() {
 
       Swal.fire({
         title: "Login Successful!",
-        text: `Welcome, ${role === "ADMIN" ? "Admin" : "Team Member"}!`,
+        text: `Welcome, ${role === "ADMIN" ? "Admin" : "User"}!`,
         icon: "success",
         confirmButtonText: "Continue",
         customClass: {
@@ -37,8 +37,7 @@ export default function Login() {
             "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md",
         },
       }).then(() => {
-        if (role === "ADMIN") router.push("/admin");
-        if (role === "USER") router.push("/user");
+        return router.push("/");
       });
     } catch (error) {
       console.log(error);
