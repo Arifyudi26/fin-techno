@@ -1,35 +1,44 @@
 import AppLayout from "@components/layout/AppLayout";
-import EcommerceMetrics from "@components/ecommerce/EcommerceMetrics";
-import MonthlySalesChart from "@components/ecommerce/MonthlySalesChart";
-import StatisticsChart from "@components/ecommerce/StatisticsChart";
-import MonthlyTarget from "@components/ecommerce/MonthlyTarget";
-import RecentOrders from "@components/ecommerce/RecentOrders";
-import DemographicCard from "@components/ecommerce/DemographicCard";
 import PageMeta from "@components/common/PageMeta";
+import FinanceMetrics from "@components/finance/FinanceMetrics";
+import CashFlowChart from "@components/finance/CashFlowChart";
+import NetFlowChart from "@components/finance/NetFlowChart";
+import SpendingByCategory from "@components/finance/SpendingByCategory";
+import RecentTransactions from "@components/finance/RecentTransactions";
+import BankAccountSummary from "@components/finance/BankAccountSummary";
 
 export default function Home() {
   return (
     <AppLayout>
       <PageMeta
-        title="Ecommerce Dashboard | TailAdmin - Next.js Admin Dashboard"
-        description="Ecommerce Dashboard page for TailAdmin - Next.js Tailwind CSS Admin Dashboard"
+        title="Dashboard Keuangan | MyFinance"
+        description="Overview keuangan — pemasukan, pengeluaran, dan net flow dari semua rekening"
       />
       <div className="grid grid-cols-12 gap-4 md:gap-6">
-        <div className="col-span-12 space-y-6 xl:col-span-7">
-          <EcommerceMetrics />
-          <MonthlySalesChart />
-        </div>
-        <div className="col-span-12 xl:col-span-5">
-          <MonthlyTarget />
-        </div>
+        {/* Metrics row */}
         <div className="col-span-12">
-          <StatisticsChart />
+          <FinanceMetrics />
+        </div>
+
+        {/* Cash flow chart + bank summary */}
+        <div className="col-span-12 xl:col-span-8">
+          <CashFlowChart />
+        </div>
+        <div className="col-span-12 xl:col-span-4">
+          <BankAccountSummary />
+        </div>
+
+        {/* Net flow trend + spending by category */}
+        <div className="col-span-12 xl:col-span-7">
+          <NetFlowChart />
         </div>
         <div className="col-span-12 xl:col-span-5">
-          <DemographicCard />
+          <SpendingByCategory />
         </div>
-        <div className="col-span-12 xl:col-span-7">
-          <RecentOrders />
+
+        {/* Recent transactions */}
+        <div className="col-span-12">
+          <RecentTransactions />
         </div>
       </div>
     </AppLayout>
