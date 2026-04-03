@@ -10,8 +10,6 @@ export default async function handler(
   const { email, password }: RegisterBody = req.body;
   const hashedPassword = bcrypt.hashSync(password, 10);
 
-  console.log("==============");
-
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -33,7 +31,7 @@ export default async function handler(
       data: {
         email,
         password: hashedPassword,
-        role: "USER",
+        role: "user",
       },
     });
     res.status(201).json({ message: "success", data: data });

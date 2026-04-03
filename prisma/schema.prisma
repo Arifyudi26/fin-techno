@@ -11,15 +11,8 @@ datasource db {
 }
 
 enum Role {
-  USER
-  ADMIN
-}
-
-enum TaskStatus {
-  NOT_STARTED
-  ON_PROGRESS
-  DONE
-  REJECT
+  user
+  admin
 }
 
 // ═══════════════════════════════════════════════
@@ -75,54 +68,17 @@ enum MergeStatus {
 
 model User {
   id           String         @id @default(uuid())
-  name         String         @default("User")
+  name         String         @default("user")
   email        String         @unique
   password     String
-  role         Role           @default(USER)
+  role         Role           @default(user)
   createdAt    DateTime       @default(now())
-  tasksCreated Task[]         @relation("CreatedTasks")
-  tasksOwned   TaskAssignee[]
-  taskLogs     TaskLog[]
 
   // relasi bank mutation
   bankAccounts      BankAccount[]
   uploadedStatements BankStatementUpload[]
   verifiedTransactions BankTransaction[] @relation("VerifiedBy")
   mergeReports      MergeReport[]
-}
-
-model Task {
-  id          String         @id @default(uuid())
-  title       String
-  description String?
-  status      TaskStatus     @default(NOT_STARTED)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  createdBy   String
-  creator     User           @relation("CreatedTasks", fields: [createdBy], references: [id])
-  assignees   TaskAssignee[]
-  logs        TaskLog[]
-}
-
-model TaskAssignee {
-  id     String @id @default(uuid())
-  taskId String
-  userId String
-  task   Task   @relation(fields: [taskId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
-}
-
-model TaskLog {
-  id        String      @id @default(uuid())
-  taskId    String
-  userId    String
-  action    String
-  oldStatus TaskStatus?
-  newStatus TaskStatus?
-  note      String?
-  createdAt DateTime    @default(now())
-  task      Task        @relation(fields: [taskId], references: [id])
-  user      User        @relation(fields: [userId], references: [id])
 }
 
 // ═══════════════════════════════════════════════

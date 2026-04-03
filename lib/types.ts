@@ -1,5 +1,4 @@
-import { TaskStatus } from "@prisma/client";
-export type UserRole = "USER" | "ADMIN";
+export type UserRole = "user" | "admin";
 
 export type RegisterBody = {
   email: string;
@@ -23,61 +22,17 @@ export type User = {
   role: UserRole;
 };
 
-export type TaskAssigneeRequestBody = {
-  taskId: string;
-  userId: string;
-};
-
-export type TaskRequestBody = {
-  taskId: string;
-  status: TaskStatus;
-  note?: string;
-  title?: string;
-  description?: string;
-  assigneeId?: string;
-};
-
 export type Assignee = {
   id: string;
   name: string;
   email: string;
 };
 
-export type TaskItem = {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  assignee: Assignee | null;
-};
-
-export type CardData = Record<
-  "not_started" | "on_progress" | "done" | "reject",
-  TaskItem[]
->;
-
 export type LogData = {
   action: string;
   createdAt: string;
   note: string;
 }[];
-
-export type CardItemProps = {
-  item: TaskItem;
-  index: number;
-  onCardClick: (item: TaskItem) => void;
-};
-
-export type CardProps = {
-  title: string;
-  items: TaskItem[];
-  background: string;
-  droppableId: string;
-  onCardClick: (item: TaskItem) => void;
-};
 
 export type Log = {
   id: string;
