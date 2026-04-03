@@ -5,6 +5,23 @@ export default function Document() {
     <Html lang="en">
       <Head />
       <body className="antialiased">
+        {/* Prevent dark mode flash on load */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
         <Main />
         <NextScript />
       </body>

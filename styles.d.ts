@@ -8,3 +8,9 @@ declare module "sweetalert2/dist/sweetalert2.min.css" {
   const content: any;
   export default content;
 }
+
+declare module "*.svg" {
+  import type React from "react";
+  const ReactComponent: React.FC<React.SVGProps<SVGSVGElement>>;
+  export default ReactComponent;
+}

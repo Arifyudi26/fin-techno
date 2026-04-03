@@ -1,4 +1,4 @@
-import GridSvg from "/public/images/shape/grid-01.svg";
+import GridSvg from "@/public/images/shape/grid-01.svg";
 
 export default function GridShape() {
   return (
