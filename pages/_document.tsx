@@ -3,7 +3,9 @@ import { Html, Head, Main, NextScript } from "next/document";
 export default function Document() {
   return (
     <Html lang="en">
-      <Head />
+      <Head>
+        <link rel="icon" type="image/svg+xml" href="/images/logo/logo-icon.svg" />
+      </Head>
       <body className="antialiased">
         {/* Prevent dark mode flash on load */}
         <script

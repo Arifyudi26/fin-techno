@@ -212,13 +212,10 @@ const AppSidebar: React.FC = () => {
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
             </>
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src="/images/logo/logo-icon.svg" alt="Logo" width={32} height={32} />
           )}
         </Link>

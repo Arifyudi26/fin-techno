@@ -79,9 +79,7 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
           </button>
 
           <Link href="/" className="lg:hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
           </Link>
 
