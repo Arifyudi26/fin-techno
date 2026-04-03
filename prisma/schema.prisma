@@ -1,0 +1,294 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  ON_PROGRESS
+  DONE
+  REJECT
+}
+
+// ═══════════════════════════════════════════════
+// ENUMS — bank mutation
+// ═══════════════════════════════════════════════
+
+enum BankProvider {
+  BCA
+  BNI
+  BRI
+  MANDIRI
+  CIMB
+  PERMATA
+  DANAMON
+  BTN
+  BSI
+  OTHER
+}
+
+/// Format file e-statement yang di-upload
+enum FileFormat {
+  CSV
+  XLSX
+  XLS
+  PDF
+}
+
+/// Status proses parsing file
+enum UploadStatus {
+  UPLOADING   // sedang upload
+  PROCESSING  // sedang di-parse
+  SUCCESS     // berhasil di-parse
+  FAILED      // gagal di-parse
+  PARTIAL     // sebagian baris gagal di-parse
+}
+
+enum TransactionType {
+  CREDIT // uang masuk
+  DEBIT  // uang keluar
+}
+
+enum MutationStatus {
+  PENDING   // belum diverifikasi
+  VERIFIED  // sudah diverifikasi
+  REJECTED  // ditolak / tidak valid
+}
+
+enum MergeStatus {
+  DRAFT
+  MERGED
+  CONFLICT // ada duplikat yang perlu resolusi manual
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String         @default("User")
+  email        String         @unique
+  password     String
+  role         Role           @default(USER)
+  createdAt    DateTime       @default(now())
+  tasksCreated Task[]         @relation("CreatedTasks")
+  tasksOwned   TaskAssignee[]
+  taskLogs     TaskLog[]
+
+  // relasi bank mutation
+  bankAccounts      BankAccount[]
+  uploadedStatements BankStatementUpload[]
+  verifiedTransactions BankTransaction[] @relation("VerifiedBy")
+  mergeReports      MergeReport[]
+}
+
+model Task {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus     @default(NOT_STARTED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   String
+  creator     User           @relation("CreatedTasks", fields: [createdBy], references: [id])
+  assignees   TaskAssignee[]
+  logs        TaskLog[]
+}
+
+model TaskAssignee {
+  id     String @id @default(uuid())
+  taskId String
+  userId String
+  task   Task   @relation(fields: [taskId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model TaskLog {
+  id        String      @id @default(uuid())
+  taskId    String
+  userId    String
+  action    String
+  oldStatus TaskStatus?
+  newStatus TaskStatus?
+  note      String?
+  createdAt DateTime    @default(now())
+  task      Task        @relation(fields: [taskId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
+}
+
+// ═══════════════════════════════════════════════
+// BANK MUTATION MODELS
+// ═══════════════════════════════════════════════
+
+/// Master rekening bank — daftarkan dulu sebelum upload
+model BankAccount {
+  id            String       @id @default(uuid())
+  bankProvider  BankProvider
+  accountNumber String       @unique
+  accountName   String
+  currency      String       @default("IDR")
+  description   String?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  ownerId       String
+
+  owner      User                  @relation(fields: [ownerId], references: [id])
+  uploads    BankStatementUpload[]
+  transactions BankTransaction[]
+
+  @@index([bankProvider])
+  @@index([ownerId])
+}
+
+/// Upload e-statement / laporan mutasi bank
+/// Satu upload = satu file (CSV / XLSX / PDF)
+/// Bisa upload lebih dari 1 file per rekening
+model BankStatementUpload {
+  id            String       @id @default(uuid())
+  bankAccountId String
+  uploadedById  String
+
+  // info file
+  fileName      String       // nama file asli
+  fileUrl       String       // URL file di storage (S3 / Supabase / lokal)
+  fileFormat    FileFormat   // CSV | XLSX | XLS | PDF
+  fileSizeBytes Int?         // ukuran file dalam bytes
+
+  // metadata periode laporan
+  bankProvider  BankProvider
+  periodStart   DateTime
+  periodEnd     DateTime
+
+  // status proses parsing
+  status        UploadStatus @default(UPLOADING)
+  errorMessage  String?      // pesan error jika status FAILED / PARTIAL
+
+  // ringkasan hasil parse (diisi setelah parsing selesai)
+  totalRows     Int          @default(0) // total baris di file
+  parsedRows    Int          @default(0) // baris yang berhasil di-parse
+  failedRows    Int          @default(0) // baris yang gagal di-parse
+  totalCredit   Decimal      @default(0) @db.Decimal(20, 2)
+  totalDebit    Decimal      @default(0) @db.Decimal(20, 2)
+  notes         String?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  bankAccount   BankAccount  @relation(fields: [bankAccountId], references: [id])
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  transactions  BankTransaction[]
+
+  @@index([bankAccountId])
+  @@index([uploadedById])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@index([bankProvider])
+}
+
+/// Setiap baris transaksi dari e-statement yang sudah di-parse
+model BankTransaction {
+  id              String          @id @default(uuid())
+  bankAccountId   String
+  uploadId        String          // dari upload mana transaksi ini berasal
+
+  // data transaksi
+  transactionDate DateTime
+  valueDate       DateTime?       // tanggal valuta (opsional, tidak semua bank ada)
+  description     String          // keterangan transaksi
+  reference       String?         // no. referensi dari bank
+  amount          Decimal         @db.Decimal(20, 2)
+  type            TransactionType // CREDIT (masuk) | DEBIT (keluar)
+  balance         Decimal?        @db.Decimal(20, 2) // saldo setelah transaksi
+
+  // kategorisasi & verifikasi
+  status          MutationStatus  @default(PENDING)
+  categoryId      String?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  note            String?
+
+  // deduplication — hash dari: bankAccountId+date+amount+description
+  hash            String?         @unique
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  bankAccount  BankAccount          @relation(fields: [bankAccountId], references: [id])
+  upload       BankStatementUpload  @relation(fields: [uploadId], references: [id])
+  category     TransactionCategory? @relation(fields: [categoryId], references: [id])
+  verifiedBy   User?                @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  mergeItems   MergeReportItem[]
+
+  @@index([bankAccountId])
+  @@index([uploadId])
+  @@index([transactionDate])
+  @@index([type])
+  @@index([status])
+  @@index([reference])
+}
+
+/// Kategori transaksi untuk finance
+/// Contoh: Operasional, Gaji, Pajak, Investasi
+model TransactionCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  transactions BankTransaction[]
+}
+
+/// Laporan merge — gabungan transaksi dari beberapa rekening / bank
+/// dalam satu periode untuk rekonsiliasi
+model MergeReport {
+  id          String      @id @default(uuid())
+  name        String      // contoh: "Rekonsiliasi April 2025"
+  periodStart DateTime
+  periodEnd   DateTime
+  status      MergeStatus @default(DRAFT)
+
+  // ringkasan kalkulasi (dihitung ulang setiap ada perubahan item)
+  totalCredit Decimal     @default(0) @db.Decimal(20, 2)
+  totalDebit  Decimal     @default(0) @db.Decimal(20, 2)
+  netFlow     Decimal     @default(0) @db.Decimal(20, 2) // credit - debit
+
+  createdById String
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy User              @relation(fields: [createdById], references: [id])
+  items     MergeReportItem[]
+
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@index([createdById])
+}
+
+/// Transaksi yang dimasukkan ke dalam sebuah MergeReport
+model MergeReportItem {
+  id            String  @id @default(uuid())
+  mergeReportId String
+  transactionId String
+  isDuplicate   Boolean @default(false) // terdeteksi duplikat antar bank / upload
+  resolvedNote  String? // catatan resolusi manual jika duplikat
+
+  mergeReport MergeReport     @relation(fields: [mergeReportId], references: [id], onDelete: Cascade)
+  transaction BankTransaction @relation(fields: [transactionId], references: [id])
+
+  @@unique([mergeReportId, transactionId])
+  @@index([mergeReportId])
+  @@index([isDuplicate])
+}
