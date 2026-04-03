@@ -6,7 +6,6 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  PieChartIcon,
 } from "@components/icons";
 import { useSidebar } from "@lib/context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -79,18 +78,12 @@ const navItems: NavItem[] = [
   {
     icon: <MergeIcon />,
     name: "Rekonsiliasi",
-    subItems: [
-      { name: "Laporan Merge", path: "/reconciliation" },
-      { name: "Buat Laporan", path: "/reconciliation/create" },
-    ],
+    path: "/reconciliation",
   },
   {
     icon: <BankIcon />,
     name: "Rekening",
-    subItems: [
-      { name: "Daftar Rekening", path: "/bank-accounts" },
-      { name: "Tambah Rekening", path: "/bank-accounts/add" },
-    ],
+    path: "/bank-accounts",
   },
   {
     icon: <TagIcon />,

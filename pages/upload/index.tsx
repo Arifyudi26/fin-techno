@@ -1,12 +1,20 @@
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
+import Link from "next/link";
 
 export default function Upload() {
   return (
     <AppLayout>
       <PageMeta title="Upload E-Statement | MyFinance" description="Upload file mutasi rekening bank" />
       <PageBreadcrumb pageTitle="Upload E-Statement" />
+
+      <div className="mb-4 flex justify-end">
+        <Link href="/upload/history" className="text-sm font-medium text-brand-500 hover:text-brand-600">
+          Lihat Riwayat Upload →
+        </Link>
+      </div>
+
       <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-white/[0.03] p-10 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-500/10">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
