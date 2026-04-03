@@ -54,9 +54,9 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     subItems: [
       { name: "Overview Keuangan", path: "/" },
-      { name: "Cash Flow", path: "/reports/cashflow" },
-      { name: "Pemasukan", path: "/reports/income" },
-      { name: "Pengeluaran", path: "/reports/expense" },
+      { name: "Cash Flow", path: "/cash-flow" },
+      { name: "Pemasukan", path: "/income" },
+      { name: "Pengeluaran", path: "/expense" },
     ],
   },
   {
