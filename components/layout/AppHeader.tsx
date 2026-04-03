@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useSidebar } from "@lib/context/SidebarContext";
 import { ThemeToggleButton } from "@components/common/ThemeToggleButton";
 import NotificationDropdown from "@components/header/NotificationDropdown";
@@ -84,20 +83,10 @@ const AppHeader: React.FC = () => {
           </button>
 
           <Link href="/" className="lg:hidden">
-            <Image
-              className="dark:hidden"
-              src="/images/logo/logo.svg"
-              alt="Logo"
-              width={150}
-              height={40}
-            />
-            <Image
-              className="hidden dark:block"
-              src="/images/logo/logo-dark.svg"
-              alt="Logo"
-              width={150}
-              height={40}
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
           </Link>
 
           <button

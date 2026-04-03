@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const PUBLIC_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup"];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -9,22 +11,16 @@ export function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get("token")?.value;
-  // const role = req.cookies.get("role")?.value;
 
   if (!token) {
-    if (!["/auth/login", "/auth/register"].includes(pathname)) {
+    if (!PUBLIC_PATHS.includes(pathname)) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   } else {
-    // if (["/auth/login", "/auth/register"].includes(pathname)) {
-    //   return NextResponse.redirect(new URL("/", req.url));
-    // const roles = role?.toLowerCase();
-    // if (roles === "admin") {
-    //   return NextResponse.redirect(new URL("/admin", req.url));
-    // } else {
-    //   return NextResponse.redirect(new URL("/user", req.url));
-    // }
-    // }
+    // Redirect logged-in users away from auth pages
+    if (PUBLIC_PATHS.includes(pathname)) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
   }
 
   return NextResponse.next();
