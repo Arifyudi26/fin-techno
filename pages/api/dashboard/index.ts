@@ -1,21 +1,25 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
+import { verifyToken } from "@lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  // Only allow GET requests
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Verifikasi JWT token
+  let userId: string;
   try {
-    const userId = req.query.userId as string;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const decoded = verifyToken(req);
+    userId = decoded.id;
+  } catch {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
+  try {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);

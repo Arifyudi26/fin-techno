@@ -1,24 +1,45 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup"];
+// Halaman publik (tidak perlu login)
+const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup"];
+
+// API yang boleh diakses tanpa token
+const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/api")) {
+  // Abaikan Next.js internal
+  if (pathname.startsWith("/_next")) {
     return NextResponse.next();
   }
 
+  // ── API routes ──────────────────────────────────────────────────────────
+  if (pathname.startsWith("/api")) {
+    // Auth API boleh tanpa token
+    if (PUBLIC_API_PATHS.some((p) => pathname.startsWith(p))) {
+      return NextResponse.next();
+    }
+
+    // Semua API lain wajib ada Authorization header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    return NextResponse.next();
+  }
+
+  // ── Page routes ─────────────────────────────────────────────────────────
   const token = req.cookies.get("token")?.value;
 
   if (!token) {
-    if (!PUBLIC_PATHS.includes(pathname)) {
+    if (!PUBLIC_PAGE_PATHS.includes(pathname)) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   } else {
-    // Redirect logged-in users away from auth pages
-    if (PUBLIC_PATHS.includes(pathname)) {
+    if (PUBLIC_PAGE_PATHS.includes(pathname)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
