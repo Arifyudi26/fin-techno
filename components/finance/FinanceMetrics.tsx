@@ -1,14 +1,19 @@
 import { ArrowDownIcon, ArrowUpIcon } from "@components/icons";
+import { DashboardMetrics } from "@/lib/types/dashboard";
 
 const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
 
-export default function FinanceMetrics() {
+interface Props {
+  data?: DashboardMetrics;
+  loading?: boolean;
+}
+
+export default function FinanceMetrics({ data, loading }: Props) {
   const metrics = [
     {
       label: "Total Pemasukan",
-      value: 48_500_000,
-      change: "+12.5%",
+      value: data?.totalIncome ?? 0,
       up: true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -20,8 +25,7 @@ export default function FinanceMetrics() {
     },
     {
       label: "Total Pengeluaran",
-      value: 31_200_000,
-      change: "+4.2%",
+      value: data?.totalExpense ?? 0,
       up: false,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -33,9 +37,8 @@ export default function FinanceMetrics() {
     },
     {
       label: "Net Flow",
-      value: 17_300_000,
-      change: "+8.1%",
-      up: true,
+      value: data?.netFlow ?? 0,
+      up: (data?.netFlow ?? 0) >= 0,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M2 12h20M12 2l4 4-4 4M12 22l-4-4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -46,9 +49,8 @@ export default function FinanceMetrics() {
     },
     {
       label: "Transaksi Bulan Ini",
-      value: 247,
+      value: data?.transactionCount ?? 0,
       isCount: true,
-      change: "+18",
       up: true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -59,6 +61,22 @@ export default function FinanceMetrics() {
       bg: "bg-warning-50 dark:bg-warning-500/10",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 animate-pulse">
+            <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-5 space-y-2">
+              <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-6 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
@@ -76,7 +94,7 @@ export default function FinanceMetrics() {
             </div>
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${m.up ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500" : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"}`}>
               {m.up ? <ArrowUpIcon /> : <ArrowDownIcon />}
-              {m.change}
+              {m.up ? "Bulan ini" : "Bulan ini"}
             </span>
           </div>
         </div>

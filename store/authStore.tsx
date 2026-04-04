@@ -5,10 +5,11 @@ import { persist } from "zustand/middleware";
 import Cookies from "js-cookie";
 
 interface AuthState {
-  setId: any | null;
+  id: string | null;
   token: string | null;
   role: any | null;
   isAuthenticated: boolean;
+  setId: (id: string) => void;
   setToken: (token: string) => void;
   setRole: (role: any) => void;
   logout: () => void;
@@ -17,24 +18,22 @@ interface AuthState {
 const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      setId: null,
+      id: null,
       token: Cookies.get("token") || null,
       role: null,
       isAuthenticated: false,
+      setId: (id: string) => set({ id }),
       setToken: (token: string) => {
-        // Expires in 1 day
         Cookies.set("token", token, { expires: 1 });
         set({ token, isAuthenticated: true });
       },
       setRole: (role: any) => set({ role, isAuthenticated: !!role }),
       logout: () => {
         Cookies.remove("token");
-        set({ token: null, role: null, isAuthenticated: false });
+        set({ id: null, token: null, role: null, isAuthenticated: false });
       },
     }),
-    {
-      name: "auth-store",
-    }
+    { name: "auth-store" }
   )
 );
 

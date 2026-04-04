@@ -4,11 +4,19 @@ import { ApexOptions } from "apexcharts";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "@components/icons";
+import { CashFlowMonth } from "@/lib/types/dashboard";
 
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+interface Props {
+  data?: CashFlowMonth[];
+  loading?: boolean;
+}
 
-export default function CashFlowChart() {
+export default function CashFlowChart({ data = [], loading }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const categories = data.map((d) => d.month);
+  const creditData = data.map((d) => d.credit);
+  const debitData = data.map((d) => d.debit);
 
   const options: ApexOptions = {
     colors: ["#12B76A", "#F04438"],
@@ -20,31 +28,13 @@ export default function CashFlowChart() {
       stacked: false,
     },
     plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: "45%",
-        borderRadius: 4,
-        borderRadiusApplication: "end",
-      },
+      bar: { horizontal: false, columnWidth: "45%", borderRadius: 4, borderRadiusApplication: "end" },
     },
     dataLabels: { enabled: false },
     stroke: { show: true, width: 3, colors: ["transparent"] },
-    xaxis: {
-      categories: months,
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-    },
-    legend: {
-      show: true,
-      position: "top",
-      horizontalAlign: "left",
-      fontFamily: "Outfit",
-    },
-    yaxis: {
-      labels: {
-        formatter: (val) => `${(val / 1_000_000).toFixed(0)}jt`,
-      },
-    },
+    xaxis: { categories, axisBorder: { show: false }, axisTicks: { show: false } },
+    legend: { show: true, position: "top", horizontalAlign: "left", fontFamily: "Outfit" },
+    yaxis: { labels: { formatter: (val) => `${(val / 1_000_000).toFixed(0)}jt` } },
     grid: { yaxis: { lines: { show: true } } },
     fill: { opacity: 1 },
     tooltip: {
@@ -56,14 +46,8 @@ export default function CashFlowChart() {
   };
 
   const series = [
-    {
-      name: "Pemasukan",
-      data: [32_000_000, 28_500_000, 41_000_000, 38_000_000, 45_000_000, 42_000_000, 48_500_000, 39_000_000, 51_000_000, 47_000_000, 53_000_000, 48_500_000],
-    },
-    {
-      name: "Pengeluaran",
-      data: [21_000_000, 19_500_000, 27_000_000, 25_000_000, 30_000_000, 28_000_000, 31_200_000, 26_000_000, 34_000_000, 31_000_000, 36_000_000, 31_200_000],
-    },
+    { name: "Pemasukan", data: creditData },
+    { name: "Pengeluaran", data: debitData },
   ];
 
   return (
@@ -84,11 +68,15 @@ export default function CashFlowChart() {
           </Dropdown>
         </div>
       </div>
-      <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <div className="min-w-[600px]">
-          <Chart options={options} series={series} type="bar" height={220} />
+      {loading ? (
+        <div className="h-[220px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+      ) : (
+        <div className="max-w-full overflow-x-auto custom-scrollbar">
+          <div className="min-w-[600px]">
+            <Chart options={options} series={series} type="bar" height={220} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

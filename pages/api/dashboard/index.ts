@@ -70,6 +70,7 @@ export default async function handler(
       .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
     const netFlow = totalIncome - totalExpense;
+    const transactionCount = currentMonthTransactions.length;
 
     // 4. Get the current balance (last transaction of each account)
     const accountBalances = await Promise.all(
@@ -163,12 +164,13 @@ export default async function handler(
     // 7. Get recent transactions (last 10)
     const recentTransactions = transactions.slice(0, 10).map((t) => ({
       id: t.id,
-      date: t.transactionDate,
+      date: t.transactionDate.toISOString().split("T")[0],
       description: t.description,
       type: t.type,
       amount: parseFloat(t.amount.toString()),
       category: t.category?.name || "Uncategorized",
-      bankAccount: t.bankAccount.accountName,
+      bankAccount: t.bankAccount.bankProvider,
+      status: t.status,
       reference: t.reference,
     }));
 
@@ -185,6 +187,7 @@ export default async function handler(
         totalExpense,
         netFlow,
         totalBalance,
+        transactionCount,
       },
       cashFlow: monthlyData,
       bankAccounts: accountBalances,

@@ -1,23 +1,26 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { NetFlowPoint } from "@/lib/types/dashboard";
 
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+interface Props {
+  data?: NetFlowPoint[];
+  loading?: boolean;
+}
 
-export default function NetFlowChart() {
+export default function NetFlowChart({ data = [], loading }: Props) {
+  const categories = data.map((d) => d.month);
+  const netFlowData = data.map((d) => d.netFlow);
+
+  // Hitung rata-rata rolling
+  const avg = netFlowData.length > 0 ? netFlowData.reduce((a, b) => a + b, 0) / netFlowData.length : 0;
+  const avgData = netFlowData.map(() => Math.round(avg));
+
   const options: ApexOptions = {
     legend: { show: false },
     colors: ["#465FFF", "#9CB9FF"],
-    chart: {
-      fontFamily: "Outfit, sans-serif",
-      height: 250,
-      type: "area",
-      toolbar: { show: false },
-    },
+    chart: { fontFamily: "Outfit, sans-serif", height: 250, type: "area", toolbar: { show: false } },
     stroke: { curve: "smooth", width: [2, 2] },
-    fill: {
-      type: "gradient",
-      gradient: { opacityFrom: 0.4, opacityTo: 0 },
-    },
+    fill: { type: "gradient", gradient: { opacityFrom: 0.4, opacityTo: 0 } },
     markers: { size: 0, strokeColors: "#fff", strokeWidth: 2, hover: { size: 5 } },
     grid: { xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } } },
     dataLabels: { enabled: false },
@@ -27,12 +30,7 @@ export default function NetFlowChart() {
           new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val),
       },
     },
-    xaxis: {
-      type: "category",
-      categories: months,
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-    },
+    xaxis: { type: "category", categories, axisBorder: { show: false }, axisTicks: { show: false } },
     yaxis: {
       labels: {
         formatter: (val) => `${(val / 1_000_000).toFixed(0)}jt`,
@@ -42,14 +40,8 @@ export default function NetFlowChart() {
   };
 
   const series = [
-    {
-      name: "Net Flow",
-      data: [11_000_000, 9_000_000, 14_000_000, 13_000_000, 15_000_000, 14_000_000, 17_300_000, 13_000_000, 17_000_000, 16_000_000, 17_000_000, 17_300_000],
-    },
-    {
-      name: "Rata-rata",
-      data: [12_000_000, 12_000_000, 13_000_000, 13_000_000, 14_000_000, 14_000_000, 14_500_000, 14_500_000, 15_000_000, 15_000_000, 15_500_000, 15_500_000],
-    },
+    { name: "Net Flow", data: netFlowData },
+    { name: "Rata-rata", data: avgData },
   ];
 
   return (
@@ -60,15 +52,19 @@ export default function NetFlowChart() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Selisih pemasukan & pengeluaran</p>
         </div>
         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full bg-brand-500"></span>Net Flow</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full bg-brand-200"></span>Rata-rata</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full bg-brand-500" />Net Flow</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full bg-brand-200" />Rata-rata</span>
         </div>
       </div>
-      <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <div className="min-w-[500px]">
-          <Chart options={options} series={series} type="area" height={250} />
+      {loading ? (
+        <div className="h-[250px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+      ) : (
+        <div className="max-w-full overflow-x-auto custom-scrollbar">
+          <div className="min-w-[500px]">
+            <Chart options={options} series={series} type="area" height={250} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
