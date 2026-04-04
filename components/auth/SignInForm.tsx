@@ -32,7 +32,8 @@ export default function SignInForm() {
     setLoading(true);
     try {
       const response = await axiosGlobal.post("/auth/login", { email, password });
-      const { token, role } = response.data.data;
+      const { token, role ,id} = response.data.data;
+      useAuthStore.getState().setId(id);
       useAuthStore.getState().setToken(token);
       useAuthStore.getState().setRole(role);
       Swal.fire({ title: "Login Successful!", icon: "success", timer: 1500, showConfirmButton: false })

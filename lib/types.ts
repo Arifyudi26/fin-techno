@@ -12,6 +12,7 @@ export type LoginRequestBody = {
 };
 
 export type LoginResponse = {
+  id: string;
   token: string;
   role: UserRole;
   name: string;

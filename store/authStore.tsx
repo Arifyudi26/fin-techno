@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 import Cookies from "js-cookie";
 
 interface AuthState {
+  setId: any | null;
   token: string | null;
   role: any | null;
   isAuthenticated: boolean;
@@ -16,6 +17,7 @@ interface AuthState {
 const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+      setId: null,
       token: Cookies.get("token") || null,
       role: null,
       isAuthenticated: false,

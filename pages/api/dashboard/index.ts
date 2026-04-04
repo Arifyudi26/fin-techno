@@ -11,14 +11,11 @@ export default async function handler(
   }
 
   try {
-    // Get userId from session (you need to add authentication)
-    // For now, we'll use a placeholder - update this based on your auth implementation
     const userId = req.query.userId as string;
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Get current date for calculations
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
