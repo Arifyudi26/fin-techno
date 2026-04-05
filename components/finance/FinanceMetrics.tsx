@@ -14,7 +14,8 @@ export default function FinanceMetrics({ data, loading }: Props) {
     {
       label: "Total Pemasukan",
       value: data?.totalIncome ?? 0,
-      up: true,
+      change: data?.changes.income ?? "0%",
+      up: data?.isUp.income ?? true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 5a1 1 0 10-2 0v4H7a1 1 0 100 2h4v4a1 1 0 102 0v-4h4a1 1 0 100-2h-4V7z" fill="currentColor" />
@@ -26,7 +27,8 @@ export default function FinanceMetrics({ data, loading }: Props) {
     {
       label: "Total Pengeluaran",
       value: data?.totalExpense ?? 0,
-      up: false,
+      change: data?.changes.expense ?? "0%",
+      up: data?.isUp.expense ?? true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4 11H8a1 1 0 110-2h8a1 1 0 110 2z" fill="currentColor" />
@@ -38,7 +40,8 @@ export default function FinanceMetrics({ data, loading }: Props) {
     {
       label: "Net Flow",
       value: data?.netFlow ?? 0,
-      up: (data?.netFlow ?? 0) >= 0,
+      change: data?.changes.netFlow ?? "0%",
+      up: data?.isUp.netFlow ?? true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M2 12h20M12 2l4 4-4 4M12 22l-4-4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -51,7 +54,8 @@ export default function FinanceMetrics({ data, loading }: Props) {
       label: "Transaksi Bulan Ini",
       value: data?.transactionCount ?? 0,
       isCount: true,
-      up: true,
+      change: data?.changes.transactions ?? "0%",
+      up: data?.isUp.transactions ?? true,
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -92,11 +96,16 @@ export default function FinanceMetrics({ data, loading }: Props) {
                 {m.isCount ? m.value.toLocaleString("id-ID") : formatIDR(m.value)}
               </h4>
             </div>
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${m.up ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500" : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              m.up
+                ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
+                : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"
+            }`}>
               {m.up ? <ArrowUpIcon /> : <ArrowDownIcon />}
-              {m.up ? "Bulan ini" : "Bulan ini"}
+              {m.change}
             </span>
           </div>
+          <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">vs bulan lalu</p>
         </div>
       ))}
     </div>

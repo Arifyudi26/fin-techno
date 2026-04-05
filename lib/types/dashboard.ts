@@ -4,6 +4,18 @@ export interface DashboardMetrics {
   netFlow: number;
   totalBalance: number;
   transactionCount: number;
+  changes: {
+    income: string;
+    expense: string;
+    netFlow: string;
+    transactions: string;
+  };
+  isUp: {
+    income: boolean;
+    expense: boolean;
+    netFlow: boolean;
+    transactions: boolean;
+  };
 }
 
 export interface CashFlowMonth {
