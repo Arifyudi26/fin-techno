@@ -406,12 +406,13 @@ export default async function handler(
 
       const fileFormat = ext as FileFormat;
       const fileBuffer = fs.readFileSync(file.filepath);
+      const fileHash = crypto.createHash("md5").update(fileBuffer).digest("hex");
       const fileContent =
         fileFormat !== "PDF" ? fileBuffer.toString("utf-8") : "";
       const fileSize = file.size;
       const fileName =
         file.originalFilename ?? `upload_${Date.now()}.${ext.toLowerCase()}`;
-      const fileUrl = `/uploads/${fileName}`; // placeholder — production: upload ke storage
+      const fileUrl = `/uploads/${fileName}#${fileHash}`; // hash disimpan di suffix untuk dedup check
 
       const db = prisma as any;
 
@@ -431,6 +432,64 @@ export default async function handler(
         if (!wallet)
           return res.status(404).json({ message: "Dompet tidak ditemukan" });
         providerName = wallet.walletProvider;
+      }
+
+      // ── Validasi 1: nama file tidak boleh sama (apapun formatnya) ────────
+      // Strip extension, compare base name case-insensitive
+      const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "").toLowerCase();
+      if (sourceType === "BANK") {
+        const existingByName = await prisma.bankStatementUpload.findFirst({
+          where: {
+            bankAccountId: accountId,
+            fileName: { contains: baseNameWithoutExt, mode: "insensitive" },
+          },
+          select: { id: true, fileName: true },
+        });
+        if (existingByName) {
+          return res.status(409).json({
+            message: `File dengan nama "${existingByName.fileName}" sudah pernah diupload sebelumnya. Gunakan nama file yang berbeda.`,
+            code: "DUPLICATE_FILENAME",
+          });
+        }
+      } else {
+        const existingByName = await db.walletStatementUpload.findFirst({
+          where: {
+            walletId: accountId,
+            fileName: { contains: baseNameWithoutExt, mode: "insensitive" },
+          },
+          select: { id: true, fileName: true },
+        });
+        if (existingByName) {
+          return res.status(409).json({
+            message: `File dengan nama "${existingByName.fileName}" sudah pernah diupload sebelumnya. Gunakan nama file yang berbeda.`,
+            code: "DUPLICATE_FILENAME",
+          });
+        }
+      }
+
+      // ── Validasi 2: konten file tidak boleh duplikat (hash MD5 isi file) ─
+      if (sourceType === "BANK") {
+        const existingByHash = await prisma.bankStatementUpload.findFirst({
+          where: { bankAccountId: accountId, fileUrl: { endsWith: fileHash } },
+          select: { id: true, fileName: true },
+        });
+        if (existingByHash) {
+          return res.status(409).json({
+            message: `Konten file ini identik dengan "${existingByHash.fileName}" yang sudah diupload sebelumnya.`,
+            code: "DUPLICATE_CONTENT",
+          });
+        }
+      } else {
+        const existingByHash = await db.walletStatementUpload.findFirst({
+          where: { walletId: accountId, fileUrl: { endsWith: fileHash } },
+          select: { id: true, fileName: true },
+        });
+        if (existingByHash) {
+          return res.status(409).json({
+            message: `Konten file ini identik dengan "${existingByHash.fileName}" yang sudah diupload sebelumnya.`,
+            code: "DUPLICATE_CONTENT",
+          });
+        }
       }
 
       // ── Create upload record (PROCESSING) ───────────────────────────────
