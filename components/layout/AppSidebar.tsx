@@ -146,10 +146,7 @@ const navItems: NavItem[] = [
   {
     icon: <UploadIcon />,
     name: "Upload Mutasi",
-    subItems: [
-      { name: "Upload E-Statement", path: "/upload" },
-      { name: "Riwayat Upload", path: "/upload/history" },
-    ],
+    path: "/upload",
   },
   {
     icon: <MergeIcon />,
