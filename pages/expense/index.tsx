@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
@@ -6,24 +7,60 @@ import PageMeta from "@components/common/PageMeta";
 import Link from "next/link";
 import axiosGlobal from "@/services/AxiosGlobal";
 
-const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
+const ReactApexChart = dynamic(() => import("react-apexcharts"), {
+  ssr: false,
+});
 
 const formatIDR = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(v);
 
 const pct = (v: number | null) =>
   v === null ? null : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 
-interface MonthlyTrend { month: string; monthNum: number; total: number; count: number; }
-interface ByCategory { name: string; total: number; count: number; }
-interface BySource { provider: string; accountName: string; source: string; total: number; count: number; }
+interface MonthlyTrend {
+  month: string;
+  monthNum: number;
+  total: number;
+  count: number;
+}
+interface ByCategory {
+  name: string;
+  total: number;
+  count: number;
+}
+interface BySource {
+  provider: string;
+  accountName: string;
+  source: string;
+  total: number;
+  count: number;
+}
 interface Summary {
-  grandTotal: number; avgMonthly: number; totalTransactions: number;
-  thisMonthTotal: number; lastMonthTotal: number; pctChange: number | null;
+  grandTotal: number;
+  avgMonthly: number;
+  totalTransactions: number;
+  thisMonthTotal: number;
+  lastMonthTotal: number;
+  pctChange: number | null;
   highestMonth: { month: string; total: number };
 }
 
-const COLORS = ["#ef4444","#f97316","#f59e0b","#8b5cf6","#465FFF","#06b6d4","#22c55e","#ec4899","#14b8a6","#6366f1"];
+const COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#f59e0b",
+  "#8b5cf6",
+  "#465FFF",
+  "#06b6d4",
+  "#22c55e",
+  "#ec4899",
+  "#14b8a6",
+  "#6366f1",
+];
 
 export default function ExpenseReport() {
   const [year, setYear] = useState(new Date().getFullYear());
@@ -48,17 +85,51 @@ export default function ExpenseReport() {
     }
   }, [year]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const barOptions = {
     chart: { toolbar: { show: false }, background: "transparent" },
     colors: ["#ef4444"],
-    xaxis: { categories: monthly.map((m) => m.month), labels: { style: { colors: "#9ca3af", fontSize: "11px" } } },
-    yaxis: { labels: { formatter: (v: number) => `${(v / 1_000_000).toFixed(0)}jt`, style: { colors: "#9ca3af", fontSize: "11px" } } },
+    xaxis: {
+      categories: monthly.map((m) => m.month),
+      labels: { style: { colors: "#9ca3af", fontSize: "11px" } },
+    },
+    yaxis: {
+      labels: {
+        formatter: (v: number) => `${(v / 1_000_000).toFixed(0)}jt`,
+        style: { colors: "#9ca3af", fontSize: "11px" },
+      },
+    },
     grid: { borderColor: "#1f2937", strokeDashArray: 4 },
     plotOptions: { bar: { borderRadius: 6, columnWidth: "55%" } },
     dataLabels: { enabled: false },
-    tooltip: { y: { formatter: (v: number) => formatIDR(v) } },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      custom: ({
+        series,
+        dataPointIndex,
+        w,
+      }: {
+        series: number[][];
+        dataPointIndex: number;
+        w: { globals: { categoryLabels: string[] } };
+      }) => {
+        const label = w.globals.categoryLabels[dataPointIndex] ?? "";
+        const val = series[0][dataPointIndex] ?? 0;
+        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0"></span>
+              <span style="color:#9ca3af;font-size:12px">Pengeluaran</span>
+            </div>
+            <span style="color:#ef4444;font-size:12px;font-weight:600">${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val)}</span>
+          </div>
+        </div>`;
+      },
+    },
     theme: { mode: "dark" as const },
   };
 
@@ -66,18 +137,58 @@ export default function ExpenseReport() {
     chart: { background: "transparent" },
     labels: byCategory.slice(0, 8).map((c) => c.name),
     colors: COLORS,
-    legend: { position: "bottom" as const, labels: { colors: "#9ca3af" }, fontSize: "12px" },
+    legend: {
+      position: "bottom" as const,
+      labels: { colors: "#9ca3af" },
+      fontSize: "12px",
+    },
     dataLabels: { enabled: false },
     plotOptions: { pie: { donut: { size: "65%" } } },
-    tooltip: { y: { formatter: (v: number) => formatIDR(v) } },
+    tooltip: {
+      custom: ({
+        series,
+        seriesIndex,
+        w,
+      }: {
+        series: number[];
+        seriesIndex: number;
+        w: { globals: { labels: string[]; colors: string[] } };
+      }) => {
+        const label = w.globals.labels[seriesIndex] ?? "";
+        const color = w.globals.colors[seriesIndex] ?? "#ef4444";
+        const val = series[seriesIndex] ?? 0;
+        const total = series.reduce((s: number, v: number) => s + v, 0);
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
+        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+            <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <span style="color:#9ca3af;font-size:12px">Jumlah</span>
+            <span style="color:${color};font-size:12px;font-weight:600">${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val)}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:3px">
+            <span style="color:#9ca3af;font-size:12px">Porsi</span>
+            <span style="color:#9ca3af;font-size:12px;font-weight:600">${pct}%</span>
+          </div>
+        </div>`;
+      },
+    },
     theme: { mode: "dark" as const },
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const years = Array.from(
+    { length: 5 },
+    (_, i) => new Date().getFullYear() - i,
+  );
 
   return (
     <AppLayout>
-      <PageMeta title="Laporan Pengeluaran | MyFinance" description="Analitik dan tren pengeluaran tahunan" />
+      <PageMeta
+        title="Laporan Pengeluaran | MyFinance"
+        description="Analitik dan tren pengeluaran tahunan"
+      />
       <PageBreadcrumb pageTitle="Laporan Pengeluaran" />
 
       {/* Header toolbar */}
@@ -88,14 +199,25 @@ export default function ExpenseReport() {
             onChange={(e) => setYear(Number(e.target.value))}
             className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           >
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
           </select>
         </div>
         <Link
           href="/transactions/expense"
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
           Lihat Detail Transaksi
         </Link>
       </div>
@@ -103,50 +225,86 @@ export default function ExpenseReport() {
       {loading ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse"
+              />
+            ))}
           </div>
           <div className="h-72 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
         </div>
       ) : !summary ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400">Belum ada data pengeluaran untuk tahun {year}</p>
-          <Link href="/upload" className="mt-3 text-sm text-brand-500 hover:underline">Upload e-Statement sekarang →</Link>
+          <p className="text-gray-500 dark:text-gray-400">
+            Belum ada data pengeluaran untuk tahun {year}
+          </p>
+          <Link
+            href="/upload"
+            className="mt-3 text-sm text-brand-500 hover:underline"
+          >
+            Upload e-Statement sekarang →
+          </Link>
         </div>
       ) : (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
-              <p className="text-xs text-error-600 dark:text-error-400 mb-1">Total Pengeluaran {year}</p>
-              <p className="text-xl font-bold text-error-700 dark:text-error-400">-{formatIDR(summary.grandTotal)}</p>
+              <p className="text-xs text-error-600 dark:text-error-400 mb-1">
+                Total Pengeluaran {year}
+              </p>
+              <p className="text-xl font-bold text-error-700 dark:text-error-400">
+                -{formatIDR(summary.grandTotal)}
+              </p>
             </div>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Rata-rata / Bulan</p>
-              <p className="text-xl font-bold text-gray-800 dark:text-white/90">{formatIDR(summary.avgMonthly)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Rata-rata / Bulan
+              </p>
+              <p className="text-xl font-bold text-gray-800 dark:text-white/90">
+                {formatIDR(summary.avgMonthly)}
+              </p>
             </div>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Bulan Ini</p>
-              <p className="text-xl font-bold text-gray-800 dark:text-white/90">{formatIDR(summary.thisMonthTotal)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Bulan Ini
+              </p>
+              <p className="text-xl font-bold text-gray-800 dark:text-white/90">
+                {formatIDR(summary.thisMonthTotal)}
+              </p>
               {summary.pctChange !== null && (
-                <p className={`text-xs mt-0.5 ${summary.pctChange >= 0 ? "text-error-500" : "text-success-500"}`}>
+                <p
+                  className={`text-xs mt-0.5 ${summary.pctChange >= 0 ? "text-error-500" : "text-success-500"}`}
+                >
                   {pct(summary.pctChange)} vs bulan lalu
                 </p>
               )}
             </div>
             <div className="rounded-2xl border border-warning-200 dark:border-warning-500/20 bg-warning-50 dark:bg-warning-500/10 p-4">
-              <p className="text-xs text-warning-600 dark:text-warning-400 mb-1">Bulan Tertinggi</p>
-              <p className="text-base font-bold text-warning-700 dark:text-warning-400">{summary.highestMonth.month}</p>
-              <p className="text-xs text-warning-600 dark:text-warning-400">{formatIDR(summary.highestMonth.total)}</p>
+              <p className="text-xs text-warning-600 dark:text-warning-400 mb-1">
+                Bulan Tertinggi
+              </p>
+              <p className="text-base font-bold text-warning-700 dark:text-warning-400">
+                {summary.highestMonth.month}
+              </p>
+              <p className="text-xs text-warning-600 dark:text-warning-400">
+                {formatIDR(summary.highestMonth.total)}
+              </p>
             </div>
           </div>
 
           {/* Bar chart */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">Tren Pengeluaran Bulanan {year}</h3>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">
+              Tren Pengeluaran Bulanan {year}
+            </h3>
             <ReactApexChart
               type="bar"
               height={260}
-              series={[{ name: "Pengeluaran", data: monthly.map((m) => m.total) }]}
+              series={[
+                { name: "Pengeluaran", data: monthly.map((m) => m.total) },
+              ]}
               options={barOptions}
             />
           </div>
@@ -154,9 +312,13 @@ export default function ExpenseReport() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Donut — per kategori */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5">
-              <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">Pengeluaran per Kategori</h3>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">
+                Pengeluaran per Kategori
+              </h3>
               {byCategory.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10">Tidak ada data</p>
+                <p className="text-sm text-gray-400 text-center py-10">
+                  Tidak ada data
+                </p>
               ) : (
                 <ReactApexChart
                   type="donut"
@@ -169,28 +331,46 @@ export default function ExpenseReport() {
 
             {/* List — per sumber */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5">
-              <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">Pengeluaran per Sumber</h3>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">
+                Pengeluaran per Sumber
+              </h3>
               {bySource.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10">Tidak ada data</p>
+                <p className="text-sm text-gray-400 text-center py-10">
+                  Tidak ada data
+                </p>
               ) : (
                 <div className="space-y-3">
                   {bySource.map((s, i) => {
-                    const pctOfTotal = summary.grandTotal > 0 ? (s.total / summary.grandTotal) * 100 : 0;
+                    const pctOfTotal =
+                      summary.grandTotal > 0
+                        ? (s.total / summary.grandTotal) * 100
+                        : 0;
                     return (
                       <div key={i}>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${s.source === "BANK" ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"}`}>
+                            <span
+                              className={`text-xs px-1.5 py-0.5 rounded font-medium ${s.source === "BANK" ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"}`}
+                            >
                               {s.source}
                             </span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{s.provider} · {s.accountName}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              {s.provider} · {s.accountName}
+                            </span>
                           </div>
-                          <span className="text-sm font-semibold text-error-600 dark:text-error-400">-{formatIDR(s.total)}</span>
+                          <span className="text-sm font-semibold text-error-600 dark:text-error-400">
+                            -{formatIDR(s.total)}
+                          </span>
                         </div>
                         <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                          <div className="h-full rounded-full bg-error-500" style={{ width: `${pctOfTotal}%` }} />
+                          <div
+                            className="h-full rounded-full bg-error-500"
+                            style={{ width: `${pctOfTotal}%` }}
+                          />
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{pctOfTotal.toFixed(1)}% · {s.count} transaksi</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {pctOfTotal.toFixed(1)}% · {s.count} transaksi
+                        </p>
                       </div>
                     );
                   })}
@@ -203,18 +383,34 @@ export default function ExpenseReport() {
           {byCategory.length > 0 && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">Rincian per Kategori</h3>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Rincian per Kategori
+                </h3>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {byCategory.map((cat, i) => {
-                  const pctOfTotal = summary.grandTotal > 0 ? (cat.total / summary.grandTotal) * 100 : 0;
+                  const pctOfTotal =
+                    summary.grandTotal > 0
+                      ? (cat.total / summary.grandTotal) * 100
+                      : 0;
                   return (
                     <div key={i} className="flex items-center gap-4 px-5 py-3">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
-                      <span className="text-xs text-gray-400 w-16 text-right">{cat.count}x</span>
-                      <span className="text-xs text-gray-400 w-12 text-right">{pctOfTotal.toFixed(1)}%</span>
-                      <span className="text-sm font-semibold text-error-600 dark:text-error-400 w-36 text-right">-{formatIDR(cat.total)}</span>
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                        {cat.name}
+                      </span>
+                      <span className="text-xs text-gray-400 w-16 text-right">
+                        {cat.count}x
+                      </span>
+                      <span className="text-xs text-gray-400 w-12 text-right">
+                        {pctOfTotal.toFixed(1)}%
+                      </span>
+                      <span className="text-sm font-semibold text-error-600 dark:text-error-400 w-36 text-right">
+                        -{formatIDR(cat.total)}
+                      </span>
                     </div>
                   );
                 })}
@@ -226,4 +422,3 @@ export default function ExpenseReport() {
     </AppLayout>
   );
 }
-

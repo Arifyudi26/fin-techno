@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
@@ -10,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@components/ui/table";
+import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -100,6 +102,8 @@ export default function PeriodAnalysis() {
   const [transactions, setTransactions] = useState<TxRow[]>([]);
   const [txFilter, setTxFilter] = useState<"ALL" | "CREDIT" | "DEBIT">("ALL");
   const [txSearch, setTxSearch] = useState("");
+  const [txPage, setTxPage] = useState(1);
+  const [txLimit, setTxLimit] = useState(10);
 
   const fetchData = useCallback(async () => {
     if (!dateFrom || !dateTo) return;
@@ -130,6 +134,9 @@ export default function PeriodAnalysis() {
       t.provider.toLowerCase().includes(txSearch.toLowerCase());
     return matchType && matchSearch;
   });
+
+  const txTotalPages = Math.ceil(filteredTx.length / txLimit);
+  const pagedTx = filteredTx.slice((txPage - 1) * txLimit, txPage * txLimit);
 
   const chartOptions = {
     chart: { toolbar: { show: false }, background: "transparent" },
@@ -182,12 +189,9 @@ export default function PeriodAnalysis() {
             <span style="color:${color};font-size:12px;font-weight:600;white-space:nowrap">${formatIDR(val)}</span>
           </div>`;
         return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:220px;font-family:Outfit,sans-serif">
-          <div style="color:#e5e7eb;font-size:12px;font-weight:600;">${label}</div>
           ${row("#22c55e", "Pemasukan", pemasukan, "#22c55e")}
           ${row("#ef4444", "Pengeluaran", pengeluaran, "#ef4444")}
-          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #374151">
-            ${row(netColor, "Net Flow", Math.abs(net), netColor)}
-          </div>
+          ${row(netColor, "Net Flow", Math.abs(net), netColor)}
         </div>`;
       },
     },
@@ -205,7 +209,37 @@ export default function PeriodAnalysis() {
     },
     dataLabels: { enabled: false },
     plotOptions: { pie: { donut: { size: "65%" } } },
-    tooltip: { y: { formatter: (v: number) => formatIDR(v) } },
+    tooltip: {
+      custom: ({
+        series,
+        seriesIndex,
+        w,
+      }: {
+        series: number[];
+        seriesIndex: number;
+        w: { globals: { labels: string[]; colors: string[] } };
+      }) => {
+        const label = w.globals.labels[seriesIndex] ?? "";
+        const color = w.globals.colors[seriesIndex] ?? "#465FFF";
+        const val = series[seriesIndex] ?? 0;
+        const total = series.reduce((s: number, v: number) => s + v, 0);
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
+        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+            <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <span style="color:#9ca3af;font-size:12px">Jumlah</span>
+            <span style="color:${color};font-size:12px;font-weight:600">${formatIDR(val)}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:3px">
+            <span style="color:#9ca3af;font-size:12px">Porsi</span>
+            <span style="color:#9ca3af;font-size:12px;font-weight:600">${pct}%</span>
+          </div>
+        </div>`;
+      },
+    },
     theme: { mode: "dark" as const },
   };
 
@@ -599,7 +633,7 @@ export default function PeriodAnalysis() {
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-3">
               <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 flex-1">
-                Semua Transaksi ({filteredTx.length})
+                Semua Transaksi ({filteredTx.length}){" "}
               </h3>
               <div className="relative">
                 <svg
@@ -627,15 +661,19 @@ export default function PeriodAnalysis() {
                   type="text"
                   placeholder="Cari..."
                   value={txSearch}
-                  onChange={(e) => setTxSearch(e.target.value)}
+                  onChange={(e) => {
+                    setTxSearch(e.target.value);
+                    setTxPage(1);
+                  }}
                   className="pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none w-40"
                 />
               </div>
               <select
                 value={txFilter}
-                onChange={(e) =>
-                  setTxFilter(e.target.value as "ALL" | "CREDIT" | "DEBIT")
-                }
+                onChange={(e) => {
+                  setTxFilter(e.target.value as "ALL" | "CREDIT" | "DEBIT");
+                  setTxPage(1);
+                }}
                 className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none"
               >
                 <option value="ALL">Semua</option>
@@ -676,7 +714,7 @@ export default function PeriodAnalysis() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredTx.map((tx) => (
+                    pagedTx.map((tx) => (
                       <TableRow key={tx.id}>
                         <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                           {tx.date}
@@ -726,6 +764,17 @@ export default function PeriodAnalysis() {
                 </TableBody>
               </Table>
             </div>
+            <Pagination
+              page={txPage}
+              totalPages={txTotalPages}
+              total={filteredTx.length}
+              limit={txLimit}
+              onPageChange={setTxPage}
+              onLimitChange={(l) => {
+                setTxLimit(l);
+                setTxPage(1);
+              }}
+            />
           </div>
         </>
       )}

@@ -6,6 +6,7 @@ import PageMeta from "@components/common/PageMeta";
 import Link from "next/link";
 import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
+import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
 
@@ -69,6 +70,8 @@ export default function UploadDetail() {
   const [upload, setUpload] = useState<UploadDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [txPage, setTxPage] = useState(1);
+  const [txLimit, setTxLimit] = useState(10);
 
   useEffect(() => {
     if (!id) return;
@@ -111,6 +114,9 @@ export default function UploadDetail() {
 
   const netFlow = upload.totalCredit - upload.totalDebit;
   const successRate = upload.totalRows > 0 ? Math.round((upload.parsedRows / upload.totalRows) * 100) : 0;
+  const txTotal = upload.transactions.length;
+  const txTotalPages = Math.ceil(txTotal / txLimit);
+  const pagedTx = upload.transactions.slice((txPage - 1) * txLimit, txPage * txLimit);
 
   return (
     <AppLayout>
@@ -209,15 +215,16 @@ export default function UploadDetail() {
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Transaksi dari Upload Ini</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{upload.transactions.length} transaksi ditampilkan</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{txTotal} transaksi</p>
           </div>
         </div>
-        {upload.transactions.length === 0 ? (
+        {txTotal === 0 ? (
           <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
             Belum ada transaksi yang berhasil diproses
           </div>
         ) : (
-          <div className="max-w-full overflow-x-auto">
+          <>
+            <div className="max-w-full overflow-x-auto">
             <Table>
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
@@ -231,7 +238,7 @@ export default function UploadDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {upload.transactions.map((tx) => (
+                {pagedTx.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="py-3 px-5 text-gray-500 text-theme-sm dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
                     <TableCell className="py-3">
@@ -257,6 +264,8 @@ export default function UploadDetail() {
               </TableBody>
             </Table>
           </div>
+            <Pagination page={txPage} totalPages={txTotalPages} total={txTotal} limit={txLimit} onPageChange={setTxPage} onLimitChange={(l) => { setTxLimit(l); setTxPage(1); }} />
+          </>
         )}
       </div>
     </AppLayout>

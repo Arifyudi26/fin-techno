@@ -4,6 +4,7 @@ import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
+import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 
 const formatIDR = (v: number) =>
@@ -34,7 +35,7 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
 
   const [filters, setFilters] = useState({
-    type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1,
+    type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1, limit: 10,
   });
 
   const fetchTx = useCallback(async () => {
@@ -47,7 +48,7 @@ export default function Transactions() {
       if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
       if (filters.dateTo) params.set("dateTo", filters.dateTo);
       params.set("page", String(filters.page));
-      params.set("limit", "50");
+      params.set("limit", String(filters.limit));
 
       const res = await axiosGlobal.get(`/transactions?${params}`);
       setTransactions(res.data.transactions);
@@ -189,23 +190,14 @@ export default function Transactions() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Halaman {filters.page} dari {totalPages}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter("page", filters.page - 1)}
-                disabled={filters.page <= 1}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >← Prev</button>
-              <button
-                onClick={() => setFilter("page", filters.page + 1)}
-                disabled={filters.page >= totalPages}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >Next →</button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={filters.page}
+          totalPages={totalPages}
+          total={total}
+          limit={filters.limit}
+          onPageChange={(p) => setFilter("page", p)}
+          onLimitChange={(l) => setFilter("limit", l)}
+        />
       </div>
     </AppLayout>
   );

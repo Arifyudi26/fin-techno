@@ -4,6 +4,7 @@ import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
+import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 
 const formatIDR = (v: number) =>
@@ -21,11 +22,12 @@ export default function ExpensePage() {
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ type: "DEBIT", page: String(page), limit: "50" });
+      const params = new URLSearchParams({ type: "DEBIT", page: String(page), limit: String(limit) });
       if (search) params.set("search", search);
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
@@ -36,7 +38,7 @@ export default function ExpensePage() {
       setTotalPages(res.data.totalPages);
     } catch { setTransactions([]); }
     finally { setLoading(false); }
-  }, [search, dateFrom, dateTo, page]);
+  }, [search, dateFrom, dateTo, page, limit]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -95,15 +97,7 @@ export default function ExpensePage() {
             </Table>
           </div>
         )}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Halaman {page} dari {totalPages}</p>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => p - 1)} disabled={page <= 1} className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800">← Prev</button>
-              <button onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages} className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800">Next →</button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} onLimitChange={setLimit} />
       </div>
     </AppLayout>
   );
