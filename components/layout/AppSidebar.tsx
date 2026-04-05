@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -136,6 +137,7 @@ const navItems: NavItem[] = [
       { name: "Overview Keuangan", path: "/" },
       { name: "Laporan Pemasukan", path: "/income" },
       { name: "Laporan Pengeluaran", path: "/expense" },
+      { name: "Analisis Periode", path: "/period" },
     ],
   },
   {
@@ -202,7 +204,10 @@ const AppSidebar: React.FC = () => {
   const isActiveGroup = useCallback(
     (basePath: string) => {
       if (basePath === "/") return router.pathname === "/";
-      return router.pathname === basePath || router.pathname.startsWith(basePath + "/");
+      return (
+        router.pathname === basePath ||
+        router.pathname.startsWith(basePath + "/")
+      );
     },
     [router.pathname],
   );
@@ -220,7 +225,9 @@ const AppSidebar: React.FC = () => {
         return router.pathname === subPath;
       }
       // Tidak ada sibling yang lebih spesifik, boleh startsWith
-      return router.pathname === subPath || router.pathname.startsWith(subPath + "/");
+      return (
+        router.pathname === subPath || router.pathname.startsWith(subPath + "/")
+      );
     },
     [router.pathname],
   );
@@ -355,7 +362,6 @@ const AppSidebar: React.FC = () => {
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 className="dark:hidden"
                 src="/images/logo/logo.svg"
@@ -363,7 +369,6 @@ const AppSidebar: React.FC = () => {
                 width={150}
                 height={40}
               />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 className="hidden dark:block"
                 src="/images/logo/logo-dark.svg"
@@ -373,7 +378,6 @@ const AppSidebar: React.FC = () => {
               />
             </>
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src="/images/logo/logo-icon.svg"
               alt="Logo"

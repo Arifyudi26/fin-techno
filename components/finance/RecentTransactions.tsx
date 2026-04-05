@@ -57,7 +57,14 @@ export default function RecentTransactions({ data = [], loading }: Props) {
                     <TableCell className="py-3">
                       <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90 max-w-[200px] truncate">{tx.description}</p>
                     </TableCell>
-                    <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">{tx.bankAccount}</TableCell>
+                    <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        {(tx as RecentTransaction & { source?: string }).source === "WALLET" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400">WALLET</span>
+                        )}
+                        {tx.bankAccount}
+                      </div>
+                    </TableCell>
                     <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">{tx.category}</TableCell>
                     <TableCell className="py-3">
                       <span className={`font-semibold text-theme-sm ${tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>

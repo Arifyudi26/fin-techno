@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import GridShape from "@components/common/GridShape";
 import PageMeta from "@components/common/PageMeta";
@@ -15,10 +16,20 @@ export default function NotFound() {
           <h1 className="mb-8 font-bold text-gray-800 text-title-md dark:text-white/90 xl:text-title-2xl">
             ERROR
           </h1>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/error/404.svg" alt="404" width={472} height={300} className="dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/error/404-dark.svg" alt="404" width={472} height={300} className="hidden dark:block" />
+          <img
+            src="/images/error/404.svg"
+            alt="404"
+            width={472}
+            height={300}
+            className="dark:hidden"
+          />
+          <img
+            src="/images/error/404-dark.svg"
+            alt="404"
+            width={472}
+            height={300}
+            className="hidden dark:block"
+          />
           <p className="mt-10 mb-6 text-base text-gray-700 dark:text-gray-400 sm:text-lg">
             Halaman yang kamu cari tidak ditemukan.
           </p>
