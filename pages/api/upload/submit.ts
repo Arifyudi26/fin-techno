@@ -7,6 +7,9 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { FileFormat, UploadStatus, TransactionType, EStatementStatus } from "@prisma/client";
 import crypto from "crypto";
+// pdf-parse uses CommonJS exports
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
 
 export const config = { api: { bodyParser: false } };
 
@@ -33,28 +36,33 @@ function parseCSV(content: string): string[][] {
 // Each field lists candidate column names in priority order (first match wins).
 const COLUMN_CANDIDATES = {
   date: [
-    "tgl_tran",           // BRImo
-    "tgl_efektif",        // BRImo (value date)
+    "tgl_tran",           // BRImo: transaction datetime
     "tanggal transaksi",  // BCA, Mandiri
     "tanggal",            // generic
-    "transaction date",   // English
+    "transaction date",
     "date",
     "tgl",
   ],
+  valueDate: [
+    "tgl_efektif",        // BRImo: effective/value date
+    "tanggal efektif",
+    "value date",
+    "tgl valuta",
+  ],
   description: [
-    "remark_custom",      // BRImo (human-readable, preferred)
-    "desk_tran",          // BRImo (fallback)
+    "remark_custom",      // BRImo: human-readable (preferred)
+    "desk_tran",          // BRImo: fallback
     "keterangan",         // BCA, Mandiri, BNI
-    "description",        // English
+    "description",
     "deskripsi",
     "ket",
-    "narasi",             // some banks
+    "narasi",
     "detail transaksi",
   ],
   debit: [
     "mutasi_debet",       // BRImo
     "debet",              // BCA
-    "debit",              // generic
+    "debit",
     "pengeluaran",
     "keluar",
     "db",
@@ -62,15 +70,19 @@ const COLUMN_CANDIDATES = {
   credit: [
     "mutasi_kredit",      // BRImo
     "kredit",             // BCA
-    "credit",             // generic
+    "credit",
     "pemasukan",
     "masuk",
     "cr",
   ],
+  openingBalance: [
+    "saldo_awal_mutasi",  // BRImo: balance before transaction
+    "saldo awal",
+  ],
   balance: [
-    "saldo_akhir_mutasi", // BRImo
+    "saldo_akhir_mutasi", // BRImo: balance after transaction
     "saldo akhir",        // BCA
-    "saldo",              // generic
+    "saldo",
     "balance",
     "saldo setelah",
   ],
@@ -83,7 +95,6 @@ const COLUMN_CANDIDATES = {
     "nomor referensi",
     "ref",
   ],
-  // GLSIGN / type hint column (Db/Cr) — used when present for reliable type detection
   sign: [
     "glsign",             // BRImo: "Db" | "Cr"
     "dc",                 // some banks: "D" | "C"
@@ -150,30 +161,34 @@ async function autoCategory(desc: string): Promise<string | null> {
 
 // ── Parse rows from CSV ──────────────────────────────────────────────────────
 function parseRows(rows: string[][]): Array<{
-  date: string; description: string; debit: string; credit: string;
-  balance: string; reference: string; sign: string;
+  date: string; valueDate: string; description: string; debit: string; credit: string;
+  openingBalance: string; balance: string; reference: string; sign: string;
 }> {
   if (rows.length < 2) return [];
   const header = rows[0].map((h) => h.toLowerCase().trim());
 
   const idx = {
-    date:    findColIdx(header, COLUMN_CANDIDATES.date),
-    desc:    findColIdx(header, COLUMN_CANDIDATES.description),
-    debit:   findColIdx(header, COLUMN_CANDIDATES.debit),
-    credit:  findColIdx(header, COLUMN_CANDIDATES.credit),
-    balance: findColIdx(header, COLUMN_CANDIDATES.balance),
-    ref:     findColIdx(header, COLUMN_CANDIDATES.reference),
-    sign:    findColIdx(header, COLUMN_CANDIDATES.sign),
+    date:           findColIdx(header, COLUMN_CANDIDATES.date),
+    valueDate:      findColIdx(header, COLUMN_CANDIDATES.valueDate),
+    desc:           findColIdx(header, COLUMN_CANDIDATES.description),
+    debit:          findColIdx(header, COLUMN_CANDIDATES.debit),
+    credit:         findColIdx(header, COLUMN_CANDIDATES.credit),
+    openingBalance: findColIdx(header, COLUMN_CANDIDATES.openingBalance),
+    balance:        findColIdx(header, COLUMN_CANDIDATES.balance),
+    ref:            findColIdx(header, COLUMN_CANDIDATES.reference),
+    sign:           findColIdx(header, COLUMN_CANDIDATES.sign),
   };
 
   return rows.slice(1).map((row) => ({
-    date:        idx.date    >= 0 ? row[idx.date]    ?? "" : "",
-    description: idx.desc    >= 0 ? row[idx.desc]    ?? "" : row[1] ?? "",
-    debit:       idx.debit   >= 0 ? row[idx.debit]   ?? "" : "",
-    credit:      idx.credit  >= 0 ? row[idx.credit]  ?? "" : "",
-    balance:     idx.balance >= 0 ? row[idx.balance] ?? "" : "",
-    reference:   idx.ref     >= 0 ? row[idx.ref]     ?? "" : "",
-    sign:        idx.sign    >= 0 ? row[idx.sign]    ?? "" : "",
+    date:           idx.date           >= 0 ? row[idx.date]           ?? "" : "",
+    valueDate:      idx.valueDate      >= 0 ? row[idx.valueDate]      ?? "" : "",
+    description:    idx.desc           >= 0 ? row[idx.desc]           ?? "" : row[1] ?? "",
+    debit:          idx.debit          >= 0 ? row[idx.debit]          ?? "" : "",
+    credit:         idx.credit         >= 0 ? row[idx.credit]         ?? "" : "",
+    openingBalance: idx.openingBalance >= 0 ? row[idx.openingBalance] ?? "" : "",
+    balance:        idx.balance        >= 0 ? row[idx.balance]        ?? "" : "",
+    reference:      idx.ref            >= 0 ? row[idx.ref]            ?? "" : "",
+    sign:           idx.sign           >= 0 ? row[idx.sign]           ?? "" : "",
   }));
 }
 
@@ -215,6 +230,65 @@ function parseDate(val: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// ── PDF parser — BRI e-Statement format ──────────────────────────────────────
+// Columns: Tanggal Transaksi | Uraian Transaksi | Teller/User ID | Debet | Kredit | Saldo
+// Date format: DD/MM/YY HH:MM:SS  (e.g. "01/03/26 08:10:47")
+// Numbers use comma as thousands separator: "1,394,102.00"
+type ParsedRow = ReturnType<typeof parseRows>[number];
+
+async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
+  const data = await pdfParse(buffer);
+  const text = data.text;
+
+  // Each transaction line in BRI PDF text looks like:
+  // "01/03/26 08:10:47 Biaya SMS Notifikasi Sejumlah 3 Notifikasi BRIMDBT 2,250.00 0.00 1,394,102.00"
+  // We match: date+time, then capture everything up to the last 3 numbers (debit, credit, balance)
+  const rows: ParsedRow[] = [];
+
+  // Regex: DD/MM/YY HH:MM:SS <description + teller> <debit> <credit> <balance>
+  // Numbers: digits with optional commas and a decimal point
+  const NUM = /[\d,]+\.\d{2}/;
+  const LINE_RE = new RegExp(
+    `(\\d{2}/\\d{2}/\\d{2}\\s+\\d{2}:\\d{2}:\\d{2})` + // date+time
+    `\\s+(.+?)\\s+`                                    + // description (non-greedy)
+    `(${NUM.source})\\s+(${NUM.source})\\s+(${NUM.source})` + // debit credit balance
+    `(?=\\s|$)`,
+    "g"
+  );
+
+  let match: RegExpExecArray | null;
+  while ((match = LINE_RE.exec(text)) !== null) {
+    const [, dateStr, descRaw, debitStr, creditStr, balanceStr] = match;
+
+    // descRaw may end with a teller ID (all-digit or known codes like BRIMDBT, CMSPYRL)
+    // Strip trailing teller token: last whitespace-separated token that is all-digits or known code
+    const tellerRe = /\s+(\d{4,}|BRIMDBT|CMSPYRL|[A-Z0-9]{5,})$/;
+    const desc = descRaw.replace(tellerRe, "").trim();
+
+    // Determine sign: if debit > 0 → Db, else Cr
+    const debitAmt  = parseAmount(debitStr);
+    const creditAmt = parseAmount(creditStr);
+    const sign = debitAmt > 0 ? "Db" : "Cr";
+
+    rows.push({
+      date:           dateStr,
+      valueDate:      "",
+      description:    desc,
+      debit:          debitStr,
+      credit:         creditStr,
+      openingBalance: "",
+      balance:        balanceStr,
+      reference:      "",
+      sign,
+    });
+
+    // Suppress unused warning
+    void debitAmt; void creditAmt;
+  }
+
+  return rows;
+}
+
 // ── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -248,7 +322,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const fileFormat = ext as FileFormat;
-      const fileContent = fs.readFileSync(file.filepath, "utf-8");
+      const fileBuffer = fs.readFileSync(file.filepath);
+      const fileContent = fileFormat !== "PDF" ? fileBuffer.toString("utf-8") : "";
       const fileSize = file.size;
       const fileName = file.originalFilename ?? `upload_${Date.now()}.${ext.toLowerCase()}`;
       const fileUrl  = `/uploads/${fileName}`; // placeholder — production: upload ke storage
@@ -317,7 +392,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           parseError = "Gagal membaca CSV: " + e.message;
         }
       } else if (fileFormat === "PDF") {
-        parseError = "File PDF memerlukan proses manual. Silakan konversi ke CSV terlebih dahulu.";
+        try {
+          parsedRows = await parsePDF(fileBuffer);
+          if (parsedRows.length === 0) parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
+        } catch (e: any) {
+          parseError = "Gagal membaca PDF: " + e.message;
+        }
       } else {
         // XLSX/XLS — simplified: treat as CSV for now
         try {
@@ -386,11 +466,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (amount === 0) { failCount++; continue; }
         const type    = detectType(row.description, row.debit, row.credit, row.sign);
         const balance = parseAmount(row.balance);
+        const valueDate = parseDate(row.valueDate);
         const catId   = await autoCategory(row.description);
-        // Include reference + balance in hash so same-amount same-description rows
-        // on the same date (e.g. BI-Fast fee rows) are treated as distinct transactions
+        // Hash includes opening balance to distinguish rows with identical
+        // date/amount/description (e.g. BI-Fast principal + fee on same timestamp)
         const hash    = crypto.createHash("md5")
-          .update(`${accountId}|${txDate.toISOString()}|${amount}|${row.description}|${row.reference}|${balance}`)
+          .update(`${accountId}|${txDate.toISOString()}|${amount}|${row.description}|${row.reference}|${row.openingBalance}`)
           .digest("hex");
 
         try {
@@ -400,6 +481,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 bankAccountId: accountId,
                 uploadId,
                 transactionDate: txDate,
+                valueDate: valueDate ?? undefined,
                 description: row.description,
                 reference: row.reference || null,
                 amount,
