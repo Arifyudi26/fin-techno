@@ -7,9 +7,9 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { FileFormat, UploadStatus, TransactionType, EStatementStatus } from "@prisma/client";
 import crypto from "crypto";
-// pdf-parse uses CommonJS exports
+// pdf-parse uses CommonJS exports with PDFParse class
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
+const { PDFParse } = require("pdf-parse") as { PDFParse: new (opts: { data: Buffer }) => { getText: () => Promise<{ text: string }> } };
 
 export const config = { api: { bodyParser: false } };
 
@@ -237,7 +237,8 @@ function parseDate(val: string): Date | null {
 type ParsedRow = ReturnType<typeof parseRows>[number];
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const data = await pdfParse(buffer);
+  const parser = new PDFParse({ data: buffer });
+  const data = await parser.getText();
   const text = data.text;
 
   // Each transaction line in BRI PDF text looks like:
