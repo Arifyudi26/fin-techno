@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -15,14 +19,33 @@
     "incremental": true,
     "useUnknownInCatchVariables": false,
     "paths": {
-      "@/*": ["./*"],
-      "@components/*": ["./components/*"],
-      "@pages/*": ["./pages/*"],
-      "@lib/*": ["./lib/*"],
-      "@icons/*": ["./components/icons/*"],
-      "@ui/*": ["./components/ui/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@components/*": [
+        "./components/*"
+      ],
+      "@pages/*": [
+        "./pages/*"
+      ],
+      "@lib/*": [
+        "./lib/*"
+      ],
+      "@icons/*": [
+        "./components/icons/*"
+      ],
+      "@ui/*": [
+        "./components/ui/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "styles.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "styles.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
