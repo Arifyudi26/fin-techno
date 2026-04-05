@@ -25,6 +25,14 @@ export default function SignUpForm() {
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      fire("warning", "Form tidak lengkap", { message: "Nama, email, dan password wajib diisi." });
+      return;
+    }
+    if (password.length < 8) {
+      fire("warning", "Password terlalu pendek", { message: "Password minimal 8 karakter." });
+      return;
+    }
     if (!isChecked) {
       fire("warning", "Syarat & Ketentuan", { message: "Harap setujui syarat dan ketentuan terlebih dahulu." });
       return;
@@ -97,16 +105,16 @@ export default function SignUpForm() {
               <div className="space-y-5">
                 <div>
                   <Label>Nama <span className="text-error-500">*</span></Label>
-                  <Input type="text" placeholder="Masukkan nama lengkap" value={name} onChange={(e) => setName(e.target.value)} />
+                  <Input type="text" placeholder="Masukkan nama lengkap" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
                 <div>
                   <Label>Email <span className="text-error-500">*</span></Label>
-                  <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)}  />
+                  <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div>
                   <Label>Password <span className="text-error-500">*</span></Label>
                   <div className="relative">
-                    <Input placeholder="Enter your password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}  />
+                    <Input placeholder="Min. 8 karakter" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
                     <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                       {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                     </span>
@@ -121,7 +129,7 @@ export default function SignUpForm() {
                   </p>
                 </div>
                 <div>
-                  <Button className="w-full" size="sm" disabled={loading}>
+                  <Button className="w-full" size="sm" disabled={loading || !name.trim() || !email.trim() || !password.trim() || !isChecked}>
                     {loading ? "Signing up..." : "Sign Up"}
                   </Button>
                 </div>

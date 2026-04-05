@@ -24,6 +24,10 @@ export default function SignInForm() {
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      fire("warning", "Form tidak lengkap", { message: "Email dan password wajib diisi." });
+      return;
+    }
     setLoading(true);
     try {
       const response = await axiosGlobal.post("/auth/login", { email, password });
@@ -93,12 +97,12 @@ export default function SignInForm() {
                 <div className="space-y-6">
                   <div>
                     <Label>Email <span className="text-error-500">*</span></Label>
-                    <Input type="email" placeholder="info@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Input type="email" placeholder="info@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div>
                     <Label>Password <span className="text-error-500">*</span></Label>
                     <div className="relative">
-                      <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                      <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                       <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                         {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                       </span>
@@ -109,7 +113,7 @@ export default function SignInForm() {
                     <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">Keep me logged in</span>
                   </div>
                   <div>
-                    <Button className="w-full" size="sm" disabled={loading}>
+                    <Button className="w-full" size="sm" disabled={loading || !email.trim() || !password.trim()}>
                       {loading ? "Signing in..." : "Sign in"}
                     </Button>
                   </div>
