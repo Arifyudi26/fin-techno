@@ -121,8 +121,6 @@ interface UploadFormProps {
 function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [sourceType, setSourceType] = useState<"BANK" | "WALLET">("BANK");
   const [accountId, setAccountId] = useState("");
-  const [periodStart, setPeriodStart] = useState("");
-  const [periodEnd, setPeriodEnd] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -156,8 +154,8 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !accountId || !periodStart || !periodEnd) {
-      setError("Semua field wajib diisi.");
+    if (!file || !accountId) {
+      setError("Pilih rekening dan file terlebih dahulu.");
       return;
     }
     setError("");
@@ -168,8 +166,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     fd.append("file", file);
     fd.append("sourceType", sourceType);
     fd.append("accountId", accountId);
-    fd.append("periodStart", periodStart);
-    fd.append("periodEnd", periodEnd);
     fd.append("notes", notes);
 
     try {
@@ -356,34 +352,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             )}
           </div>
 
-          {/* Period */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Periode Mulai
-              </label>
-              <input
-                type="date"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-800 dark:text-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Periode Akhir
-              </label>
-              <input
-                type="date"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-800 dark:text-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                required
-              />
-            </div>
-          </div>
-
           {/* File drop zone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -547,7 +515,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             <button
               type="submit"
               disabled={
-                loading || !file || !accountId || !periodStart || !periodEnd
+                loading || !file || !accountId
               }
               className="flex-1 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
             >
