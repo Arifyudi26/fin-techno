@@ -4959,11 +4959,6 @@ svgo@^3.0.2:
     picocolors "^1.0.0"
     sax "^1.5.0"
 
-sweetalert2@^11.15.10:
-  version "11.26.24"
-  resolved "https://registry.npmjs.org/sweetalert2/-/sweetalert2-11.26.24.tgz"
-  integrity sha512-SLgukW4wicewpW5VOukSXY5Z6DL/z7HCOK2ODSjmQPiSphCN8gJAmh9npoceXOtBRNoDN0xIz+zHYthtfiHmjg==
-
 tailwind-merge@^3.5.0:
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/tailwind-merge/-/tailwind-merge-3.5.0.tgz#06502f4496ba15151445d97d916a26564d50d1ca"

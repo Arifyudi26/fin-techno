@@ -1,21 +1,13 @@
 import { useState } from "react";
 import Link from "next/link";
-import Swal from "sweetalert2";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@components/icons";
 import Label from "@components/form/Label";
 import Input from "@components/form/input/InputField";
 import Checkbox from "@components/form/input/Checkbox";
 import Button from "@components/ui/button/Button";
+import Toast from "@components/ui/toast/Toast";
+import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
-
-function showInProgress() {
-  Swal.fire({
-    title: "In Progress",
-    text: "This feature is currently under development.",
-    icon: "info",
-    confirmButtonText: "OK",
-  });
-}
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -23,24 +15,27 @@ export default function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { toastState, fire, close } = useToast();
+
+  const showInProgress = () => {
+    fire("info", "In Progress", { message: "This feature is currently under development." });
+  };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isChecked) {
-      Swal.fire({ title: "Please agree to the Terms and Conditions", icon: "warning" });
+      fire("warning", "Syarat & Ketentuan", { message: "Harap setujui syarat dan ketentuan terlebih dahulu." });
       return;
     }
     setLoading(true);
     try {
       await axiosGlobal.post("/auth/register", { email, password });
-      await Swal.fire({ title: "Registration Successful!", text: "Your account has been created.", icon: "success", timer: 2000, showConfirmButton: false });
-      window.location.href = "/auth/login";
+      fire("success", "Registrasi Berhasil!", { message: "Akun kamu berhasil dibuat.", duration: 2000 });
+      setTimeout(() => { window.location.href = "/auth/login"; }, 2000);
     } catch (error: unknown) {
-      Swal.fire({
-        title: "Registration Failed!",
-        text: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Please check your details and try again.",
-        icon: "error",
-        confirmButtonText: "Try Again",
+      fire("error", "Registrasi Gagal!", {
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Periksa kembali data kamu.",
+        confirmText: "Coba Lagi",
       });
     } finally {
       setLoading(false);
@@ -48,7 +43,9 @@ export default function SignUpForm() {
   };
 
   return (
-    <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
+    <>
+      <Toast {...toastState} onClose={close} />
+      <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
         <Link href="/" className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
           <ChevronLeftIcon className="size-5" />
@@ -127,5 +124,6 @@ export default function SignUpForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }
