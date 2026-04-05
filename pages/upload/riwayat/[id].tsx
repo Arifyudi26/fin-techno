@@ -114,7 +114,7 @@ export default function UploadDetail() {
 
   return (
     <AppLayout>
-      <PageMeta title={`Detail Upload — ${upload.fileName} | MyFinance`} description="Detail informasi upload mutasi" />
+      <PageMeta title={`Detail Upload — ${upload.fileName} | MyFinance`} description="Detail informasi upload e-statement" />
       <PageBreadcrumb pageTitle="Detail Upload" />
 
       {/* Back */}

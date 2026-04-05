@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
@@ -110,7 +110,7 @@ export default function IncomeReport() {
       ) : !summary ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">Belum ada data pemasukan untuk tahun {year}</p>
-          <Link href="/upload" className="mt-3 text-sm text-brand-500 hover:underline">Upload mutasi sekarang →</Link>
+          <Link href="/upload" className="mt-3 text-sm text-brand-500 hover:underline">Upload e-Statement sekarang →</Link>
         </div>
       ) : (
         <>
@@ -226,3 +226,4 @@ export default function IncomeReport() {
     </AppLayout>
   );
 }
+

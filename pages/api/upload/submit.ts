@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
-import { FileFormat, UploadStatus, TransactionType, MutationStatus } from "@prisma/client";
+import { FileFormat, UploadStatus, TransactionType, EStatementStatus } from "@prisma/client";
 import crypto from "crypto";
 
 export const config = { api: { bodyParser: false } };
@@ -281,7 +281,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 amount,
                 type,
                 balance: balance || null,
-                status: MutationStatus.PENDING,
+                status: EStatementStatus.PENDING,
                 categoryId: catId,
                 hash,
               },
@@ -297,7 +297,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 amount,
                 type,
                 balance: balance || null,
-                status: MutationStatus.PENDING,
+                status: EStatementStatus.PENDING,
                 categoryId: catId,
                 hash,
               },

@@ -16,7 +16,7 @@ enum Role {
 }
 
 // ═══════════════════════════════════════════════
-// ENUMS — bank mutation
+// ENUMS — bank e-statement
 // ═══════════════════════════════════════════════
 
 enum BankProvider {
@@ -72,7 +72,7 @@ enum TransactionType {
   DEBIT  // uang keluar
 }
 
-enum MutationStatus {
+enum EStatementStatus {
   PENDING   // belum diverifikasi
   VERIFIED  // sudah diverifikasi
   REJECTED  // ditolak / tidak valid
@@ -92,7 +92,7 @@ model User {
   role         Role           @default(user)
   createdAt    DateTime       @default(now())
 
-  // relasi bank mutation
+  // relasi bank e-statement
   bankAccounts         BankAccount[]
   uploadedStatements   BankStatementUpload[]
   verifiedTransactions BankTransaction[]     @relation("VerifiedBy")
@@ -105,7 +105,7 @@ model User {
 }
 
 // ═══════════════════════════════════════════════
-// BANK MUTATION MODELS
+// BANK E-STATEMENT MODELS
 // ═══════════════════════════════════════════════
 
 /// Master rekening bank — daftarkan dulu sebelum upload
@@ -129,7 +129,7 @@ model BankAccount {
   @@index([ownerId])
 }
 
-/// Upload e-statement / laporan mutasi bank
+/// Upload e-statement / laporan e-statement bank
 /// Satu upload = satu file (CSV / XLSX / PDF)
 /// Bisa upload lebih dari 1 file per rekening
 model BankStatementUpload {
@@ -190,7 +190,7 @@ model BankTransaction {
   balance         Decimal?        @db.Decimal(20, 2) // saldo setelah transaksi
 
   // kategorisasi & verifikasi
-  status          MutationStatus  @default(PENDING)
+  status          EStatementStatus  @default(PENDING)
   categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?
@@ -298,7 +298,7 @@ model DigitalWallet {
   @@index([ownerId])
 }
 
-/// Upload mutasi dompet digital
+/// Upload e-statement dompet digital
 model WalletStatementUpload {
   id             String         @id @default(uuid())
   walletId       String
@@ -341,7 +341,7 @@ model WalletStatementUpload {
   @@index([walletProvider])
 }
 
-/// Transaksi dari mutasi dompet digital
+/// Transaksi dari e-statement dompet digital
 model WalletTransaction {
   id              String          @id @default(uuid())
   walletId        String
@@ -354,7 +354,7 @@ model WalletTransaction {
   type            TransactionType
   balance         Decimal?        @db.Decimal(20, 2)
 
-  status          MutationStatus  @default(PENDING)
+  status          EStatementStatus  @default(PENDING)
   categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?

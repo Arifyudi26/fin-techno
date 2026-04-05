@@ -5,7 +5,7 @@ import {
   FileFormat,
   UploadStatus,
   TransactionType,
-  MutationStatus,
+  EStatementStatus,
   MergeStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -120,8 +120,8 @@ async function main() {
       data: {
         bankAccountId: accBCA.id,
         uploadedById: user.id,
-        fileName: `mutasi_bca_${monthLabel}.csv`,
-        fileUrl: `/uploads/mutasi_bca_${monthLabel}.csv`,
+        fileName: `e-statement_bca_${monthLabel}.csv`,
+        fileUrl: `/uploads/e-statement_bca_${monthLabel}.csv`,
         fileFormat: FileFormat.CSV,
         fileSizeBytes: 22_000 + mIdx * 500,
         bankProvider: BankProvider.BCA,
@@ -141,8 +141,8 @@ async function main() {
       data: {
         bankAccountId: accBRI.id,
         uploadedById: user.id,
-        fileName: `mutasi_bri_${monthLabel}.xlsx`,
-        fileUrl: `/uploads/mutasi_bri_${monthLabel}.xlsx`,
+        fileName: `e-statement_bri_${monthLabel}.xlsx`,
+        fileUrl: `/uploads/e-statement_bri_${monthLabel}.xlsx`,
         fileFormat: FileFormat.XLSX,
         fileSizeBytes: 16_000 + mIdx * 400,
         bankProvider: BankProvider.BRI,
@@ -171,7 +171,7 @@ async function main() {
         type: tpl.type,
         balance: 20_000_000 + mIdx * 1_500_000,
         categoryId: tpl.catId,
-        status: MutationStatus.VERIFIED,
+        status: EStatementStatus.VERIFIED,
         hash: `bca-${mIdx}-${txIdx}`,
       };
     });
@@ -189,7 +189,7 @@ async function main() {
         type: tpl.type,
         balance: 10_000_000 + mIdx * 800_000,
         categoryId: tpl.catId,
-        status: mIdx >= 10 ? MutationStatus.PENDING : MutationStatus.VERIFIED,
+        status: mIdx >= 10 ? EStatementStatus.PENDING : EStatementStatus.VERIFIED,
         hash: `bri-${mIdx}-${txIdx}`,
       };
     });
@@ -206,7 +206,7 @@ async function main() {
 
   // ── 5. Merge Reports ───────────────────────────────────────────────────────
   const verifiedTx = await prisma.bankTransaction.findMany({
-    where: { bankAccount: { ownerId: user.id }, status: MutationStatus.VERIFIED },
+    where: { bankAccount: { ownerId: user.id }, status: EStatementStatus.VERIFIED },
     take: 20,
     orderBy: { transactionDate: "asc" },
   });

@@ -21,8 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "DELETE") {
-    await db.digitalWallet.update({ where: { id }, data: { isActive: false } });
-    return res.status(200).json({ message: "Dompet dinonaktifkan" });
+    const txCount = await db.walletTransaction.count({ where: { walletId: id } });
+    if (txCount > 0) {
+      await db.digitalWallet.update({ where: { id }, data: { isActive: false } });
+      return res.status(200).json({ message: "Dompet dinonaktifkan (memiliki riwayat transaksi)", softDeleted: true });
+    }
+    await db.digitalWallet.delete({ where: { id } });
+    return res.status(200).json({ message: "Dompet berhasil dihapus", softDeleted: false });
   }
 
   return res.status(405).end();

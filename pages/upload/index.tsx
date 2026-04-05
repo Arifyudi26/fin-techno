@@ -8,7 +8,13 @@ import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
 import Badge from "@components/ui/badge/Badge";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@components/ui/table";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AccountOption {
@@ -59,7 +65,11 @@ interface TxRow {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatIDR = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(v);
 
 const formatBytes = (b: number | null) => {
   if (!b) return "-";
@@ -69,21 +79,43 @@ const formatBytes = (b: number | null) => {
 };
 
 const formatDate = (d: string) =>
-  new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+  new Date(d).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
-const statusConfig: Record<string, { label: string; color: "success" | "error" | "warning" | "info" | "light" | "dark" | "primary" }> = {
-  SUCCESS:    { label: "Berhasil",   color: "success" },
-  FAILED:     { label: "Gagal",      color: "error" },
-  PARTIAL:    { label: "Sebagian",   color: "warning" },
-  PROCESSING: { label: "Memproses",  color: "info" },
-  UPLOADING:  { label: "Mengupload", color: "info" },
+const statusConfig: Record<
+  string,
+  {
+    label: string;
+    color:
+      | "success"
+      | "error"
+      | "warning"
+      | "info"
+      | "light"
+      | "dark"
+      | "primary";
+  }
+> = {
+  SUCCESS: { label: "Berhasil", color: "success" },
+  FAILED: { label: "Gagal", color: "error" },
+  PARTIAL: { label: "Sebagian", color: "warning" },
+  PROCESSING: { label: "Memproses", color: "info" },
+  UPLOADING: { label: "Mengupload", color: "info" },
 };
 
 // ─── Upload Form Modal ────────────────────────────────────────────────────────
 interface UploadFormProps {
   accounts: AccountOption[];
   onClose: () => void;
-  onSuccess: (result: { uploadId?: string; status: string; parsedRows: number; totalRows: number }) => void;
+  onSuccess: (result: {
+    uploadId?: string;
+    status: string;
+    parsedRows: number;
+    totalRows: number;
+  }) => void;
 }
 
 function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
@@ -145,13 +177,16 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       const res = await axiosGlobal.post("/upload/submit", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (ev) => {
-          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
+          if (ev.total)
+            setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
         },
       });
       setProgress(100);
       onSuccess(res.data);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload gagal. Coba lagi.";
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Upload gagal. Coba lagi.";
       setError(msg);
       setProgress(0);
     } finally {
@@ -161,31 +196,56 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={!loading ? onClose : undefined} />
+      <div
+        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+        onClick={!loading ? onClose : undefined}
+      />
       <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Upload Mutasi</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Rekening bank atau dompet digital</p>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+              Upload e-Statement
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Rekening bank atau dompet digital
+            </p>
           </div>
           {!loading && (
-            <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+        >
           {/* Source type toggle */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Jenis Sumber</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Jenis Sumber
+            </label>
             <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
               {(["BANK", "WALLET"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
-                  onClick={() => { setSourceType(t); setAccountId(""); }}
+                  onClick={() => {
+                    setSourceType(t);
+                    setAccountId("");
+                  }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     sourceType === t
                       ? "bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm"
@@ -193,9 +253,33 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                   }`}
                 >
                   {t === "BANK" ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.8" /><path d="M2 10h20" stroke="currentColor" strokeWidth="1.8" /><circle cx="17" cy="15" r="1.5" fill="currentColor" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <rect
+                        x="2"
+                        y="6"
+                        width="20"
+                        height="14"
+                        rx="3"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M2 10h20"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
+                      <circle cx="17" cy="15" r="1.5" fill="currentColor" />
+                    </svg>
                   )}
                   {t === "BANK" ? "Rekening Bank" : "Dompet Digital"}
                 </button>
@@ -211,9 +295,16 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             {filtered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Belum ada {sourceType === "BANK" ? "rekening bank" : "dompet digital"} terdaftar.
+                  Belum ada{" "}
+                  {sourceType === "BANK" ? "rekening bank" : "dompet digital"}{" "}
+                  terdaftar.
                 </p>
-                <a href={sourceType === "BANK" ? "/bank-accounts/add" : "#"} className="text-sm text-brand-500 hover:underline mt-1 inline-block">
+                <a
+                  href={
+                    sourceType === "BANK" ? "/bank-accounts/add" : "/wallets"
+                  }
+                  className="text-sm text-brand-500 hover:underline mt-1 inline-block"
+                >
                   + Tambah sekarang
                 </a>
               </div>
@@ -230,17 +321,33 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                         : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                   >
-                    {sourceType === "BANK"
-                      ? <BankProviderIcon provider={acc.provider} size={36} />
-                      : <WalletProviderIcon provider={acc.provider} size={36} />
-                    }
+                    {sourceType === "BANK" ? (
+                      <BankProviderIcon provider={acc.provider} size={36} />
+                    ) : (
+                      <WalletProviderIcon provider={acc.provider} size={36} />
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 dark:text-white/90">{acc.accountName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{acc.provider} · {acc.identifier}</p>
+                      <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                        {acc.accountName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {acc.provider} · {acc.identifier}
+                      </p>
                     </div>
                     {accountId === acc.id && (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-brand-500 shrink-0">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L10 14.586l-2.293-2.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 000-1.414z" fill="currentColor" />
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="text-brand-500 shrink-0"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          clipRule="evenodd"
+                          d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L10 14.586l-2.293-2.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 000-1.414z"
+                          fill="currentColor"
+                        />
                       </svg>
                     )}
                   </button>
@@ -252,7 +359,9 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* Period */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Periode Mulai</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Periode Mulai
+              </label>
               <input
                 type="date"
                 value={periodStart}
@@ -262,7 +371,9 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Periode Akhir</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Periode Akhir
+              </label>
               <input
                 type="date"
                 value={periodEnd}
@@ -275,9 +386,14 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
           {/* File drop zone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File Mutasi</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              File e-Statement
+            </label>
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
@@ -294,18 +410,40 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                 type="file"
                 accept=".csv,.xlsx,.xls,.pdf"
                 className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                }}
               />
               {file ? (
                 <>
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-success-500">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L10 14.586l-2.293-2.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 000-1.414z" fill="currentColor" />
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-success-500"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L10 14.586l-2.293-2.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 000-1.414z"
+                      fill="currentColor"
+                    />
                   </svg>
-                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">{file.name}</p>
-                  <p className="text-xs text-gray-500">{formatBytes(file.size)}</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatBytes(file.size)}
+                  </p>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setFile(null); if (fileRef.current) fileRef.current.value = ""; }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                      if (fileRef.current) fileRef.current.value = "";
+                    }}
                     className="text-xs text-error-500 hover:underline"
                   >
                     Hapus file
@@ -313,13 +451,30 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                 </>
               ) : (
                 <>
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-gray-400">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-gray-400"
+                  >
+                    <path
+                      d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-brand-500">Klik untuk upload</span> atau drag & drop
+                    <span className="font-medium text-brand-500">
+                      Klik untuk upload
+                    </span>{" "}
+                    atau drag & drop
                   </p>
-                  <p className="text-xs text-gray-400">CSV, XLSX, XLS, PDF · Maks. 10 MB</p>
+                  <p className="text-xs text-gray-400">
+                    CSV, XLSX, XLS, PDF · Maks. 10 MB
+                  </p>
                 </>
               )}
             </div>
@@ -327,12 +482,15 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Catatan <span className="text-gray-400 font-normal">(opsional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Catatan{" "}
+              <span className="text-gray-400 font-normal">(opsional)</span>
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="Contoh: Mutasi BCA Januari 2025"
+              placeholder="Contoh: e-Statement BCA Januari 2025"
               className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-none"
             />
           </div>
@@ -340,10 +498,23 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* Error */}
           {error && (
             <div className="flex items-start gap-2.5 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-error-500 shrink-0 mt-0.5">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 5a1 1 0 112 0v5a1 1 0 11-2 0V7zm1 9a1.25 1.25 0 100-2.5A1.25 1.25 0 0013 16z" fill="currentColor" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-error-500 shrink-0 mt-0.5"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 5a1 1 0 112 0v5a1 1 0 11-2 0V7zm1 9a1.25 1.25 0 100-2.5A1.25 1.25 0 0013 16z"
+                  fill="currentColor"
+                />
               </svg>
-              <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
+              <p className="text-sm text-error-700 dark:text-error-400">
+                {error}
+              </p>
             </div>
           )}
 
@@ -375,20 +546,47 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             </button>
             <button
               type="submit"
-              disabled={loading || !file || !accountId || !periodStart || !periodEnd}
+              disabled={
+                loading || !file || !accountId || !periodStart || !periodEnd
+              }
               className="flex-1 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg
+                    className="animate-spin"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   Memproses...
                 </>
               ) : (
                 <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   Upload Sekarang
                 </>
               )}
@@ -421,30 +619,66 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
       .finally(() => setLoading(false));
   }, [uploadId, sourceType]);
 
-  const filteredTx = detail?.transactions.filter((t) => {
-    const matchType = txFilter === "ALL" || t.type === txFilter;
-    const matchSearch = !search || t.description.toLowerCase().includes(search.toLowerCase()) || (t.reference ?? "").toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
-  }) ?? [];
+  const filteredTx =
+    detail?.transactions.filter((t) => {
+      const matchType = txFilter === "ALL" || t.type === txFilter;
+      const matchSearch =
+        !search ||
+        t.description.toLowerCase().includes(search.toLowerCase()) ||
+        (t.reference ?? "").toLowerCase().includes(search.toLowerCase());
+      return matchType && matchSearch;
+    }) ?? [];
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Detail Upload</h2>
-          <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Detail Upload
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <svg className="animate-spin text-brand-500" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="animate-spin text-brand-500"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
             </div>
           ) : detail ? (
@@ -452,20 +686,37 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               {/* Info cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Baris</p>
-                  <p className="text-xl font-bold text-gray-800 dark:text-white/90">{detail.totalRows}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Total Baris
+                  </p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-white/90">
+                    {detail.totalRows}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-success-50 dark:bg-success-500/10 p-4">
-                  <p className="text-xs text-success-600 dark:text-success-400 mb-1">Berhasil</p>
-                  <p className="text-xl font-bold text-success-700 dark:text-success-400">{detail.parsedRows}</p>
+                  <p className="text-xs text-success-600 dark:text-success-400 mb-1">
+                    Berhasil
+                  </p>
+                  <p className="text-xl font-bold text-success-700 dark:text-success-400">
+                    {detail.parsedRows}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-error-50 dark:bg-error-500/10 p-4">
-                  <p className="text-xs text-error-600 dark:text-error-400 mb-1">Gagal</p>
-                  <p className="text-xl font-bold text-error-700 dark:text-error-400">{detail.failedRows}</p>
+                  <p className="text-xs text-error-600 dark:text-error-400 mb-1">
+                    Gagal
+                  </p>
+                  <p className="text-xl font-bold text-error-700 dark:text-error-400">
+                    {detail.failedRows}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                  <Badge size="sm" color={statusConfig[detail.status]?.color ?? "light"}>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Status
+                  </p>
+                  <Badge
+                    size="sm"
+                    color={statusConfig[detail.status]?.color ?? "light"}
+                  >
                     {statusConfig[detail.status]?.label ?? detail.status}
                   </Badge>
                 </div>
@@ -474,26 +725,53 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               {/* Summary */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4">
-                  <p className="text-xs text-success-600 dark:text-success-400 mb-1">Total Kredit (Masuk)</p>
-                  <p className="text-lg font-bold text-success-700 dark:text-success-400">+{formatIDR(detail.totalCredit)}</p>
+                  <p className="text-xs text-success-600 dark:text-success-400 mb-1">
+                    Total Kredit (Masuk)
+                  </p>
+                  <p className="text-lg font-bold text-success-700 dark:text-success-400">
+                    +{formatIDR(detail.totalCredit)}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
-                  <p className="text-xs text-error-600 dark:text-error-400 mb-1">Total Debit (Keluar)</p>
-                  <p className="text-lg font-bold text-error-700 dark:text-error-400">-{formatIDR(detail.totalDebit)}</p>
+                  <p className="text-xs text-error-600 dark:text-error-400 mb-1">
+                    Total Debit (Keluar)
+                  </p>
+                  <p className="text-lg font-bold text-error-700 dark:text-error-400">
+                    -{formatIDR(detail.totalDebit)}
+                  </p>
                 </div>
               </div>
 
               {/* Meta info */}
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
                 {[
-                  ["Akun", `${detail.provider} · ${detail.accountIdentifier} (${detail.accountName})`],
-                  ["File", `${detail.fileName} · ${formatBytes(detail.fileSizeBytes)} · ${detail.fileFormat}`],
-                  ["Periode", `${formatDate(detail.periodStart)} – ${formatDate(detail.periodEnd)}`],
-                  ["Diupload oleh", `${detail.uploadedBy} · ${formatDate(detail.uploadedAt)}`],
+                  [
+                    "Akun",
+                    `${detail.provider} · ${detail.accountIdentifier} (${detail.accountName})`,
+                  ],
+                  [
+                    "File",
+                    `${detail.fileName} · ${formatBytes(detail.fileSizeBytes)} · ${detail.fileFormat}`,
+                  ],
+                  [
+                    "Periode",
+                    `${formatDate(detail.periodStart)} – ${formatDate(detail.periodEnd)}`,
+                  ],
+                  [
+                    "Diupload oleh",
+                    `${detail.uploadedBy} · ${formatDate(detail.uploadedAt)}`,
+                  ],
                 ].map(([label, value]) => (
-                  <div key={label} className="flex items-center gap-4 px-4 py-3">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0">{label}</span>
-                    <span className="text-sm text-gray-800 dark:text-white/90">{value}</span>
+                  <div
+                    key={label}
+                    className="flex items-center gap-4 px-4 py-3"
+                  >
+                    <span className="text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0">
+                      {label}
+                    </span>
+                    <span className="text-sm text-gray-800 dark:text-white/90">
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -501,10 +779,23 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               {/* Error message */}
               {detail.errorMessage && (
                 <div className="flex items-start gap-2.5 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-error-500 shrink-0 mt-0.5">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 5a1 1 0 112 0v5a1 1 0 11-2 0V7zm1 9a1.25 1.25 0 100-2.5A1.25 1.25 0 0013 16z" fill="currentColor" />
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-error-500 shrink-0 mt-0.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 5a1 1 0 112 0v5a1 1 0 11-2 0V7zm1 9a1.25 1.25 0 100-2.5A1.25 1.25 0 0013 16z"
+                      fill="currentColor"
+                    />
                   </svg>
-                  <p className="text-sm text-error-700 dark:text-error-400">{detail.errorMessage}</p>
+                  <p className="text-sm text-error-700 dark:text-error-400">
+                    {detail.errorMessage}
+                  </p>
                 </div>
               )}
 
@@ -513,12 +804,33 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 <div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
                     <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 flex-1">
-                      Transaksi <span className="text-gray-400 font-normal">({filteredTx.length} dari {detail.transactions.length})</span>
+                      Transaksi{" "}
+                      <span className="text-gray-400 font-normal">
+                        ({filteredTx.length} dari {detail.transactions.length})
+                      </span>
                     </h3>
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        >
+                          <circle
+                            cx="11"
+                            cy="11"
+                            r="8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          />
+                          <path
+                            d="M21 21l-4.35-4.35"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
                         </svg>
                         <input
                           type="text"
@@ -539,7 +851,11 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                                 : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                             }`}
                           >
-                            {f === "ALL" ? "Semua" : f === "CREDIT" ? "Masuk" : "Keluar"}
+                            {f === "ALL"
+                              ? "Semua"
+                              : f === "CREDIT"
+                                ? "Masuk"
+                                : "Keluar"}
                           </button>
                         ))}
                       </div>
@@ -549,34 +865,79 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                     <Table>
                       <TableHeader className="border-b border-gray-100 dark:border-gray-800">
                         <TableRow>
-                          {["Tanggal", "Keterangan", "Referensi", "Kategori", "Jumlah", "Saldo", "Status"].map((h) => (
-                            <TableCell key={h} isHeader className="py-2.5 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</TableCell>
+                          {[
+                            "Tanggal",
+                            "Keterangan",
+                            "Referensi",
+                            "Kategori",
+                            "Jumlah",
+                            "Saldo",
+                            "Status",
+                          ].map((h) => (
+                            <TableCell
+                              key={h}
+                              isHeader
+                              className="py-2.5 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
+                            >
+                              {h}
+                            </TableCell>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {filteredTx.length === 0 ? (
                           <TableRow>
-                            <TableCell className="py-8 text-center text-sm text-gray-400" colSpan={7}>Tidak ada transaksi</TableCell>
+                            <TableCell
+                              className="py-8 text-center text-sm text-gray-400"
+                              colSpan={7}
+                            >
+                              Tidak ada transaksi
+                            </TableCell>
                           </TableRow>
                         ) : (
                           filteredTx.map((tx) => (
                             <TableRow key={tx.id}>
-                              <TableCell className="py-2.5 px-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatDate(tx.date)}</TableCell>
-                              <TableCell className="py-2.5 px-3 text-xs text-gray-800 dark:text-white/90 max-w-[180px] truncate">{tx.description}</TableCell>
-                              <TableCell className="py-2.5 px-3 text-xs text-gray-400 whitespace-nowrap">{tx.reference ?? "-"}</TableCell>
-                              <TableCell className="py-2.5 px-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{tx.category}</TableCell>
+                              <TableCell className="py-2.5 px-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                {formatDate(tx.date)}
+                              </TableCell>
+                              <TableCell className="py-2.5 px-3 text-xs text-gray-800 dark:text-white/90 max-w-[180px] truncate">
+                                {tx.description}
+                              </TableCell>
+                              <TableCell className="py-2.5 px-3 text-xs text-gray-400 whitespace-nowrap">
+                                {tx.reference ?? "-"}
+                              </TableCell>
+                              <TableCell className="py-2.5 px-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                {tx.category}
+                              </TableCell>
                               <TableCell className="py-2.5 px-3 text-xs font-semibold whitespace-nowrap">
-                                <span className={tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}>
-                                  {tx.type === "CREDIT" ? "+" : "-"}{formatIDR(tx.amount)}
+                                <span
+                                  className={
+                                    tx.type === "CREDIT"
+                                      ? "text-success-600 dark:text-success-400"
+                                      : "text-error-600 dark:text-error-400"
+                                  }
+                                >
+                                  {tx.type === "CREDIT" ? "+" : "-"}
+                                  {formatIDR(tx.amount)}
                                 </span>
                               </TableCell>
                               <TableCell className="py-2.5 px-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                {tx.balance != null ? formatIDR(tx.balance) : "-"}
+                                {tx.balance != null
+                                  ? formatIDR(tx.balance)
+                                  : "-"}
                               </TableCell>
                               <TableCell className="py-2.5 px-3">
-                                <Badge size="sm" color={tx.status === "VERIFIED" ? "success" : "warning"}>
-                                  {tx.status === "VERIFIED" ? "Verified" : "Pending"}
+                                <Badge
+                                  size="sm"
+                                  color={
+                                    tx.status === "VERIFIED"
+                                      ? "success"
+                                      : "warning"
+                                  }
+                                >
+                                  {tx.status === "VERIFIED"
+                                    ? "Verified"
+                                    : "Pending"}
                                 </Badge>
                               </TableCell>
                             </TableRow>
@@ -586,13 +947,17 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                     </Table>
                   </div>
                   {detail.transactions.length >= 50 && (
-                    <p className="text-xs text-gray-400 mt-2 text-center">Menampilkan 50 transaksi terbaru</p>
+                    <p className="text-xs text-gray-400 mt-2 text-center">
+                      Menampilkan 50 transaksi terbaru
+                    </p>
                   )}
                 </div>
               )}
             </div>
           ) : (
-            <div className="py-20 text-center text-sm text-gray-400">Data tidak ditemukan</div>
+            <div className="py-20 text-center text-sm text-gray-400">
+              Data tidak ditemukan
+            </div>
           )}
         </div>
       </div>
@@ -601,8 +966,17 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
 }
 
 // ─── Upload Card ──────────────────────────────────────────────────────────────
-function UploadCard({ item, onViewDetail }: { item: UploadItem; onViewDetail: () => void }) {
-  const cfg = statusConfig[item.status] ?? { label: item.status, color: "light" as const };
+function UploadCard({
+  item,
+  onViewDetail,
+}: {
+  item: UploadItem;
+  onViewDetail: () => void;
+}) {
+  const cfg = statusConfig[item.status] ?? {
+    label: item.status,
+    color: "light" as const,
+  };
   const netFlow = item.totalCredit - item.totalDebit;
 
   return (
@@ -610,32 +984,79 @@ function UploadCard({ item, onViewDetail }: { item: UploadItem; onViewDetail: ()
       {/* Top row */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          {item.sourceType === "BANK"
-            ? <BankProviderIcon provider={item.provider} size={40} />
-            : <WalletProviderIcon provider={item.provider} size={40} />
-          }
+          {item.sourceType === "BANK" ? (
+            <BankProviderIcon provider={item.provider} size={40} />
+          ) : (
+            <WalletProviderIcon provider={item.provider} size={40} />
+          )}
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{item.accountName}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{item.provider} · {item.accountIdentifier}</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
+              {item.accountName}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {item.provider} · {item.accountIdentifier}
+            </p>
           </div>
         </div>
-        <Badge size="sm" color={cfg.color}>{cfg.label}</Badge>
+        <Badge size="sm" color={cfg.color}>
+          {cfg.label}
+        </Badge>
       </div>
 
       {/* File info */}
       <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          className="text-gray-400 shrink-0"
+        >
+          <path
+            d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M14 2v6h6"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
-        <span className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1">{item.fileName}</span>
-        <span className="text-xs text-gray-400 shrink-0">{formatBytes(item.fileSizeBytes)}</span>
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shrink-0">{item.fileFormat}</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1">
+          {item.fileName}
+        </span>
+        <span className="text-xs text-gray-400 shrink-0">
+          {formatBytes(item.fileSizeBytes)}
+        </span>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shrink-0">
+          {item.fileFormat}
+        </span>
       </div>
 
       {/* Period */}
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-4">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" /><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="18"
+            rx="2"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <path
+            d="M16 2v4M8 2v4M3 10h18"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
         {formatDate(item.periodStart)} – {formatDate(item.periodEnd)}
       </div>
 
@@ -643,47 +1064,82 @@ function UploadCard({ item, onViewDetail }: { item: UploadItem; onViewDetail: ()
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
           <p className="text-xs text-gray-400 mb-0.5">Baris</p>
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{item.totalRows}</p>
+          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+            {item.totalRows}
+          </p>
         </div>
         <div className="text-center p-2 rounded-lg bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Berhasil</p>
-          <p className="text-sm font-bold text-success-700 dark:text-success-400">{item.parsedRows}</p>
+          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
+            Berhasil
+          </p>
+          <p className="text-sm font-bold text-success-700 dark:text-success-400">
+            {item.parsedRows}
+          </p>
         </div>
         <div className="text-center p-2 rounded-lg bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Gagal</p>
-          <p className="text-sm font-bold text-error-700 dark:text-error-400">{item.failedRows}</p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">
+            Gagal
+          </p>
+          <p className="text-sm font-bold text-error-700 dark:text-error-400">
+            {item.failedRows}
+          </p>
         </div>
       </div>
 
       {/* Credit / Debit */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Masuk</p>
-          <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">+{formatIDR(item.totalCredit)}</p>
+          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
+            Masuk
+          </p>
+          <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
+            +{formatIDR(item.totalCredit)}
+          </p>
         </div>
         <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Keluar</p>
-          <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">-{formatIDR(item.totalDebit)}</p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">
+            Keluar
+          </p>
+          <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
+            -{formatIDR(item.totalDebit)}
+          </p>
         </div>
       </div>
 
       {/* Net flow */}
-      <div className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
-        <span className="text-xs text-gray-500 dark:text-gray-400">Net Flow</span>
-        <span className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}>
-          {netFlow >= 0 ? "+" : ""}{formatIDR(netFlow)}
+      <div
+        className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}
+      >
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Net Flow
+        </span>
+        <span
+          className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}
+        >
+          {netFlow >= 0 ? "+" : ""}
+          {formatIDR(netFlow)}
         </span>
       </div>
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-400">{formatDate(item.uploadedAt)}</span>
+        <span className="text-xs text-gray-400">
+          {formatDate(item.uploadedAt)}
+        </span>
         <button
           onClick={onViewDetail}
           className="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors"
         >
           Lihat Detail
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M5 12h14M12 5l7 7-7 7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
       </div>
     </div>
@@ -697,8 +1153,13 @@ export default function UploadPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [loadingUploads, setLoadingUploads] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [detailItem, setDetailItem] = useState<{ id: string; sourceType: "BANK" | "WALLET" } | null>(null);
-  const [filterType, setFilterType] = useState<"ALL" | "BANK" | "WALLET">("ALL");
+  const [detailItem, setDetailItem] = useState<{
+    id: string;
+    sourceType: "BANK" | "WALLET";
+  } | null>(null);
+  const [filterType, setFilterType] = useState<"ALL" | "BANK" | "WALLET">(
+    "ALL",
+  );
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const { toastState, fire, close } = useToast();
@@ -731,14 +1192,23 @@ export default function UploadPage() {
     fetchUploads();
   }, [fetchAccounts, fetchUploads]);
 
-  const handleUploadSuccess = (result: { uploadId?: string; status: string; parsedRows: number; totalRows: number }) => {
+  const handleUploadSuccess = (result: {
+    uploadId?: string;
+    status: string;
+    parsedRows: number;
+    totalRows: number;
+  }) => {
     setShowForm(false);
     fetchUploads();
     const isSuccess = result.status === "SUCCESS";
     const isPartial = result.status === "PARTIAL";
     fire(
       isSuccess ? "success" : isPartial ? "warning" : "error",
-      isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
+      isSuccess
+        ? "Upload Berhasil"
+        : isPartial
+          ? "Upload Sebagian"
+          : "Upload Gagal",
       {
         message: isSuccess
           ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
@@ -746,14 +1216,15 @@ export default function UploadPage() {
             ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil. Beberapa baris gagal diproses.`
             : "Terjadi kesalahan saat memproses file.",
         duration: 5000,
-      }
+      },
     );
   };
 
   const filteredUploads = uploads.filter((u) => {
     const matchType = filterType === "ALL" || u.sourceType === filterType;
     const matchStatus = filterStatus === "ALL" || u.status === filterStatus;
-    const matchSearch = !searchQuery ||
+    const matchSearch =
+      !searchQuery ||
       u.accountName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.fileName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -771,26 +1242,74 @@ export default function UploadPage() {
 
   return (
     <AppLayout>
-      <PageMeta title="Upload Mutasi | MyFinance" description="Upload mutasi rekening bank dan dompet digital" />
-      <PageBreadcrumb pageTitle="Upload Mutasi" />
+      <PageMeta
+        title="Upload e-Statement | MyFinance"
+        description="Upload e-Statement rekening bank dan dompet digital"
+      />
+      <PageBreadcrumb pageTitle="Upload e-Statement" />
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total Upload", value: stats.total, icon: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12", color: "text-brand-500", bg: "bg-brand-50 dark:bg-brand-500/10" },
-          { label: "Berhasil", value: stats.success, icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-success-500", bg: "bg-success-50 dark:bg-success-500/10" },
-          { label: "Gagal", value: stats.failed, icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-error-500", bg: "bg-error-50 dark:bg-error-500/10" },
-          { label: "Sebagian", value: stats.partial, icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z", color: "text-warning-500", bg: "bg-warning-50 dark:bg-warning-500/10" },
+          {
+            label: "Total Upload",
+            value: stats.total,
+            icon: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12",
+            color: "text-brand-500",
+            bg: "bg-brand-50 dark:bg-brand-500/10",
+          },
+          {
+            label: "Berhasil",
+            value: stats.success,
+            icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+            color: "text-success-500",
+            bg: "bg-success-50 dark:bg-success-500/10",
+          },
+          {
+            label: "Gagal",
+            value: stats.failed,
+            icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
+            color: "text-error-500",
+            bg: "bg-error-50 dark:bg-error-500/10",
+          },
+          {
+            label: "Sebagian",
+            value: stats.partial,
+            icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+            color: "text-warning-500",
+            bg: "bg-warning-50 dark:bg-warning-500/10",
+          },
         ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4 flex items-center gap-4">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.bg} shrink-0`}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className={s.color}>
-                <path d={s.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <div
+            key={s.label}
+            className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4 flex items-center gap-4"
+          >
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.bg} shrink-0`}
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                className={s.color}
+              >
+                <path
+                  d={s.icon}
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{s.label}</p>
-              <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{s.value}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {s.label}
+              </p>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                {s.value}
+              </p>
             </div>
           </div>
         ))}
@@ -801,30 +1320,95 @@ export default function UploadPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="rounded-2xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4 flex items-center gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-100 dark:bg-success-500/20 shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-success-600"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-success-600"
+              >
+                <path
+                  d="M12 19V5M5 12l7-7 7 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
             <div>
-              <p className="text-xs text-success-600 dark:text-success-400">Total Kredit</p>
-              <p className="text-base font-bold text-success-700 dark:text-success-400">+{formatIDR(stats.totalCredit)}</p>
+              <p className="text-xs text-success-600 dark:text-success-400">
+                Total Kredit
+              </p>
+              <p className="text-base font-bold text-success-700 dark:text-success-400">
+                +{formatIDR(stats.totalCredit)}
+              </p>
             </div>
           </div>
           <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4 flex items-center gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-error-100 dark:bg-error-500/20 shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-error-600"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-error-600"
+              >
+                <path
+                  d="M12 5v14M5 12l7 7 7-7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
             <div>
-              <p className="text-xs text-error-600 dark:text-error-400">Total Debit</p>
-              <p className="text-base font-bold text-error-700 dark:text-error-400">-{formatIDR(stats.totalDebit)}</p>
+              <p className="text-xs text-error-600 dark:text-error-400">
+                Total Debit
+              </p>
+              <p className="text-base font-bold text-error-700 dark:text-error-400">
+                -{formatIDR(stats.totalDebit)}
+              </p>
             </div>
           </div>
-          <div className={`rounded-2xl border p-4 flex items-center gap-4 ${stats.totalCredit - stats.totalDebit >= 0 ? "border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10" : "border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10"}`}>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${stats.totalCredit - stats.totalDebit >= 0 ? "bg-success-100 dark:bg-success-500/20" : "bg-error-100 dark:bg-error-500/20"}`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={stats.totalCredit - stats.totalDebit >= 0 ? "text-success-600" : "text-error-600"}><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <div
+            className={`rounded-2xl border p-4 flex items-center gap-4 ${stats.totalCredit - stats.totalDebit >= 0 ? "border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10" : "border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10"}`}
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${stats.totalCredit - stats.totalDebit >= 0 ? "bg-success-100 dark:bg-success-500/20" : "bg-error-100 dark:bg-error-500/20"}`}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                className={
+                  stats.totalCredit - stats.totalDebit >= 0
+                    ? "text-success-600"
+                    : "text-error-600"
+                }
+              >
+                <path
+                  d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
             <div>
-              <p className={`text-xs ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>Net Flow</p>
-              <p className={`text-base font-bold ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}>
-                {stats.totalCredit - stats.totalDebit >= 0 ? "+" : ""}{formatIDR(stats.totalCredit - stats.totalDebit)}
+              <p
+                className={`text-xs ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}
+              >
+                Net Flow
+              </p>
+              <p
+                className={`text-base font-bold ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}
+              >
+                {stats.totalCredit - stats.totalDebit >= 0 ? "+" : ""}
+                {formatIDR(stats.totalCredit - stats.totalDebit)}
               </p>
             </div>
           </div>
@@ -834,8 +1418,26 @@ export default function UploadPage() {
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
         <div className="flex-1 relative">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+          >
+            <circle
+              cx="11"
+              cy="11"
+              r="8"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M21 21l-4.35-4.35"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
           <input
             type="text"
@@ -848,7 +1450,9 @@ export default function UploadPage() {
         <div className="flex items-center gap-2">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value as "ALL" | "BANK" | "WALLET")}
+            onChange={(e) =>
+              setFilterType(e.target.value as "ALL" | "BANK" | "WALLET")
+            }
             className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           >
             <option value="ALL">Semua Jenis</option>
@@ -871,7 +1475,15 @@ export default function UploadPage() {
             disabled={loadingAccounts}
             className="flex items-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 px-4 py-2.5 text-sm font-medium text-white transition-colors whitespace-nowrap"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             Upload Baru
           </button>
         </div>
@@ -881,7 +1493,10 @@ export default function UploadPage() {
       {loadingUploads ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 space-y-3">
+            <div
+              key={i}
+              className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 space-y-3"
+            >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
                 <div className="flex-1 space-y-1.5">
@@ -891,10 +1506,20 @@ export default function UploadPage() {
               </div>
               <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
               <div className="grid grid-cols-3 gap-2">
-                {[...Array(3)].map((_, j) => <div key={j} className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+                {[...Array(3)].map((_, j) => (
+                  <div
+                    key={j}
+                    className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse"
+                  />
+                ))}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {[...Array(2)].map((_, j) => <div key={j} className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+                {[...Array(2)].map((_, j) => (
+                  <div
+                    key={j}
+                    className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse"
+                  />
+                ))}
               </div>
             </div>
           ))}
@@ -902,8 +1527,20 @@ export default function UploadPage() {
       ) : filteredUploads.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-gray-400">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-gray-400"
+            >
+              <path
+                d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
           <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -911,7 +1548,7 @@ export default function UploadPage() {
           </p>
           <p className="text-sm text-gray-400 mb-5">
             {uploads.length === 0
-              ? "Upload mutasi rekening bank atau dompet digital Anda"
+              ? "Upload e-Statement rekening bank atau dompet digital Anda"
               : "Coba ubah filter atau kata kunci pencarian"}
           </p>
           {uploads.length === 0 && (
@@ -919,7 +1556,14 @@ export default function UploadPage() {
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
               Upload Pertama
             </button>
           )}
@@ -930,7 +1574,9 @@ export default function UploadPage() {
             <UploadCard
               key={item.id}
               item={item}
-              onViewDetail={() => setDetailItem({ id: item.id, sourceType: item.sourceType })}
+              onViewDetail={() =>
+                setDetailItem({ id: item.id, sourceType: item.sourceType })
+              }
             />
           ))}
         </div>
@@ -956,3 +1602,4 @@ export default function UploadPage() {
     </AppLayout>
   );
 }
+

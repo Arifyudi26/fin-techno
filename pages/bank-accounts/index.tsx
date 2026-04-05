@@ -64,6 +64,25 @@ export default function BankAccounts() {
     }
   };
 
+  const handleDelete = async (acc: BankAccount) => {
+    const hasHistory = acc.totalTransactions > 0 || acc.totalUploads > 0;
+    const ok = await confirm("error", "Hapus Rekening?", {
+      message: hasHistory
+        ? `${acc.bankProvider} · ${acc.accountNumber} memiliki ${acc.totalTransactions} transaksi dan ${acc.totalUploads} upload. Semua data terkait akan dihapus permanen.`
+        : `${acc.bankProvider} · ${acc.accountNumber} akan dihapus permanen.`,
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+    if (!ok) return;
+    try {
+      await axiosGlobal.delete(`/bank-accounts/${acc.id}`);
+      fire("success", "Rekening berhasil dihapus", { duration: 3000 });
+      fetchAccounts();
+    } catch {
+      fire("error", "Gagal menghapus rekening");
+    }
+  };
+
   const activeAccounts = accounts.filter((a) => a.isActive);
   const totalBalance = activeAccounts.reduce((s, a) => s + a.lastBalance, 0);
 
@@ -151,16 +170,34 @@ export default function BankAccounts() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleToggleActive(acc)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
                   >
                     {acc.isActive ? "Nonaktifkan" : "Aktifkan"}
                   </button>
-                  <Link
-                    href={`/upload?account=${acc.id}`}
-                    className="flex-1 text-center rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600"
+                  {acc.isActive ? (
+                    <Link
+                      href={`/upload?account=${acc.id}`}
+                      className="flex-1 text-center rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600"
+                    >
+                      Upload e-Statement
+                    </Link>
+                  ) : (
+                    <span
+                      title="Aktifkan rekening terlebih dahulu"
+                      className="flex-1 text-center rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-2 text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                    >
+                      Upload e-Statement
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(acc)}
+                    title="Hapus rekening"
+                    className="inline-flex items-center justify-center rounded-lg border border-error-200 dark:border-error-500/30 bg-error-50 dark:bg-error-500/10 px-2.5 py-2 text-error-500 hover:bg-error-100 dark:hover:bg-error-500/20 transition-colors"
                   >
-                    Upload Mutasi
-                  </Link>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>

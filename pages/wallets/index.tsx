@@ -89,6 +89,25 @@ export default function WalletsPage() {
     }
   };
 
+  const handleDelete = async (w: DigitalWallet) => {
+    const hasHistory = w.totalTransactions > 0 || w.totalUploads > 0;
+    const ok = await confirm("error", "Hapus Dompet?", {
+      message: hasHistory
+        ? `${w.walletProvider} · ${w.phoneNumber} memiliki ${w.totalTransactions} transaksi. Dompet akan dinonaktifkan permanen (data historis tetap tersimpan).`
+        : `${w.walletProvider} · ${w.phoneNumber} akan dihapus permanen.`,
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+    if (!ok) return;
+    try {
+      await axiosGlobal.delete(`/wallets/${w.id}`);
+      fire("success", "Dompet dihapus", { duration: 2000 });
+      fetchWallets();
+    } catch {
+      fire("error", "Gagal menghapus dompet");
+    }
+  };
+
   return (
     <AppLayout>
       <PageMeta title="Dompet Digital | MyFinance" description="Kelola dompet digital yang terhubung" />
@@ -170,7 +189,7 @@ export default function WalletsPage() {
       ) : wallets.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
           <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">Belum ada dompet digital</p>
-          <p className="text-sm text-gray-400 mb-5">Tambahkan dompet digital untuk mulai upload mutasi</p>
+          <p className="text-sm text-gray-400 mb-5">Tambahkan dompet digital untuk mulai upload e-Statement</p>
           <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             Tambah Dompet
@@ -211,16 +230,34 @@ export default function WalletsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleToggle(w)}
-                    className="flex-1 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
                   >
                     {w.isActive ? "Nonaktifkan" : "Aktifkan"}
                   </button>
-                  <a
-                    href={`/upload?wallet=${w.id}`}
-                    className="flex-1 text-center rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600"
+                  {w.isActive ? (
+                    <a
+                      href={`/upload?wallet=${w.id}`}
+                      className="flex-1 text-center rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600"
+                    >
+                      Upload e-Statement
+                    </a>
+                  ) : (
+                    <span
+                      title="Aktifkan dompet terlebih dahulu"
+                      className="flex-1 text-center rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-2 text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                    >
+                      Upload e-Statement
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(w)}
+                    title="Hapus dompet"
+                    className="inline-flex items-center justify-center rounded-lg border border-error-200 dark:border-error-500/30 bg-error-50 dark:bg-error-500/10 px-2.5 py-2 text-error-500 hover:bg-error-100 dark:hover:bg-error-500/20 transition-colors"
                   >
-                    Upload Mutasi
-                  </a>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>

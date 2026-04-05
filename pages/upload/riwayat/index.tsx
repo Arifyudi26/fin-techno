@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -76,7 +76,7 @@ export default function UploadRiwayat() {
 
   return (
     <AppLayout>
-      <PageMeta title="Riwayat Upload | MyFinance" description="Riwayat upload mutasi rekening bank dan dompet digital" />
+      <PageMeta title="Riwayat Upload | MyFinance" description="Riwayat Upload e-Statement rekening bank dan dompet digital" />
       <PageBreadcrumb pageTitle="Riwayat Upload" />
 
       {/* Summary */}
@@ -240,3 +240,4 @@ export default function UploadRiwayat() {
     </AppLayout>
   );
 }
+

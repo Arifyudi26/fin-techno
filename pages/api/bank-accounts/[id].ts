@@ -27,11 +27,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // DELETE
+  // DELETE — hapus permanen beserta semua data terkait
   if (req.method === "DELETE") {
     try {
-      await prisma.bankAccount.update({ where: { id }, data: { isActive: false } });
-      return res.status(200).json({ message: "Rekening dinonaktifkan" });
+      await prisma.$transaction(async (tx) => {
+        // 1. Hapus MergeReportItem yang mereferensi transaksi rekening ini
+        await tx.mergeReportItem.deleteMany({
+          where: { transaction: { bankAccountId: id } },
+        });
+        // 2. Hapus semua transaksi
+        await tx.bankTransaction.deleteMany({ where: { bankAccountId: id } });
+        // 3. Hapus semua upload
+        await tx.bankStatementUpload.deleteMany({ where: { bankAccountId: id } });
+        // 4. Hapus rekening
+        await tx.bankAccount.delete({ where: { id } });
+      });
+      return res.status(200).json({ message: "Rekening dan semua data terkait berhasil dihapus", softDeleted: false });
     } catch (e) {
       console.error(e);
       return res.status(500).json({ message: "Internal server error" });
