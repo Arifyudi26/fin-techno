@@ -70,8 +70,11 @@ export default function Reconciliation() {
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
               <p className="text-xs text-gray-400 dark:text-gray-500">Dibuat: {r.createdAt}</p>
               <div className="flex gap-2">
-                <Link href={`/reconciliation/${r.id}`} className="text-xs font-medium text-brand-500 hover:text-brand-600">
-                  Detail →
+                <Link href={`/reconciliation/${r.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:text-brand-400 dark:hover:bg-brand-500/10 transition-colors" title="Lihat Detail">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
                 </Link>
               </div>
             </div>

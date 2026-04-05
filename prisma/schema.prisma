@@ -32,6 +32,24 @@ enum BankProvider {
   OTHER
 }
 
+/// Dompet digital yang didukung
+enum WalletProvider {
+  GOPAY
+  OVO
+  DANA
+  SHOPEEPAY
+  LINKAJA
+  SAKUKU
+  JENIUS
+  OTHER
+}
+
+/// Tipe sumber dana upload
+enum UploadSourceType {
+  BANK
+  WALLET
+}
+
 /// Format file e-statement yang di-upload
 enum FileFormat {
   CSV
@@ -75,10 +93,15 @@ model User {
   createdAt    DateTime       @default(now())
 
   // relasi bank mutation
-  bankAccounts      BankAccount[]
-  uploadedStatements BankStatementUpload[]
-  verifiedTransactions BankTransaction[] @relation("VerifiedBy")
-  mergeReports      MergeReport[]
+  bankAccounts         BankAccount[]
+  uploadedStatements   BankStatementUpload[]
+  verifiedTransactions BankTransaction[]     @relation("VerifiedBy")
+  mergeReports         MergeReport[]
+
+  // relasi digital wallet
+  wallets              DigitalWallet[]
+  uploadedWalletStmts  WalletStatementUpload[]
+  verifiedWalletTx     WalletTransaction[]   @relation("WalletVerifiedBy")
 }
 
 // ═══════════════════════════════════════════════
@@ -204,6 +227,7 @@ model TransactionCategory {
   createdAt   DateTime @default(now())
 
   transactions BankTransaction[]
+  walletTransactions WalletTransaction[]
 }
 
 /// Laporan merge — gabungan transaksi dari beberapa rekening / bank
@@ -247,4 +271,109 @@ model MergeReportItem {
   @@unique([mergeReportId, transactionId])
   @@index([mergeReportId])
   @@index([isDuplicate])
+}
+
+// ═══════════════════════════════════════════════
+// DIGITAL WALLET MODELS
+// ═══════════════════════════════════════════════
+
+/// Master akun dompet digital
+model DigitalWallet {
+  id             String         @id @default(uuid())
+  walletProvider WalletProvider
+  phoneNumber    String         // nomor HP terdaftar
+  accountName    String
+  description    String?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  ownerId        String
+
+  owner    User                    @relation(fields: [ownerId], references: [id])
+  uploads  WalletStatementUpload[]
+  transactions WalletTransaction[]
+
+  @@unique([walletProvider, phoneNumber, ownerId])
+  @@index([walletProvider])
+  @@index([ownerId])
+}
+
+/// Upload mutasi dompet digital
+model WalletStatementUpload {
+  id             String         @id @default(uuid())
+  walletId       String
+  uploadedById   String
+
+  // info file
+  fileName       String
+  fileUrl        String
+  fileFormat     FileFormat
+  fileSizeBytes  Int?
+
+  // metadata periode
+  walletProvider WalletProvider
+  periodStart    DateTime
+  periodEnd      DateTime
+
+  // status parsing
+  status         UploadStatus   @default(UPLOADING)
+  errorMessage   String?
+
+  // ringkasan
+  totalRows      Int            @default(0)
+  parsedRows     Int            @default(0)
+  failedRows     Int            @default(0)
+  totalCredit    Decimal        @default(0) @db.Decimal(20, 2)
+  totalDebit     Decimal        @default(0) @db.Decimal(20, 2)
+  notes          String?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  wallet       DigitalWallet   @relation(fields: [walletId], references: [id])
+  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+  transactions WalletTransaction[]
+
+  @@index([walletId])
+  @@index([uploadedById])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@index([walletProvider])
+}
+
+/// Transaksi dari mutasi dompet digital
+model WalletTransaction {
+  id              String          @id @default(uuid())
+  walletId        String
+  uploadId        String
+
+  transactionDate DateTime
+  description     String
+  reference       String?
+  amount          Decimal         @db.Decimal(20, 2)
+  type            TransactionType
+  balance         Decimal?        @db.Decimal(20, 2)
+
+  status          MutationStatus  @default(PENDING)
+  categoryId      String?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  note            String?
+
+  // hash: walletId+date+amount+description
+  hash            String?         @unique
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  wallet       DigitalWallet         @relation(fields: [walletId], references: [id])
+  upload       WalletStatementUpload @relation(fields: [uploadId], references: [id])
+  category     TransactionCategory?  @relation(fields: [categoryId], references: [id])
+  verifiedBy   User?                 @relation("WalletVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@index([walletId])
+  @@index([uploadId])
+  @@index([transactionDate])
+  @@index([type])
+  @@index([status])
 }
