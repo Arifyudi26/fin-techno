@@ -1,45 +1,38 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import db from "@/lib/db";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { RegisterBody } from "@/lib/types";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  const { email, password }: RegisterBody = req.body;
-  const hashedPassword = bcrypt.hashSync(password, 10);
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "POST") return res.status(405).json({ message: "Method Not Allowed" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" });
+  const { name, email, password }: RegisterBody = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: "Nama, email, dan password wajib diisi" });
   }
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
-  const existingUser = await db.user.findUnique({
-    where: { email },
-  });
-
-  if (existingUser) {
-    return res.status(409).json({ message: "Email is already registered" });
-  }
+  const existingUser = await db.user.findUnique({ where: { email } });
+  if (existingUser) return res.status(409).json({ message: "Email sudah terdaftar" });
 
   try {
-    const data = await db.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role: "user",
-      },
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const user = await db.user.create({
+      data: { name, email, password: hashedPassword, role: "user" },
     });
-    res.status(201).json({ message: "success", data: data });
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role, name: user.name },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1d" }
+    );
+
+    return res.status(201).json({
+      message: "success",
+      data: { token, role: user.role, name: user.name, id: user.id },
+    });
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(500).json({ message: error.message });
-    } else {
-      res.status(500).json({ message: "Internal server error" });
-    }
+    res.status(500).json({ message: error instanceof Error ? error.message : "Internal server error" });
   }
 }

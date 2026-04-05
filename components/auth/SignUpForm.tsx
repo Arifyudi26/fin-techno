@@ -8,10 +8,12 @@ import Button from "@components/ui/button/Button";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
+import useAuthStore from "@/store/authStore";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,9 +31,16 @@ export default function SignUpForm() {
     }
     setLoading(true);
     try {
-      await axiosGlobal.post("/auth/register", { email, password });
-      fire("success", "Registrasi Berhasil!", { message: "Akun kamu berhasil dibuat.", duration: 2000 });
-      setTimeout(() => { window.location.href = "/auth/login"; }, 2000);
+      const res = await axiosGlobal.post("/auth/register", { name, email, password });
+      const { token, role, id, name: userName } = res.data.data;
+
+      useAuthStore.getState().setId(id);
+      useAuthStore.getState().setToken(token);
+      useAuthStore.getState().setRole(role);
+      useAuthStore.getState().setName(userName);
+
+      fire("success", "Registrasi Berhasil!", { message: `Selamat datang, ${userName}!`, duration: 1500 });
+      setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (error: unknown) {
       fire("error", "Registrasi Gagal!", {
         message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Periksa kembali data kamu.",
@@ -86,6 +95,10 @@ export default function SignUpForm() {
             </div>
             <form onSubmit={onSubmit}>
               <div className="space-y-5">
+                <div>
+                  <Label>Nama <span className="text-error-500">*</span></Label>
+                  <Input type="text" placeholder="Masukkan nama lengkap" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
                 <div>
                   <Label>Email <span className="text-error-500">*</span></Label>
                   <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)}  />
