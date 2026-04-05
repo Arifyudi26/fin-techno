@@ -14,7 +14,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
     if (!user) return res.status(404).json({ message: "User tidak ditemukan" });
-    return res.status(200).json({ user });
+
+    const [bankAccountCount, walletCount, uploadCount, transactionCount] = await Promise.all([
+      prisma.bankAccount.count({ where: { ownerId: userId } }),
+      prisma.digitalWallet.count({ where: { ownerId: userId } }),
+      prisma.bankStatementUpload.count({ where: { uploadedById: userId } }),
+      prisma.bankTransaction.count({ where: { bankAccount: { ownerId: userId } } }),
+    ]);
+
+    return res.status(200).json({
+      user,
+      stats: { bankAccountCount, walletCount, uploadCount, transactionCount },
+    });
   }
 
   if (req.method === "PUT") {

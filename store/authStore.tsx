@@ -8,10 +8,12 @@ interface AuthState {
   id: string | null;
   token: string | null;
   role: any | null;
+  name: string | null;
   isAuthenticated: boolean;
   setId: (id: string) => void;
   setToken: (token: string) => void;
   setRole: (role: any) => void;
+  setName: (name: string) => void;
   logout: () => void;
 }
 
@@ -21,6 +23,7 @@ const useAuthStore = create<AuthState>()(
       id: null,
       token: Cookies.get("token") || null,
       role: null,
+      name: null,
       isAuthenticated: false,
       setId: (id: string) => set({ id }),
       setToken: (token: string) => {
@@ -28,9 +31,10 @@ const useAuthStore = create<AuthState>()(
         set({ token, isAuthenticated: true });
       },
       setRole: (role: any) => set({ role, isAuthenticated: !!role }),
+      setName: (name: string) => set({ name }),
       logout: () => {
         Cookies.remove("token");
-        set({ id: null, token: null, role: null, isAuthenticated: false });
+        set({ id: null, token: null, role: null, name: null, isAuthenticated: false });
       },
     }),
     { name: "auth-store" }

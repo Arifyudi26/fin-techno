@@ -5,12 +5,15 @@ import PageMeta from "@components/common/PageMeta";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
+import useAuthStore from "@/store/authStore";
 
 interface UserProfile { id: string; name: string; email: string; role: string; createdAt: string; }
+interface UserStats { bankAccountCount: number; walletCount: number; uploadCount: number; transactionCount: number; }
 
 export default function ProfilePage() {
   const { toastState, fire, close } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -22,11 +25,14 @@ export default function ProfilePage() {
     axiosGlobal.get("/user/profile")
       .then((res) => {
         setProfile(res.data.user);
+        setStats(res.data.stats);
         setEditName(res.data.user.name);
       })
       .catch(() => fire("error", "Gagal memuat profil"))
       .finally(() => setLoading(false));
   }, [fire]);
+
+  const { setName } = useAuthStore();
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +46,7 @@ export default function ProfilePage() {
       if (newPassword) { payload.currentPassword = currentPassword; payload.newPassword = newPassword; }
       const res = await axiosGlobal.put("/user/profile", payload);
       setProfile(res.data.user);
+      setName(res.data.user.name);
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       fire("success", "Profil berhasil diperbarui", { duration: 3000 });
     } catch (err: unknown) {
@@ -56,6 +63,28 @@ export default function ProfilePage() {
       <PageBreadcrumb pageTitle="Profil" />
 
       <div className="max-w-2xl space-y-6">
+        {/* Stats cards */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { label: "Rekening Bank", value: stats?.bankAccountCount, icon: "M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" },
+            { label: "Dompet Digital", value: stats?.walletCount, icon: "M2 6h20v14H2zM2 10h20" },
+            { label: "Total Upload", value: stats?.uploadCount, icon: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" },
+            { label: "Transaksi", value: stats?.transactionCount, icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-brand-500 shrink-0">
+                  <path d={icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                {loading ? "—" : (value ?? 0)}
+              </p>
+            </div>
+          ))}
+        </div>
+
         {/* Profile card */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
           {loading ? (
@@ -73,9 +102,14 @@ export default function ProfilePage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{profile.name}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  Role: <span className="capitalize">{profile.role}</span> · Bergabung: {new Date(profile.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
-                </p>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${profile.role === "admin" ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
+                    {profile.role === "admin" ? "Administrator" : "User"}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    Bergabung {new Date(profile.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
+                  </span>
+                </div>
               </div>
             </div>
           ) : null}

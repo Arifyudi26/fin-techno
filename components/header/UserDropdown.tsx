@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/router";
 import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
@@ -8,7 +7,7 @@ import useAuthStore from "@/store/authStore";
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const { logout, role } = useAuthStore();
+  const { logout, role, name } = useAuthStore();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -24,22 +23,20 @@ export default function UserDropdown() {
     router.push("/auth/login");
   }
 
+  const displayName = name || (role?.toLowerCase() === "admin" ? "Admin" : "User");
+  const initials = displayName.charAt(0).toUpperCase();
+
   return (
     <div className="relative">
       <button
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <Image
-            src="/images/user/owner.jpg"
-            alt="User"
-            width={44}
-            height={44}
-          />
+        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-brand-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+          {initials}
         </span>
         <span className="block mr-1 font-medium text-theme-sm">
-          {role?.toLowerCase() === "admin" ? "Admin" : "User"}
+          {displayName}
         </span>
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
@@ -65,8 +62,11 @@ export default function UserDropdown() {
         className="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
       >
         <div>
-          <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            {role?.toLowerCase() === "admin" ? "Administrator" : "User"}
+          <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+            {displayName}
+          </span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400 capitalize mt-0.5">
+            {role || "user"}
           </span>
         </div>
 
