@@ -141,12 +141,19 @@ const navItems: NavItem[] = [
   {
     icon: <WalletIcon />,
     name: "Transaksi",
-    path: "/transactions",
+    subItems: [
+      { name: "Semua Transaksi", path: "/transactions" },
+      { name: "Pemasukan", path: "/transactions/income" },
+      { name: "Pengeluaran", path: "/transactions/expense" },
+    ],
   },
   {
     icon: <UploadIcon />,
     name: "Upload Mutasi",
-    path: "/upload",
+    subItems: [
+      { name: "Upload Baru", path: "/upload" },
+      { name: "Riwayat Upload", path: "/upload/riwayat" },
+    ],
   },
   {
     icon: <MergeIcon />,
@@ -156,7 +163,10 @@ const navItems: NavItem[] = [
   {
     icon: <CardIcon />,
     name: "Rekening",
-    path: "/bank-accounts",
+    subItems: [
+      { name: "Rekening Bank", path: "/bank-accounts" },
+      { name: "Dompet Digital", path: "/wallets" },
+    ],
   },
   {
     icon: <TagIcon />,
@@ -187,17 +197,31 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // exact match untuk highlight item
-  const isActive = useCallback(
-    (path: string) => router.pathname === path,
+  // true jika pathname berada di bawah basePath — dipakai untuk parent group & single-item menu
+  // Khusus "/" harus exact match agar tidak match semua path
+  const isActiveGroup = useCallback(
+    (basePath: string) => {
+      if (basePath === "/") return router.pathname === "/";
+      return router.pathname === basePath || router.pathname.startsWith(basePath + "/");
+    },
     [router.pathname],
   );
 
-  // true jika pathname berada di bawah basePath (misal /reconciliation/create → /reconciliation)
-  const isActiveGroup = useCallback(
-    (basePath: string) =>
-      router.pathname === basePath ||
-      router.pathname.startsWith(basePath + "/"),
+  // Untuk sub-item: exact match ATAU starts-with hanya jika tidak ada sibling yang bisa conflict
+  // Misal: /upload (sub) vs /upload/riwayat (sub) — /upload harus exact, /upload/riwayat boleh startsWith
+  const isSubItemActive = useCallback(
+    (subPath: string, allSubPaths: string[]) => {
+      // Cek apakah ada sub-item lain yang merupakan child dari subPath ini
+      const hasChildSibling = allSubPaths.some(
+        (p) => p !== subPath && p.startsWith(subPath + "/"),
+      );
+      if (hasChildSibling) {
+        // Jika ada sibling yang lebih spesifik, gunakan exact match saja
+        return router.pathname === subPath;
+      }
+      // Tidak ada sibling yang lebih spesifik, boleh startsWith
+      return router.pathname === subPath || router.pathname.startsWith(subPath + "/");
+    },
     [router.pathname],
   );
 
@@ -207,11 +231,9 @@ const AppSidebar: React.FC = () => {
       const items = menuType === "main" ? navItems : othersItems;
       items.forEach((nav, index) => {
         if (nav.subItems) {
-          // aktif jika salah satu sub-item exact match ATAU pathname starts with sub-item path
-          const anyActive = nav.subItems.some(
-            (sub) =>
-              router.pathname === sub.path ||
-              router.pathname.startsWith(sub.path + "/"),
+          const allSubPaths = nav.subItems.map((s) => s.path);
+          const anyActive = nav.subItems.some((sub) =>
+            isSubItemActive(sub.path, allSubPaths),
           );
           if (anyActive) {
             setOpenSubmenu({ type: menuType, index });
@@ -221,7 +243,7 @@ const AppSidebar: React.FC = () => {
       });
     });
     if (!matched) setOpenSubmenu(null);
-  }, [router.pathname, isActive]);
+  }, [router.pathname, isSubItemActive]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -297,16 +319,19 @@ const AppSidebar: React.FC = () => {
               }}
             >
               <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((sub) => (
-                  <li key={sub.name}>
-                    <Link
-                      href={sub.path}
-                      className={`menu-dropdown-item ${isActiveGroup(sub.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}
-                    >
-                      {sub.name}
-                    </Link>
-                  </li>
-                ))}
+                {nav.subItems.map((sub) => {
+                  const allSubPaths = nav.subItems!.map((s) => s.path);
+                  return (
+                    <li key={sub.name}>
+                      <Link
+                        href={sub.path}
+                        className={`menu-dropdown-item ${isSubItemActive(sub.path, allSubPaths) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}
+                      >
+                        {sub.name}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

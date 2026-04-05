@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import {
   DragDropContext,
   Droppable,
@@ -9,6 +10,9 @@ import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
+import Toast from "@components/ui/toast/Toast";
+import { useToast } from "@lib/hooks/useToast";
+import axiosGlobal from "@/services/AxiosGlobal";
 
 const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -27,23 +31,34 @@ interface Transaction {
   isDuplicate?: boolean;
 }
 
-const initialAvailable: Transaction[] = [
-  { id: "tx-1", date: "2025-04-28", description: "Transfer Masuk - PT Maju Jaya", bank: "BCA", amount: 15_000_000, type: "CREDIT" },
-  { id: "tx-2", date: "2025-04-27", description: "Pembayaran Listrik PLN", bank: "BRI", amount: 1_250_000, type: "DEBIT" },
-  { id: "tx-3", date: "2025-04-26", description: "Gaji Karyawan April", bank: "Mandiri", amount: 8_200_000, type: "DEBIT" },
-  { id: "tx-4", date: "2025-04-25", description: "Penjualan Produk Online", bank: "BCA", amount: 4_500_000, type: "CREDIT" },
-  { id: "tx-5", date: "2025-04-24", description: "Pembelian Bahan Baku", bank: "BNI", amount: 3_800_000, type: "DEBIT" },
-  { id: "tx-6", date: "2025-04-23", description: "Transfer Masuk - CV Sejahtera", bank: "BRI", amount: 7_200_000, type: "CREDIT" },
-  { id: "tx-7", date: "2025-04-22", description: "Biaya Sewa Kantor", bank: "Mandiri", amount: 5_000_000, type: "DEBIT" },
-  { id: "tx-8", date: "2025-04-21", description: "Penjualan Jasa Konsultasi", bank: "BCA", amount: 12_000_000, type: "CREDIT" },
-];
-
 export default function CreateReconciliation() {
-  const [available, setAvailable] = useState<Transaction[]>(initialAvailable);
+  const router = useRouter();
+  const { toastState, fire, close } = useToast();
+  const [available, setAvailable] = useState<Transaction[]>([]);
   const [merged, setMerged] = useState<Transaction[]>([]);
-  const [reportName, setReportName] = useState("Rekonsiliasi April 2025");
+  const [reportName, setReportName] = useState("Rekonsiliasi " + new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" }));
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
   const [filterBank, setFilterBank] = useState("ALL");
   const [filterType, setFilterType] = useState("ALL");
+  const [loadingTx, setLoadingTx] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchTransactions = useCallback(async () => {
+    setLoadingTx(true);
+    try {
+      const res = await axiosGlobal.get("/transactions?limit=100");
+      setAvailable(res.data.transactions.map((t: { id: string; date: string; description: string; provider: string; amount: number; type: "CREDIT" | "DEBIT" }) => ({
+        id: t.id, date: t.date, description: t.description, bank: t.provider, amount: t.amount, type: t.type,
+      })));
+    } catch {
+      fire("error", "Gagal memuat transaksi");
+    } finally {
+      setLoadingTx(false);
+    }
+  }, [fire]);
+
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
   const totalCredit = merged.filter((t) => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0);
   const totalDebit = merged.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
@@ -55,7 +70,32 @@ export default function CreateReconciliation() {
     return bankMatch && typeMatch;
   });
 
-  const banks = ["ALL", ...Array.from(new Set(initialAvailable.map((t) => t.bank)))];
+  const banks = ["ALL", ...Array.from(new Set(available.map((t) => t.bank)))];
+
+  const handleSave = async () => {
+    if (!reportName.trim() || merged.length === 0) return;
+    if (!periodStart || !periodEnd) {
+      fire("warning", "Periode wajib diisi", { message: "Isi periode mulai dan akhir laporan.", duration: 3000 });
+      return;
+    }
+    setSaving(true);
+    try {
+      await axiosGlobal.post("/reconciliation", {
+        name: reportName,
+        periodStart,
+        periodEnd,
+        transactionIds: merged.map((t) => t.id),
+        status: "DRAFT",
+      });
+      fire("success", "Laporan berhasil disimpan", { duration: 2000 });
+      setTimeout(() => router.push("/reconciliation"), 2000);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Gagal menyimpan laporan";
+      fire("error", msg);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -126,16 +166,25 @@ export default function CreateReconciliation() {
       <PageMeta title="Buat Laporan Rekonsiliasi | MyFinance" description="Drag transaksi ke laporan merge" />
       <PageBreadcrumb pageTitle="Buat Laporan Rekonsiliasi" />
 
-      {/* Report name */}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="text"
-          value={reportName}
-          onChange={(e) => setReportName(e.target.value)}
-          className="h-11 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-medium text-gray-800 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/20 w-full sm:max-w-xs"
-          placeholder="Nama laporan..."
-        />
-        <button className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50" disabled={merged.length === 0}>
+      {/* Report name + period */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <input
+            type="text"
+            value={reportName}
+            onChange={(e) => setReportName(e.target.value)}
+            className="h-11 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 text-sm font-medium text-gray-800 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/20 flex-1"
+            placeholder="Nama laporan..."
+          />
+          <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="h-11 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none" />
+          <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="h-11 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none" />
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || merged.length === 0}
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 h-11"
+        >
+          {saving && <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
           Simpan Laporan
         </button>
       </div>
@@ -148,7 +197,7 @@ export default function CreateReconciliation() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-800 dark:text-white/90">Transaksi Tersedia</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{available.length} transaksi · drag ke kanan untuk menambahkan</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{loadingTx ? "Memuat..." : `${available.length} transaksi · drag ke kanan untuk menambahkan`}</p>
               </div>
               <button onClick={addAll} disabled={filteredAvailable.length === 0} className="text-xs font-medium text-brand-500 hover:text-brand-600 disabled:opacity-40">
                 Tambah Semua →
@@ -335,6 +384,7 @@ export default function CreateReconciliation() {
           </div>
         </div>
       </DragDropContext>
+      <Toast {...toastState} onClose={close} />
     </AppLayout>
   );
 }
