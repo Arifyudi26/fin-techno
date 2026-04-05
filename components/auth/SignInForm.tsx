@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import Swal from "sweetalert2";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@components/icons";
 import Label from "@components/form/Label";
@@ -25,19 +24,28 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
       const response = await axiosGlobal.post("/auth/login", { email, password });
-      const { token, role ,id} = response.data.data;
+      const { token, role, id } = response.data.data;
+
+      // Set store + cookie dulu sebelum redirect
       useAuthStore.getState().setId(id);
       useAuthStore.getState().setToken(token);
       useAuthStore.getState().setRole(role);
-      Swal.fire({ title: "Login Successful!", icon: "success", timer: 1500, showConfirmButton: false })
-        .then(() => router.push("/"));
+
+      await Swal.fire({
+        title: "Login Successful!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      // Full page navigation agar cookie terbawa ke middleware
+      window.location.href = "/";
     } catch (error: unknown) {
       Swal.fire({
         title: "Login Failed!",

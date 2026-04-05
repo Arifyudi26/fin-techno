@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import Swal from "sweetalert2";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@components/icons";
 import Label from "@components/form/Label";
@@ -24,7 +23,6 @@ export default function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,8 +33,8 @@ export default function SignUpForm() {
     setLoading(true);
     try {
       await axiosGlobal.post("/auth/register", { email, password });
-      Swal.fire({ title: "Registration Successful!", text: "Your account has been created.", icon: "success", timer: 2000, showConfirmButton: false })
-        .then(() => router.push("/auth/login"));
+      await Swal.fire({ title: "Registration Successful!", text: "Your account has been created.", icon: "success", timer: 2000, showConfirmButton: false });
+      window.location.href = "/auth/login";
     } catch (error: unknown) {
       Swal.fire({
         title: "Registration Failed!",
