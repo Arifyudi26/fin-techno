@@ -239,42 +239,50 @@ type ParsedRow = ReturnType<typeof parseRows>[number];
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   const parser = new PDFParse({ data: buffer });
   const data = await parser.getText();
-  const text = data.text;
+  // Normalize: collapse tabs/spaces but keep newlines for now
+  const text = data.text.replace(/\r/g, "").replace(/[ \t]+/g, " ");
 
-  // Each transaction line in BRI PDF text looks like:
-  // "01/03/26 08:10:47 Biaya SMS Notifikasi Sejumlah 3 Notifikasi BRIMDBT 2,250.00 0.00 1,394,102.00"
-  // We match: date+time, then capture everything up to the last 3 numbers (debit, credit, balance)
   const rows: ParsedRow[] = [];
 
-  // Regex: DD/MM/YY HH:MM:SS <description + teller> <debit> <credit> <balance>
-  // Numbers: digits with optional commas and a decimal point
-  const NUM = /[\d,]+\.\d{2}/;
-  const LINE_RE = new RegExp(
-    `(\\d{2}/\\d{2}/\\d{2}\\s+\\d{2}:\\d{2}:\\d{2})` + // date+time
-    `\\s+(.+?)\\s+`                                    + // description (non-greedy)
-    `(${NUM.source})\\s+(${NUM.source})\\s+(${NUM.source})` + // debit credit balance
-    `(?=\\s|$)`,
-    "g"
-  );
+  // Strategy: split on every transaction date occurrence.
+  // This handles multi-line descriptions naturally since each chunk
+  // starts with a date and ends just before the next date.
+  const DATE_SPLIT = /(?=\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})/g;
+  const chunks = text.split(DATE_SPLIT).filter(c => /^\d{2}\/\d{2}\/\d{2}/.test(c.trim()));
 
-  let match: RegExpExecArray | null;
-  while ((match = LINE_RE.exec(text)) !== null) {
-    const [, dateStr, descRaw, debitStr, creditStr, balanceStr] = match;
+  for (const chunk of chunks) {
+    // Flatten newlines within each chunk into spaces
+    const clean = chunk.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
-    // descRaw may end with a teller ID (all-digit or known codes like BRIMDBT, CMSPYRL)
-    // Strip trailing teller token: last whitespace-separated token that is all-digits or known code
-    const tellerRe = /\s+(\d{4,}|BRIMDBT|CMSPYRL|[A-Z0-9]{5,})$/;
-    const desc = descRaw.replace(tellerRe, "").trim();
+    // Extract date+time at start: "DD/MM/YY HH:MM:SS"
+    const dateMatch = clean.match(/^(\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) /);
+    if (!dateMatch) continue;
+    const dateStr = dateMatch[1];
+    const rest = clean.slice(dateMatch[0].length).trim();
 
-    // Determine sign: if debit > 0 → Db, else Cr
-    const debitAmt  = parseAmount(debitStr);
-    const creditAmt = parseAmount(creditStr);
-    const sign = debitAmt > 0 ? "Db" : "Cr";
+    // Find all numbers in the chunk — last 3 are debit, credit, balance
+    const allNums = [...rest.matchAll(/[\d,]+\.\d{2}/g)];
+    if (allNums.length < 3) continue;
+
+    const balanceStr = allNums[allNums.length - 1][0];
+    const creditStr  = allNums[allNums.length - 2][0];
+    const debitStr   = allNums[allNums.length - 3][0];
+
+    // Description = everything before the first of the last-3 numbers
+    const firstNumIdx = allNums[allNums.length - 3].index!;
+    let descRaw = rest.slice(0, firstNumIdx).trim();
+
+    // Strip trailing teller ID: all-digit 4+ chars, or known alpha codes (BRIMDBT, CMSPYRL, etc.)
+    descRaw = descRaw.replace(/\s+(\d{4,}|[A-Z]{3,}[A-Z0-9]*)$/, "").trim();
+
+    if (!descRaw) continue;
+
+    const sign = parseAmount(debitStr) > 0 ? "Db" : "Cr";
 
     rows.push({
       date:           dateStr,
       valueDate:      "",
-      description:    desc,
+      description:    descRaw,
       debit:          debitStr,
       credit:         creditStr,
       openingBalance: "",
@@ -282,9 +290,6 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
       reference:      "",
       sign,
     });
-
-    // Suppress unused warning
-    void debitAmt; void creditAmt;
   }
 
   return rows;
