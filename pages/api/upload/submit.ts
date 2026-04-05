@@ -202,18 +202,26 @@ function parseDate(val: string): Date | null {
   const clean = val.trim();
 
   // Datetime with space or T: "2026-03-01 08:10:47" | "2026-03-01T08:10:47"
-  const dtMatch = clean.match(/^(\d{4}-\d{2}-\d{2})[T ][\d:]+/);
-  if (dtMatch) {
-    const d = new Date(dtMatch[1]);
+  const isoMatch = clean.match(/^(\d{4}-\d{2}-\d{2})[T ][\d:]+/);
+  if (isoMatch) {
+    const d = new Date(isoMatch[1]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // DD/MM/YY HH:MM:SS — BRI PDF format e.g. "01/03/26 08:10:47"
+  const briPdfMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{2})\s+\d{2}:\d{2}:\d{2}/);
+  if (briPdfMatch) {
+    const [, dd, mm, yy] = briPdfMatch;
+    const d = new Date(`20${yy}-${mm}-${dd}`);
     return isNaN(d.getTime()) ? null : d;
   }
 
   // Date-only patterns
   const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
-    [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, m, d]) => `${y}-${m}-${d}`],   // YYYY-MM-DD
-    [/^(\d{2})\/(\d{2})\/(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`], // DD/MM/YYYY
-    [/^(\d{2})-(\d{2})-(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],   // DD-MM-YYYY
-    [/^(\d{2})\.(\d{2})\.(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`], // DD.MM.YYYY
+    [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, m, d]) => `${y}-${m}-${d}`],     // YYYY-MM-DD
+    [/^(\d{2})\/(\d{2})\/(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],   // DD/MM/YYYY
+    [/^(\d{2})-(\d{2})-(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],     // DD-MM-YYYY
+    [/^(\d{2})\.(\d{2})\.(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],   // DD.MM.YYYY
     [/^(\d{2})\/(\d{2})\/(\d{2})$/, ([, d, m, y]) => `20${y}-${m}-${d}`], // DD/MM/YY
   ];
 
@@ -523,9 +531,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (type === TransactionType.CREDIT) totalCredit += amount;
           else totalDebit += amount;
           successCount++;
-        } catch (e: any) {
+        } catch {
           failCount++;
-          console.error(`[upload] row fail: ${e?.message} | date=${row.date} | amount=${amount} | desc=${row.description.slice(0,40)}`);
         }
       }
 
