@@ -474,16 +474,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const balance = parseAmount(row.balance);
         const valueDate = parseDate(row.valueDate);
         const catId   = await autoCategory(row.description);
-        // Hash includes opening balance to distinguish rows with identical
-        // date/amount/description (e.g. BI-Fast principal + fee on same timestamp)
+        // Hash key: accountId + date + amount + balance (closing)
+        // Using balance instead of description/reference makes hash consistent
+        // across CSV and PDF uploads of the same statement (descriptions may differ slightly)
         const hash    = crypto.createHash("md5")
-          .update(`${accountId}|${txDate.toISOString()}|${amount}|${row.description}|${row.reference}|${row.openingBalance}`)
+          .update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`)
           .digest("hex");
 
         try {
           if (sourceType === "BANK") {
-            await prisma.bankTransaction.create({
-              data: {
+            await prisma.bankTransaction.upsert({
+              where: { hash },
+              create: {
                 bankAccountId: accountId,
                 uploadId,
                 transactionDate: txDate,
@@ -497,10 +499,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 categoryId: catId,
                 hash,
               },
+              update: {}, // already exists — keep original, just count as success
             });
           } else {
-            await db.walletTransaction.create({
-              data: {
+            await db.walletTransaction.upsert({
+              where: { hash },
+              create: {
                 walletId: accountId,
                 uploadId,
                 transactionDate: txDate,
@@ -513,13 +517,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 categoryId: catId,
                 hash,
               },
+              update: {},
             });
           }
           if (type === TransactionType.CREDIT) totalCredit += amount;
           else totalDebit += amount;
           successCount++;
-        } catch {
-          failCount++; // duplicate hash or other error
+        } catch (e: any) {
+          failCount++;
+          console.error(`[upload] row fail: ${e?.message} | date=${row.date} | amount=${amount} | desc=${row.description.slice(0,40)}`);
         }
       }
 
