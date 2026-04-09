@@ -24,6 +24,8 @@
     "@types/axios": "^0.14.4",
     "@types/formidable": "^3.5.0",
     "@types/pdf-parse": "^1.1.5",
+    "@upstash/qstash": "^2.10.1",
+    "@vercel/blob": "^2.3.3",
     "apexcharts": "^5.10.4",
     "autoprefixer": "^10.4.27",
     "axios": "^1.7.9",

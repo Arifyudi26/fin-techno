@@ -177,8 +177,20 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
         },
       });
-      setProgress(100);
-      onSuccess(res.data);
+      setProgress(70);
+
+      // File sudah diupload, sekarang polling status background processing
+      const { uploadId } = res.data;
+      if (uploadId) {
+        await pollUploadStatus(uploadId, (p) => setProgress(70 + Math.round(p * 0.3)));
+        const statusRes = await axiosGlobal.get(`/upload/${uploadId}`);
+        const { status, parsedRows: parsed, totalRows: total } = statusRes.data;
+        setProgress(100);
+        onSuccess({ uploadId, status, parsedRows: parsed ?? 0, totalRows: total ?? 0 });
+      } else {
+        setProgress(100);
+        onSuccess(res.data);
+      }
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -187,6 +199,20 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       setProgress(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Polling status sampai selesai (max 5 menit)
+  const pollUploadStatus = async (uploadId: string, onProgress: (p: number) => void) => {
+    const maxAttempts = 60; // 60 x 5 detik = 5 menit
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      onProgress(Math.min((i + 1) / maxAttempts, 0.95));
+      try {
+        const res = await axiosGlobal.get(`/upload/${uploadId}`);
+        const { status } = res.data;
+        if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") return;
+      } catch { /* lanjut polling */ }
     }
   };
 
@@ -490,15 +516,26 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {loading && (
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-gray-500">
-                <span>Memproses file...</span>
+                <span>
+                  {progress < 70
+                    ? "Mengupload file..."
+                    : progress < 100
+                      ? "Memproses transaksi di background..."
+                      : "Selesai"}
+                </span>
                 <span>{progress}%</span>
               </div>
               <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-brand-500 transition-all duration-300"
+                  className="h-full rounded-full bg-brand-500 transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              {progress >= 70 && progress < 100 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  File besar diproses di background. Mohon tunggu...
+                </p>
+              )}
             </div>
           )}
 
