@@ -33,7 +33,7 @@ Aplikasi manajemen keuangan pribadi berbasis web untuk upload, parsing, dan anal
 ```bash
 git clone <repo-url>
 cd myfinance
-npm install
+yarn install
 ```
 
 ### 2. Environment Variables
@@ -88,13 +88,13 @@ npx prisma generate
 Seed data awal (opsional):
 
 ```bash
-npm run seed
+yarn seed
 ```
 
 ### 4. Jalankan Dev Server
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 Buka [http://localhost:3000](http://localhost:3000).
@@ -217,11 +217,11 @@ Semua route dilindungi middleware di `middleware.ts`:
 ## Scripts
 
 ```bash
-npm run dev      # development server
-npm run build    # production build
-npm run start    # production server
-npm run lint     # ESLint
-npm run seed     # seed database
+yarn dev      # development server
+yarn build    # production build
+yarn start    # production server
+yarn lint     # ESLint
+yarn seed     # seed database
 ```
 
 ## Deploy ke Vercel

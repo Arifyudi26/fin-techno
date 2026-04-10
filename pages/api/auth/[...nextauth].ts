@@ -61,6 +61,7 @@ export const authOptions: NextAuthOptions = {
               name: user.name ?? user.email.split("@")[0],
               password: "",
               role: "user",
+              loginProvider: account?.provider === "google" ? "GOOGLE" : "TWITTER",
             },
           });
         }
