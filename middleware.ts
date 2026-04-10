@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Halaman publik (tidak perlu login)
-const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup"];
+const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup", "/auth/oauth-callback"];
 
 // API yang boleh diakses tanpa token
-const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register"];
+const PUBLIC_API_PATHS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/callback",   // NextAuth OAuth callback
+  "/api/auth/signin",     // NextAuth signin
+  "/api/auth/signout",    // NextAuth signout
+  "/api/auth/session",    // NextAuth session
+  "/api/auth/csrf",       // NextAuth CSRF token
+  "/api/auth/providers",  // NextAuth providers
+  "/api/auth/error",      // NextAuth error page
+  "/api/auth/_log",       // NextAuth internal
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
