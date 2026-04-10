@@ -117,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // ── Upload file ke Vercel Blob ────────────────────────────────────────
       const blobPath = `statements/${userId}/${crypto.randomUUID()}_${fileName}`;
       const blob = await put(blobPath, fileBuffer, {
-        access: "public",
+        access: "private",
         contentType: fileFormat === "PDF" ? "application/pdf" : "text/plain",
         token: process.env.BLOB_READ_WRITE_TOKEN,
       });
@@ -169,26 +169,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const qstashToken = process.env.QSTASH_TOKEN;
       const isLocal = !process.env.VERCEL_URL;
 
-      if (!qstashToken || isLocal) {
-        // Fallback: proses langsung di local dev (QStash tidak bisa hit localhost)
-        await triggerProcessDirect(uploadId, sourceType, accountId, blob.url, fileFormat, userId);
-      } else {
-        const qstash = new Client({
-          token: qstashToken,
-          baseUrl: process.env.QSTASH_URL,
-        });
-        await qstash.publishJSON({
-          url: `${appUrl}/api/upload/process`,
-          body: { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId },
-          retries: 2,
-        });
-      }
-
-      return res.status(202).json({
+      // Respond dulu ke client, baru trigger background process
+      res.status(202).json({
         uploadId,
         status: "PROCESSING",
         message: "File sedang diproses di background. Cek status secara berkala.",
       });
+
+      // Background process — jalan setelah response dikirim
+      if (!qstashToken || isLocal) {
+        // Fallback: proses langsung di local dev (QStash tidak bisa hit localhost)
+        setImmediate(() => {
+          triggerProcessDirect(uploadId, sourceType, accountId, blob.url, fileFormat, userId);
+        });
+      } else {
+        setImmediate(async () => {
+          try {
+            const qstash = new Client({
+              token: qstashToken,
+              baseUrl: process.env.QSTASH_URL,
+            });
+            await qstash.publishJSON({
+              url: `${appUrl}/api/upload/process`,
+              body: { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId },
+              retries: 2,
+            });
+          } catch (e) {
+            console.error("QStash publish error:", e);
+            // Fallback ke direct process jika QStash gagal
+            triggerProcessDirect(uploadId, sourceType, accountId, blob.url, fileFormat, userId);
+          }
+        });
+      }
     } catch (error: any) {
       console.error("upload submit error:", error);
       return res.status(500).json({ message: "Internal server error: " + error.message });
@@ -196,8 +208,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 }
 
-// Fallback untuk dev/local: import dan jalankan langsung
-async function triggerProcessDirect(
+// Fallback untuk dev/local: import dan jalankan langsung (fire-and-forget)
+function triggerProcessDirect(
   uploadId: string,
   sourceType: string,
   accountId: string,
@@ -205,10 +217,9 @@ async function triggerProcessDirect(
   fileFormat: string,
   userId: string,
 ) {
-  // Fire and forget — tidak await agar response cepat
-  import("./process").then(({ processUpload }) => {
-    processUpload({ uploadId, sourceType, accountId, fileUrl, fileFormat, userId }).catch(
-      (e) => console.error("process error:", e),
-    );
-  });
+  import("./process")
+    .then(({ processUpload }) =>
+      processUpload({ uploadId, sourceType, accountId, fileUrl, fileFormat, userId })
+    )
+    .catch((e) => console.error("process error:", e));
 }

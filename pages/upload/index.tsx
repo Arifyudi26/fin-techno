@@ -177,20 +177,12 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
         },
       });
-      setProgress(70);
+      setProgress(100);
 
-      // File sudah diupload, sekarang polling status background processing
+      // File sudah diupload & diterima server — langsung tutup modal
+      // Background processing berjalan di server, halaman utama akan polling
       const { uploadId } = res.data;
-      if (uploadId) {
-        await pollUploadStatus(uploadId, (p) => setProgress(70 + Math.round(p * 0.3)));
-        const statusRes = await axiosGlobal.get(`/upload/${uploadId}`);
-        const { status, parsedRows: parsed, totalRows: total } = statusRes.data;
-        setProgress(100);
-        onSuccess({ uploadId, status, parsedRows: parsed ?? 0, totalRows: total ?? 0 });
-      } else {
-        setProgress(100);
-        onSuccess(res.data);
-      }
+      onSuccess({ uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -199,20 +191,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       setProgress(0);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Polling status sampai selesai (max 5 menit)
-  const pollUploadStatus = async (uploadId: string, onProgress: (p: number) => void) => {
-    const maxAttempts = 60; // 60 x 5 detik = 5 menit
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      onProgress(Math.min((i + 1) / maxAttempts, 0.95));
-      try {
-        const res = await axiosGlobal.get(`/upload/${uploadId}`);
-        const { status } = res.data;
-        if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") return;
-      } catch { /* lanjut polling */ }
     }
   };
 
@@ -1205,15 +1183,48 @@ export default function UploadPage() {
   }) => {
     setShowForm(false);
     fetchUploads();
+
+    if (result.status === "PROCESSING" && result.uploadId) {
+      fire("info", "File sedang diproses", {
+        message: "Upload berhasil diterima. Hasil akan muncul otomatis setelah selesai.",
+        duration: 4000,
+      });
+      // Polling di background — refresh list setiap 5 detik sampai selesai
+      const uploadId = result.uploadId;
+      const maxAttempts = 60;
+      let attempt = 0;
+      const poll = setInterval(async () => {
+        attempt++;
+        try {
+          const res = await axiosGlobal.get(`/upload/${uploadId}`);
+          const { status, parsedRows: parsed, totalRows: total } = res.data;
+          if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
+            clearInterval(poll);
+            fetchUploads();
+            fire(
+              status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
+              status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
+              {
+                message: status === "SUCCESS"
+                  ? `${parsed} dari ${total} transaksi berhasil diproses.`
+                  : status === "PARTIAL"
+                    ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
+                    : "Terjadi kesalahan saat memproses file.",
+                duration: 5000,
+              },
+            );
+          }
+        } catch { /* lanjut polling */ }
+        if (attempt >= maxAttempts) clearInterval(poll);
+      }, 5000);
+      return;
+    }
+
     const isSuccess = result.status === "SUCCESS";
     const isPartial = result.status === "PARTIAL";
     fire(
       isSuccess ? "success" : isPartial ? "warning" : "error",
-      isSuccess
-        ? "Upload Berhasil"
-        : isPartial
-          ? "Upload Sebagian"
-          : "Upload Gagal",
+      isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
       {
         message: isSuccess
           ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
