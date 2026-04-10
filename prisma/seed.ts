@@ -12,7 +12,7 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 function monthStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -29,7 +29,7 @@ function fmt(date: Date) {
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // ── 1. User ────────────────────────────────────────────────────────────────
+  // 1. User
   const hashedPassword = bcrypt.hashSync("password", 10);
   const user = await prisma.user.upsert({
     where: { email: "user@gmail.com" },
@@ -43,7 +43,7 @@ async function main() {
   });
   console.log("✅ User:", user.email);
 
-  // ── 2. Categories ──────────────────────────────────────────────────────────
+  // 2. Categories
   const [catOps, catGaj, catPaj, catUtl, catInv, catLny] = await Promise.all([
     prisma.transactionCategory.upsert({ where: { code: "OPS" }, update: {}, create: { name: "Operasional", code: "OPS", description: "Biaya operasional bisnis" } }),
     prisma.transactionCategory.upsert({ where: { code: "GAJ" }, update: {}, create: { name: "Gaji", code: "GAJ", description: "Pembayaran gaji karyawan" } }),
@@ -54,7 +54,7 @@ async function main() {
   ]);
   console.log("✅ Categories: 6");
 
-  // ── 3. Bank Accounts ───────────────────────────────────────────────────────
+  // 3. Bank Accounts
   const accBCA = await prisma.bankAccount.upsert({
     where: { accountNumber: "1234567890" },
     update: {},
@@ -72,7 +72,7 @@ async function main() {
   });
   console.log("✅ Bank accounts: BCA, BRI, Mandiri");
 
-  // ── 4. Generate 12 bulan ke belakang dari sekarang ─────────────────────────
+  // 4. Generate 12 bulan ke belakang dari sekarang
   const now = new Date();
   const months: Array<{ start: Date; end: Date }> = [];
   for (let i = 11; i >= 0; i--) {
@@ -204,7 +204,7 @@ async function main() {
   console.log(`✅ Uploads: ${totalUploads}`);
   console.log(`✅ Transactions: ${totalTx}`);
 
-  // ── 5. Merge Reports ───────────────────────────────────────────────────────
+  // 5. Merge Reports
   const verifiedTx = await prisma.bankTransaction.findMany({
     where: { bankAccount: { ownerId: user.id }, status: EStatementStatus.VERIFIED },
     take: 20,

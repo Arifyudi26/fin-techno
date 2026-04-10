@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@components/ui/table";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 interface AccountOption {
   id: string;
   provider: string;
@@ -63,7 +63,7 @@ interface TxRow {
   status: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -106,7 +106,7 @@ const statusConfig: Record<
   UPLOADING: { label: "Mengupload", color: "info" },
 };
 
-// ─── Upload Form Modal ────────────────────────────────────────────────────────
+// Upload Form Modal
 interface UploadFormProps {
   accounts: AccountOption[];
   onClose: () => void;
@@ -581,7 +581,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   );
 }
 
-// ─── Detail Modal ─────────────────────────────────────────────────────────────
+// Detail Modal
 interface DetailModalProps {
   uploadId: string;
   sourceType: "BANK" | "WALLET";
@@ -948,7 +948,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
   );
 }
 
-// ─── Upload Card ──────────────────────────────────────────────────────────────
+// Upload Card
 function UploadCard({
   item,
   onViewDetail,
@@ -1129,7 +1129,7 @@ function UploadCard({
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// Main Page
 export default function UploadPage() {
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [uploads, setUploads] = useState<UploadItem[]>([]);

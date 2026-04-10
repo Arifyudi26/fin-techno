@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
@@ -36,6 +36,7 @@
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "next": "15.3.8",
+    "next-auth": "^4.24.13",
     "pdf-parse": "^2.4.5",
     "prisma": "^6.3.1",
     "react": "^18.3.1",

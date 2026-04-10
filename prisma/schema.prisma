@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,9 +12,11 @@ enum Role {
   admin
 }
 
-// ═══════════════════════════════════════════════
-// ENUMS — bank e-statement
-// ═══════════════════════════════════════════════
+enum LoginProvider {
+  APP
+  GOOGLE
+  FACEBOOK
+}
 
 enum BankProvider {
   BCA
@@ -32,7 +31,6 @@ enum BankProvider {
   OTHER
 }
 
-/// Dompet digital yang didukung
 enum WalletProvider {
   GOPAY
   OVO
@@ -44,13 +42,11 @@ enum WalletProvider {
   OTHER
 }
 
-/// Tipe sumber dana upload
 enum UploadSourceType {
   BANK
   WALLET
 }
 
-/// Format file e-statement yang di-upload
 enum FileFormat {
   CSV
   XLSX
@@ -58,57 +54,49 @@ enum FileFormat {
   PDF
 }
 
-/// Status proses parsing file
 enum UploadStatus {
-  UPLOADING   // sedang upload
-  PROCESSING  // sedang di-parse
-  SUCCESS     // berhasil di-parse
-  FAILED      // gagal di-parse
-  PARTIAL     // sebagian baris gagal di-parse
+  UPLOADING
+  PROCESSING
+  SUCCESS
+  FAILED
+  PARTIAL
 }
 
 enum TransactionType {
-  CREDIT // uang masuk
-  DEBIT  // uang keluar
+  CREDIT
+  DEBIT
 }
 
 enum EStatementStatus {
-  PENDING   // belum diverifikasi
-  VERIFIED  // sudah diverifikasi
-  REJECTED  // ditolak / tidak valid
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 enum MergeStatus {
   DRAFT
   MERGED
-  CONFLICT // ada duplikat yang perlu resolusi manual
+  CONFLICT
 }
 
 model User {
-  id           String         @id @default(uuid())
-  name         String         @default("user")
-  email        String         @unique
-  password     String
-  role         Role           @default(user)
-  createdAt    DateTime       @default(now())
+  id            String        @id @default(uuid())
+  name          String        @default("user")
+  email         String        @unique
+  password      String
+  role          Role          @default(user)
+  loginProvider LoginProvider @default(APP)
+  createdAt     DateTime      @default(now())
 
-  // relasi bank e-statement
   bankAccounts         BankAccount[]
   uploadedStatements   BankStatementUpload[]
   verifiedTransactions BankTransaction[]     @relation("VerifiedBy")
   mergeReports         MergeReport[]
-
-  // relasi digital wallet
   wallets              DigitalWallet[]
   uploadedWalletStmts  WalletStatementUpload[]
   verifiedWalletTx     WalletTransaction[]   @relation("WalletVerifiedBy")
 }
 
-// ═══════════════════════════════════════════════
-// BANK E-STATEMENT MODELS
-// ═══════════════════════════════════════════════
-
-/// Master rekening bank — daftarkan dulu sebelum upload
 model BankAccount {
   id            String       @id @default(uuid())
   bankProvider  BankProvider
@@ -121,51 +109,39 @@ model BankAccount {
   updatedAt     DateTime     @updatedAt
   ownerId       String
 
-  owner      User                  @relation(fields: [ownerId], references: [id])
-  uploads    BankStatementUpload[]
+  owner        User                  @relation(fields: [ownerId], references: [id])
+  uploads      BankStatementUpload[]
   transactions BankTransaction[]
 
   @@index([bankProvider])
   @@index([ownerId])
 }
 
-/// Upload e-statement / laporan e-statement bank
-/// Satu upload = satu file (CSV / XLSX / PDF)
-/// Bisa upload lebih dari 1 file per rekening
 model BankStatementUpload {
   id            String       @id @default(uuid())
   bankAccountId String
   uploadedById  String
-
-  // info file
-  fileName      String       // nama file asli
-  fileUrl       String       // URL file di storage (S3 / Supabase / lokal)
-  fileFormat    FileFormat   // CSV | XLSX | XLS | PDF
-  fileSizeBytes Int?         // ukuran file dalam bytes
-
-  // metadata periode laporan
+  fileName      String
+  fileUrl       String
+  fileFormat    FileFormat
+  fileSizeBytes Int?
   bankProvider  BankProvider
   periodStart   DateTime
   periodEnd     DateTime
-
-  // status proses parsing
   status        UploadStatus @default(UPLOADING)
-  errorMessage  String?      // pesan error jika status FAILED / PARTIAL
-
-  // ringkasan hasil parse (diisi setelah parsing selesai)
-  totalRows     Int          @default(0) // total baris di file
-  parsedRows    Int          @default(0) // baris yang berhasil di-parse
-  failedRows    Int          @default(0) // baris yang gagal di-parse
+  errorMessage  String?
+  totalRows     Int          @default(0)
+  parsedRows    Int          @default(0)
+  failedRows    Int          @default(0)
   totalCredit   Decimal      @default(0) @db.Decimal(20, 2)
   totalDebit    Decimal      @default(0) @db.Decimal(20, 2)
   notes         String?
-
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  bankAccount   BankAccount  @relation(fields: [bankAccountId], references: [id])
-  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
-  transactions  BankTransaction[]
+  bankAccount  BankAccount       @relation(fields: [bankAccountId], references: [id])
+  uploadedBy   User              @relation(fields: [uploadedById], references: [id])
+  transactions BankTransaction[]
 
   @@index([bankAccountId])
   @@index([uploadedById])
@@ -174,39 +150,31 @@ model BankStatementUpload {
   @@index([bankProvider])
 }
 
-/// Setiap baris transaksi dari e-statement yang sudah di-parse
 model BankTransaction {
-  id              String          @id @default(uuid())
+  id              String           @id @default(uuid())
   bankAccountId   String
-  uploadId        String          // dari upload mana transaksi ini berasal
-
-  // data transaksi
+  uploadId        String
   transactionDate DateTime
-  valueDate       DateTime?       // tanggal valuta (opsional, tidak semua bank ada)
-  description     String          // keterangan transaksi
-  reference       String?         // no. referensi dari bank
-  amount          Decimal         @db.Decimal(20, 2)
-  type            TransactionType // CREDIT (masuk) | DEBIT (keluar)
-  balance         Decimal?        @db.Decimal(20, 2) // saldo setelah transaksi
-
-  // kategorisasi & verifikasi
-  status          EStatementStatus  @default(PENDING)
+  valueDate       DateTime?
+  description     String
+  reference       String?
+  amount          Decimal          @db.Decimal(20, 2)
+  type            TransactionType
+  balance         Decimal?         @db.Decimal(20, 2)
+  status          EStatementStatus @default(PENDING)
   categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?
   note            String?
+  hash            String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  // deduplication — hash dari: bankAccountId+date+amount+description
-  hash            String?         @unique
-
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-  bankAccount  BankAccount          @relation(fields: [bankAccountId], references: [id])
-  upload       BankStatementUpload  @relation(fields: [uploadId], references: [id])
-  category     TransactionCategory? @relation(fields: [categoryId], references: [id])
-  verifiedBy   User?                @relation("VerifiedBy", fields: [verifiedById], references: [id])
-  mergeItems   MergeReportItem[]
+  bankAccount BankAccount          @relation(fields: [bankAccountId], references: [id])
+  upload      BankStatementUpload  @relation(fields: [uploadId], references: [id])
+  category    TransactionCategory? @relation(fields: [categoryId], references: [id])
+  verifiedBy  User?                @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  mergeItems  MergeReportItem[]
 
   @@index([bankAccountId])
   @@index([uploadId])
@@ -216,8 +184,6 @@ model BankTransaction {
   @@index([reference])
 }
 
-/// Kategori transaksi untuk finance
-/// Contoh: Operasional, Gaji, Pajak, Investasi
 model TransactionCategory {
   id          String   @id @default(uuid())
   name        String   @unique
@@ -226,24 +192,19 @@ model TransactionCategory {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  transactions BankTransaction[]
+  transactions       BankTransaction[]
   walletTransactions WalletTransaction[]
 }
 
-/// Laporan merge — gabungan transaksi dari beberapa rekening / bank
-/// dalam satu periode untuk rekonsiliasi
 model MergeReport {
   id          String      @id @default(uuid())
-  name        String      // contoh: "Rekonsiliasi April 2025"
+  name        String
   periodStart DateTime
   periodEnd   DateTime
   status      MergeStatus @default(DRAFT)
-
-  // ringkasan kalkulasi (dihitung ulang setiap ada perubahan item)
   totalCredit Decimal     @default(0) @db.Decimal(20, 2)
   totalDebit  Decimal     @default(0) @db.Decimal(20, 2)
-  netFlow     Decimal     @default(0) @db.Decimal(20, 2) // credit - debit
-
+  netFlow     Decimal     @default(0) @db.Decimal(20, 2)
   createdById String
   notes       String?
   createdAt   DateTime    @default(now())
@@ -257,13 +218,12 @@ model MergeReport {
   @@index([createdById])
 }
 
-/// Transaksi yang dimasukkan ke dalam sebuah MergeReport
 model MergeReportItem {
   id            String  @id @default(uuid())
   mergeReportId String
   transactionId String
-  isDuplicate   Boolean @default(false) // terdeteksi duplikat antar bank / upload
-  resolvedNote  String? // catatan resolusi manual jika duplikat
+  isDuplicate   Boolean @default(false)
+  resolvedNote  String?
 
   mergeReport MergeReport     @relation(fields: [mergeReportId], references: [id], onDelete: Cascade)
   transaction BankTransaction @relation(fields: [transactionId], references: [id])
@@ -273,15 +233,10 @@ model MergeReportItem {
   @@index([isDuplicate])
 }
 
-// ═══════════════════════════════════════════════
-// DIGITAL WALLET MODELS
-// ═══════════════════════════════════════════════
-
-/// Master akun dompet digital
 model DigitalWallet {
   id             String         @id @default(uuid())
   walletProvider WalletProvider
-  phoneNumber    String         // nomor HP terdaftar
+  phoneNumber    String
   accountName    String
   description    String?
   isActive       Boolean        @default(true)
@@ -289,8 +244,8 @@ model DigitalWallet {
   updatedAt      DateTime       @updatedAt
   ownerId        String
 
-  owner    User                    @relation(fields: [ownerId], references: [id])
-  uploads  WalletStatementUpload[]
+  owner        User                    @relation(fields: [ownerId], references: [id])
+  uploads      WalletStatementUpload[]
   transactions WalletTransaction[]
 
   @@unique([walletProvider, phoneNumber, ownerId])
@@ -298,40 +253,30 @@ model DigitalWallet {
   @@index([ownerId])
 }
 
-/// Upload e-statement dompet digital
 model WalletStatementUpload {
   id             String         @id @default(uuid())
   walletId       String
   uploadedById   String
-
-  // info file
   fileName       String
   fileUrl        String
   fileFormat     FileFormat
   fileSizeBytes  Int?
-
-  // metadata periode
   walletProvider WalletProvider
   periodStart    DateTime
   periodEnd      DateTime
-
-  // status parsing
   status         UploadStatus   @default(UPLOADING)
   errorMessage   String?
-
-  // ringkasan
   totalRows      Int            @default(0)
   parsedRows     Int            @default(0)
   failedRows     Int            @default(0)
   totalCredit    Decimal        @default(0) @db.Decimal(20, 2)
   totalDebit     Decimal        @default(0) @db.Decimal(20, 2)
   notes          String?
-
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  wallet       DigitalWallet   @relation(fields: [walletId], references: [id])
-  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+  wallet       DigitalWallet     @relation(fields: [walletId], references: [id])
+  uploadedBy   User              @relation(fields: [uploadedById], references: [id])
   transactions WalletTransaction[]
 
   @@index([walletId])
@@ -341,35 +286,29 @@ model WalletStatementUpload {
   @@index([walletProvider])
 }
 
-/// Transaksi dari e-statement dompet digital
 model WalletTransaction {
-  id              String          @id @default(uuid())
+  id              String           @id @default(uuid())
   walletId        String
   uploadId        String
-
   transactionDate DateTime
   description     String
   reference       String?
-  amount          Decimal         @db.Decimal(20, 2)
+  amount          Decimal          @db.Decimal(20, 2)
   type            TransactionType
-  balance         Decimal?        @db.Decimal(20, 2)
-
-  status          EStatementStatus  @default(PENDING)
+  balance         Decimal?         @db.Decimal(20, 2)
+  status          EStatementStatus @default(PENDING)
   categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?
   note            String?
+  hash            String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  // hash: walletId+date+amount+description
-  hash            String?         @unique
-
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-  wallet       DigitalWallet         @relation(fields: [walletId], references: [id])
-  upload       WalletStatementUpload @relation(fields: [uploadId], references: [id])
-  category     TransactionCategory?  @relation(fields: [categoryId], references: [id])
-  verifiedBy   User?                 @relation("WalletVerifiedBy", fields: [verifiedById], references: [id])
+  wallet     DigitalWallet         @relation(fields: [walletId], references: [id])
+  upload     WalletStatementUpload @relation(fields: [uploadId], references: [id])
+  category   TransactionCategory?  @relation(fields: [categoryId], references: [id])
+  verifiedBy User?                 @relation("WalletVerifiedBy", fields: [verifiedById], references: [id])
 
   @@index([walletId])
   @@index([uploadId])

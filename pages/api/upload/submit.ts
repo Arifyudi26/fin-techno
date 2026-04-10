@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const db = prisma as any;
 
-      // ── Verify account belongs to user ──────────────────────────────────
+      // Verify account belongs to user
       let providerName: string;
       if (sourceType === "BANK") {
         const acc = await prisma.bankAccount.findFirst({ where: { id: accountId, ownerId: userId } });
