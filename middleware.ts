@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Halaman publik (tidak perlu login)
-const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup"];
+const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup", "/auth/oauth-callback"];
 
 // API yang boleh diakses tanpa token
-const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register"];
+const PUBLIC_API_PATHS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/callback",    
+  "/api/auth/signin",     
+  "/api/auth/signout",    
+  "/api/auth/session",    
+  "/api/auth/csrf",        
+  "/api/auth/providers",  
+  "/api/auth/error",       
+  "/api/auth/_log",       
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -15,7 +26,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── API routes ──────────────────────────────────────────────────────────
+  // API routes 
   if (pathname.startsWith("/api")) {
     // Auth API boleh tanpa token
     if (PUBLIC_API_PATHS.some((p) => pathname.startsWith(p))) {
@@ -31,7 +42,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Page routes ─────────────────────────────────────────────────────────
+  // Page routes 
   const token = req.cookies.get("token")?.value;
 
   if (!token) {

@@ -22,7 +22,7 @@ const { PDFParse } = require("pdf-parse") as {
 
 export const config = { api: { bodyParser: false } };
 
-// ── CSV parser (minimal, no external dep) ────────────────────────────────────
+// CSV parser
 function parseCSV(content: string): string[][] {
   return content
     .split(/\r?\n/)
@@ -48,7 +48,7 @@ function parseCSV(content: string): string[][] {
     });
 }
 
-// ── Column mapping — covers BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, etc. ──
+// Column mapping — covers BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, etc.
 // Each field lists candidate column names in priority order (first match wins).
 const COLUMN_CANDIDATES = {
   date: [
@@ -130,7 +130,7 @@ function findColIdx(header: string[], candidates: readonly string[]): number {
   return -1;
 }
 
-// ── Detect transaction type ───────────────────────────────────────────────────
+// Detect transaction type
 function detectType(
   desc: string,
   debitVal: string,
@@ -160,7 +160,7 @@ function detectType(
   return TransactionType.DEBIT;
 }
 
-// ── Auto-categorize ──────────────────────────────────────────────────────────
+// Auto-categorize
 async function autoCategory(desc: string): Promise<string | null> {
   const lower = desc.toLowerCase();
   const categories = await prisma.transactionCategory.findMany({
@@ -195,7 +195,7 @@ async function autoCategory(desc: string): Promise<string | null> {
   return lny?.id ?? null;
 }
 
-// ── Parse rows from CSV ──────────────────────────────────────────────────────
+// Parse rows from CSV
 function parseRows(rows: string[][]): Array<{
   date: string;
   valueDate: string;
@@ -240,7 +240,7 @@ function parseAmount(val: string): number {
   return Math.abs(Number(val.replace(/[^0-9.-]/g, "")) || 0);
 }
 
-// ── Date parser — handles all common formats + datetime variants ──────────────
+// Date parser — handles all common formats + datetime variants
 function parseDate(val: string): Date | null {
   if (!val) return null;
   const clean = val.trim();
@@ -284,7 +284,7 @@ function parseDate(val: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// ── PDF parser — BRI e-Statement format ──────────────────────────────────────
+// PDF parser — BRI e-Statement format
 // Columns: Tanggal Transaksi | Uraian Transaksi | Teller/User ID | Debet | Kredit | Saldo
 // Date format: DD/MM/YY HH:MM:SS  (e.g. "01/03/26 08:10:47")
 // Numbers use comma as thousands separator: "1,394,102.00"
@@ -351,7 +351,7 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   return rows;
 }
 
-// ── Main handler ─────────────────────────────────────────────────────────────
+// Main handler
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -416,7 +416,7 @@ export default async function handler(
 
       const db = prisma as any;
 
-      // ── Verify account belongs to user ──────────────────────────────────
+      // Verify account belongs to user
       let providerName: string;
       if (sourceType === "BANK") {
         const acc = await prisma.bankAccount.findFirst({
@@ -434,8 +434,7 @@ export default async function handler(
         providerName = wallet.walletProvider;
       }
 
-      // ── Validasi 1: nama file tidak boleh sama (apapun formatnya) ────────
-      // Strip extension, compare base name case-insensitive
+      // Validasi 1: nama file tidak boleh sama
       const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "").toLowerCase();
       if (sourceType === "BANK") {
         const existingByName = await prisma.bankStatementUpload.findFirst({
@@ -467,7 +466,7 @@ export default async function handler(
         }
       }
 
-      // ── Validasi 2: konten file tidak boleh duplikat (hash MD5 isi file) ─
+      // Validasi 2: konten file tidak boleh duplikat (hash MD5)
       if (sourceType === "BANK") {
         const existingByHash = await prisma.bankStatementUpload.findFirst({
           where: { bankAccountId: accountId, fileUrl: { endsWith: fileHash } },
@@ -492,7 +491,7 @@ export default async function handler(
         }
       }
 
-      // ── Create upload record (PROCESSING) ───────────────────────────────
+      // Create upload record
       let uploadId: string;
       if (sourceType === "BANK") {
         const upload = await prisma.bankStatementUpload.create({
@@ -530,7 +529,7 @@ export default async function handler(
         uploadId = upload.id;
       }
 
-      // ── Parse file ───────────────────────────────────────────────────────
+      // Parse file
       let parsedRows: ReturnType<typeof parseRows> = [];
       let parseError: string | null = null;
 
@@ -574,7 +573,7 @@ export default async function handler(
         return res.status(422).json({ message: parseError, uploadId });
       }
 
-      // ── Auto-detect period from transaction dates ─────────────────────────
+      // Auto-detect period from transaction dates
       const allDates = parsedRows
         .map((r) => parseDate(r.date))
         .filter((d): d is Date => d !== null);
@@ -601,7 +600,7 @@ export default async function handler(
         });
       }
 
-      // ── Insert transactions ──────────────────────────────────────────────
+      // Insert transactions
       let successCount = 0;
       let failCount = 0;
       let totalCredit = 0;
@@ -690,7 +689,7 @@ export default async function handler(
         }
       }
 
-      // ── Update upload summary ────────────────────────────────────────────
+      // Update upload summary
       const finalStatus =
         failCount === 0
           ? UploadStatus.SUCCESS

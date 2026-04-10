@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const user = await db.user.create({
-      data: { name, email, password: hashedPassword, role: "user" },
+      data: { name, email, password: hashedPassword, role: "user", loginProvider: "APP" },
     });
 
     const token = jwt.sign(
