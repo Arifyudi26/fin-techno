@@ -51,19 +51,22 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false;
 
       try {
-        let dbUser = await db.user.findUnique({ where: { email: user.email } });
+        const provider = account?.provider === "google" ? "GOOGLE" : account?.provider === "facebook" ? "FACEBOOK" : "APP";
 
-        if (!dbUser) {
-          dbUser = await db.user.create({
-            data: {
-              email: user.email,
-              name: user.name ?? user.email.split("@")[0],
-              password: "",
-              role: "user",
-              loginProvider: (account?.provider === "google" ? "GOOGLE" : "FACEBOOK") as "GOOGLE" | "FACEBOOK",
-            },
-          });
-        }
+        const dbUser = await db.user.upsert({
+          where: { email: user.email },
+          create: {
+            email: user.email,
+            name: user.name ?? user.email.split("@")[0],
+            password: "",
+            role: "user",
+            loginProvider: provider,
+          },
+          update: {
+            loginProvider: provider,
+            name: user.name ?? undefined,
+          },
+        });
 
         const appToken = jwt.sign(
           { id: dbUser.id, role: dbUser.role, name: dbUser.name },
@@ -78,7 +81,7 @@ export const authOptions: NextAuthOptions = {
 
         return true;
       } catch (err) {
-        console.error("OAuth signIn error:", err);
+        console.error("OAuth signIn error:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
         return false;
       }
     },
