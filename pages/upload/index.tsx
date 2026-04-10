@@ -952,9 +952,11 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
 function UploadCard({
   item,
   onViewDetail,
+  onDelete,
 }: {
   item: UploadItem;
   onViewDetail: () => void;
+  onDelete: () => void;
 }) {
   const cfg = statusConfig[item.status] ?? {
     label: item.status,
@@ -1109,21 +1111,34 @@ function UploadCard({
         <span className="text-xs text-gray-400">
           {formatDate(item.uploadedAt)}
         </span>
-        <button
-          onClick={onViewDetail}
-          className="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors"
-        >
-          Lihat Detail
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M5 12h14M12 5l7 7-7 7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:text-error-400 dark:hover:bg-error-500/10 transition-colors"
+            title="Hapus"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            onClick={onViewDetail}
+            className="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors"
+          >
+            Lihat Detail
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1140,6 +1155,8 @@ export default function UploadPage() {
     id: string;
     sourceType: "BANK" | "WALLET";
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UploadItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filterType, setFilterType] = useState<"ALL" | "BANK" | "WALLET">(
     "ALL",
   );
@@ -1234,6 +1251,21 @@ export default function UploadPage() {
         duration: 5000,
       },
     );
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await axiosGlobal.delete(`/upload/${deleteTarget.id}?type=${deleteTarget.sourceType}`);
+      setUploads((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      fire("success", "Upload dihapus", { message: "Data upload dan transaksi terkait berhasil dihapus.", duration: 3000 });
+    } catch {
+      fire("error", "Gagal menghapus upload");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredUploads = uploads.filter((u) => {
@@ -1593,6 +1625,7 @@ export default function UploadPage() {
               onViewDetail={() =>
                 setDetailItem({ id: item.id, sourceType: item.sourceType })
               }
+              onDelete={() => setDeleteTarget(item)}
             />
           ))}
         </div>
@@ -1612,6 +1645,57 @@ export default function UploadPage() {
           sourceType={detailItem.sourceType}
           onClose={() => setDetailItem(null)}
         />
+      )}
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-error-50 dark:bg-error-500/10 shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4M12 17h.01" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Hapus Upload?</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Tindakan ini tidak dapat dibatalkan</p>
+              </div>
+            </div>
+            <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {deleteTarget.provider} · {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
+              </p>
+              <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 rounded-lg bg-error-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-error-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Menghapus...
+                  </>
+                ) : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <Toast {...toastState} onClose={close} />
