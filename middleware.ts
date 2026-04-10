@@ -50,7 +50,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   } else {
-    if (PUBLIC_PAGE_PATHS.includes(pathname)) {
+    // oauth-callback selalu boleh diakses meski ada token, untuk handle re-login OAuth
+    if (PUBLIC_PAGE_PATHS.includes(pathname) && pathname !== "/auth/oauth-callback") {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }

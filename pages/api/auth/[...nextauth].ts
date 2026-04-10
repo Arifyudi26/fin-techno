@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import TwitterProvider from "next-auth/providers/twitter";
+import FacebookProvider from "next-auth/providers/facebook";
 import db from "@/lib/db";
 import jwt from "jsonwebtoken";
 
@@ -34,20 +34,19 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
-    ...(process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
       ? [
-          TwitterProvider({
-            clientId: process.env.TWITTER_CLIENT_ID,
-            clientSecret: process.env.TWITTER_CLIENT_SECRET,
-            version: "2.0",
+          FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
           }),
         ]
       : []),
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (!user.email && account?.provider === "twitter") {
-        user.email = `twitter_${account.providerAccountId}@oauth.local`;
+      if (!user.email && account?.provider === "facebook") {
+        user.email = `facebook_${account.providerAccountId}@oauth.local`;
       }
       if (!user.email) return false;
 
@@ -61,7 +60,7 @@ export const authOptions: NextAuthOptions = {
               name: user.name ?? user.email.split("@")[0],
               password: "",
               role: "user",
-              loginProvider: account?.provider === "google" ? "GOOGLE" : "TWITTER",
+              loginProvider: (account?.provider === "google" ? "GOOGLE" : "FACEBOOK") as "GOOGLE" | "FACEBOOK",
             },
           });
         }

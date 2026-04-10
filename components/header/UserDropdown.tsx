@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import { signOut } from "next-auth/react";
 import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
 import useAuthStore from "@/store/authStore";
@@ -20,7 +21,9 @@ export default function UserDropdown() {
   function handleLogout() {
     closeDropdown();
     logout();
-    router.push("/auth/login");
+    signOut({ redirect: false }).then(() => {
+      router.push("/auth/login");
+    });
   }
 
   const displayName = name || (role?.toLowerCase() === "admin" ? "Admin" : "User");

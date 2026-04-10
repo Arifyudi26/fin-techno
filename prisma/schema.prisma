@@ -15,7 +15,7 @@ enum Role {
 enum LoginProvider {
   APP
   GOOGLE
-  TWITTER
+  FACEBOOK
 }
 
 enum BankProvider {

@@ -6,7 +6,7 @@ Aplikasi manajemen keuangan pribadi berbasis web untuk upload, parsing, dan anal
 
 - **Framework:** Next.js 15 (Pages Router) + TypeScript
 - **Database:** PostgreSQL (Neon) via Prisma ORM
-- **Auth:** JWT (email/password) + NextAuth v4 (Google, Twitter/X OAuth)
+- **Auth:** JWT (email/password) + NextAuth v4 (Google, Facebook OAuth)
 - **State:** Zustand + js-cookie
 - **Charts:** ApexCharts
 - **Styling:** Tailwind CSS
@@ -22,7 +22,7 @@ Aplikasi manajemen keuangan pribadi berbasis web untuk upload, parsing, dan anal
 - Laporan pengeluaran & pemasukan per periode
 - Rekonsiliasi multi-rekening (merge report)
 - Manajemen kategori transaksi
-- Login email/password + OAuth Google & X
+- Login email/password + OAuth Google & Facebook
 
 ---
 
@@ -67,9 +67,9 @@ NEXTAUTH_SECRET="random_string_minimal_32_karakter"
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 
-# Twitter/X OAuth
-TWITTER_CLIENT_ID=""
-TWITTER_CLIENT_SECRET=""
+# Facebook OAuth
+FACEBOOK_CLIENT_ID=""
+FACEBOOK_CLIENT_SECRET=""
 ```
 
 Generate `NEXTAUTH_SECRET` dan `JWT_SECRET`:
@@ -123,23 +123,27 @@ Buka [http://localhost:3000](http://localhost:3000).
    GOOGLE_CLIENT_SECRET="..."
    ```
 
-### Twitter / X
+### Facebook
 
-1. Buka [Twitter Developer Portal](https://developer.twitter.com)
-2. Buat app baru atau pilih yang sudah ada
-3. Pergi ke **App Settings → User authentication settings**
-4. Enable **OAuth 2.0**, Type: **Web App**
-5. Tambahkan Callback URL:
+1. Buka [Facebook Developers](https://developers.facebook.com)
+2. Buat app baru, pilih type **Consumer**
+3. Tambahkan produk **Facebook Login**
+4. Pergi ke **Facebook Login → Settings**
+5. Tambahkan Valid OAuth Redirect URI:
    ```
-   http://localhost:3000/api/auth/callback/twitter
+   http://localhost:3000/api/auth/callback/facebook
    ```
-6. Copy **Client ID** dan **Client Secret** ke `.env`:
+   Untuk production:
+   ```
+   https://yourdomain.com/api/auth/callback/facebook
+   ```
+6. Copy **App ID** dan **App Secret** ke `.env`:
    ```env
-   TWITTER_CLIENT_ID="..."
-   TWITTER_CLIENT_SECRET="..."
+   FACEBOOK_CLIENT_ID="..."
+   FACEBOOK_CLIENT_SECRET="..."
    ```
 
-> Twitter provider hanya aktif jika kedua variabel diisi. Jika kosong, tombol Sign in with X tidak akan muncul di flow OAuth.
+> Facebook provider hanya aktif jika kedua variabel diisi. Jika kosong, tombol Sign in with Facebook tidak akan muncul di flow OAuth.
 
 ---
 
@@ -151,7 +155,7 @@ Buka [http://localhost:3000](http://localhost:3000).
 POST /api/auth/login  →  JWT token  →  disimpan di cookie "token" + Zustand store
 ```
 
-### OAuth (Google / X)
+### OAuth (Google / Facebook)
 
 ```
 Klik button  →  signIn(provider)  →  /api/auth/callback/[provider]
@@ -230,4 +234,4 @@ yarn seed     # seed database
 2. Import project di [vercel.com](https://vercel.com)
 3. Tambahkan semua environment variables dari `.env` di Vercel dashboard
 4. Update `NEXTAUTH_URL` ke domain production
-5. Update redirect URI di Google Console dan Twitter Developer Portal ke domain production
+5. Update redirect URI di Google Console dan Facebook Developers ke domain production

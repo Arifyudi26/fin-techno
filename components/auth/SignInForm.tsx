@@ -19,7 +19,7 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const { toastState, fire, close } = useToast();
 
-  const handleOAuth = (provider: "google" | "twitter") => {
+  const handleOAuth = (provider: "google" | "facebook") => {
     signIn(provider, { callbackUrl: "/auth/oauth-callback" });
   };
 
@@ -79,11 +79,11 @@ export default function SignInForm() {
                   </svg>
                   Sign in with Google
                 </button>
-                <button type="button" onClick={() => handleOAuth("twitter")} className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
-                  <svg width="21" className="fill-current" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15.6705 1.875H18.4272L12.4047 8.75833L19.4897 18.125H13.9422L9.59717 12.4442L4.62554 18.125H1.86721L8.30887 10.7625L1.51221 1.875H7.20054L11.128 7.0675L15.6705 1.875ZM14.703 16.475H16.2305L6.37054 3.43833H4.73137L14.703 16.475Z" />
+                <button type="button" onClick={() => handleOAuth("facebook")} className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" fill="#1877F2"/>
                   </svg>
-                  Sign in with X
+                  Sign in with Facebook
                 </button>
               </div>
               <div className="relative py-3 sm:py-5">
