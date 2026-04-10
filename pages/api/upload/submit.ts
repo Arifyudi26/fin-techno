@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import { IncomingForm, File as FormidableFile } from "formidable";
@@ -62,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         providerName = wallet.walletProvider;
       }
 
-      // ── Cek duplikat nama file ───────────────────────────────────────────
+      // Cek duplikat nama file 
       const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "").toLowerCase();
       if (sourceType === "BANK") {
         const existingByName = await prisma.bankStatementUpload.findFirst({
@@ -88,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // ── Cek duplikat konten (hash MD5) ───────────────────────────────────
+      // Cek duplikat konten (hash MD5) ───────────────────────────────────
       const fileUrlSuffix = fileHash;
       if (sourceType === "BANK") {
         const existingByHash = await prisma.bankStatementUpload.findFirst({
@@ -114,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // ── Upload file ke Vercel Blob ────────────────────────────────────────
+      // Upload file ke Vercel Blob 
       const blobPath = `statements/${userId}/${crypto.randomUUID()}_${fileName}`;
       const blob = await put(blobPath, fileBuffer, {
         access: "private",
@@ -123,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       const fileUrl = `${blob.url}#${fileHash}`;
 
-      // ── Buat upload record (PROCESSING) ──────────────────────────────────
+      // Buat upload record (PROCESSING) 
       let uploadId: string;
       if (sourceType === "BANK") {
         const upload = await prisma.bankStatementUpload.create({
@@ -161,65 +160,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         uploadId = upload.id;
       }
 
-      // ── Kirim job ke QStash (background processing) ──────────────────────
+      // Kirim job ke QStash (background processing) 
       const appUrl = process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api$/, "");
+        : process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
       const qstashToken = process.env.QSTASH_TOKEN;
       const isLocal = !process.env.VERCEL_URL;
 
-      // Respond dulu ke client, baru trigger background process
-      res.status(202).json({
-        uploadId,
-        status: "PROCESSING",
-        message: "File sedang diproses di background. Cek status secara berkala.",
-      });
+      const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
-      // Background process — jalan setelah response dikirim
       if (!qstashToken || isLocal) {
-        // Fallback: proses langsung di local dev (QStash tidak bisa hit localhost)
-        setImmediate(() => {
-          triggerProcessDirect(uploadId, sourceType, accountId, blob.url, fileFormat, userId);
+        // Local dev: proses langsung (fire-and-forget)
+        // Kirim response dulu, baru proses
+        res.status(202).json({
+          uploadId,
+          status: "PROCESSING",
+          message: "File sedang diproses. Cek status secara berkala.",
         });
+        import("./process")
+          .then(({ processUpload }) => processUpload(jobPayload))
+          .catch((e) => console.error("process error:", e));
       } else {
-        setImmediate(async () => {
-          try {
-            const qstash = new Client({
-              token: qstashToken,
-              baseUrl: process.env.QSTASH_URL,
-            });
-            await qstash.publishJSON({
-              url: `${appUrl}/api/upload/process`,
-              body: { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId },
-              retries: 2,
-            });
-          } catch (e) {
-            console.error("QStash publish error:", e);
-            // Fallback ke direct process jika QStash gagal
-            triggerProcessDirect(uploadId, sourceType, accountId, blob.url, fileFormat, userId);
-          }
-        });
+        // Production: kirim ke QStash untuk background processing yang reliable
+        try {
+          const qstash = new Client({
+            token: qstashToken,
+            baseUrl: process.env.QSTASH_URL,
+          });
+          await qstash.publishJSON({
+            url: `${appUrl}/api/upload/process`,
+            body: jobPayload,
+            retries: 3,
+            // Delay 1 detik agar DB record sudah committed sebelum diproses
+            delay: 1,
+          });
+          return res.status(202).json({
+            uploadId,
+            status: "PROCESSING",
+            message: "File sedang diproses di background. Cek status secara berkala.",
+          });
+        } catch (e) {
+          console.error("QStash publish error:", e);
+          // Fallback: tandai FAILED agar user tahu ada masalah
+          await (sourceType === "BANK"
+            ? prisma.bankStatementUpload.update({ where: { id: uploadId }, data: { status: UploadStatus.FAILED, errorMessage: "Gagal mengirim job ke background processor." } })
+            : db.walletStatementUpload.update({ where: { id: uploadId }, data: { status: UploadStatus.FAILED, errorMessage: "Gagal mengirim job ke background processor." } })
+          );
+          return res.status(500).json({ message: "Gagal memulai background processing. Coba lagi." });
+        }
       }
     } catch (error: any) {
       console.error("upload submit error:", error);
       return res.status(500).json({ message: "Internal server error: " + error.message });
     }
   });
-}
-
-// Fallback untuk dev/local: import dan jalankan langsung (fire-and-forget)
-function triggerProcessDirect(
-  uploadId: string,
-  sourceType: string,
-  accountId: string,
-  fileUrl: string,
-  fileFormat: string,
-  userId: string,
-) {
-  import("./process")
-    .then(({ processUpload }) =>
-      processUpload({ uploadId, sourceType, accountId, fileUrl, fileFormat, userId })
-    )
-    .catch((e) => console.error("process error:", e));
 }

@@ -46,6 +46,10 @@ interface UploadItem {
   uploadedAt: string;
 }
 
+// Upload dianggap duplikat jika SUCCESS tapi tidak ada transaksi baru yang masuk
+const isDuplicate = (item: Pick<UploadItem, "status" | "parsedRows" | "totalRows">) =>
+  item.status === "SUCCESS" && item.parsedRows === 0 && item.totalRows > 0;
+
 interface UploadDetail extends UploadItem {
   uploadedBy: string;
   transactions: TxRow[];
@@ -104,6 +108,7 @@ const statusConfig: Record<
   PARTIAL: { label: "Sebagian", color: "warning" },
   PROCESSING: { label: "Memproses", color: "info" },
   UPLOADING: { label: "Mengupload", color: "info" },
+  DUPLICATE: { label: "Duplikat", color: "light" },
 };
 
 // Upload Form Modal
@@ -759,6 +764,28 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 ))}
               </div>
 
+              {/* Duplicate notice */}
+              {isDuplicate(detail) && (
+                <div className="flex items-start gap-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
+                      <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Semua transaksi sudah tercatat</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {detail.totalRows} transaksi dari file ini identik dengan data yang sudah diupload sebelumnya.
+                      Tidak ada transaksi baru yang ditambahkan untuk menghindari duplikasi data.
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                      Jika ini bukan yang diharapkan, pastikan kamu tidak mengupload file yang sama dua kali (misal: CSV dan PDF dari periode yang sama).
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Error message */}
               {detail.errorMessage && (
                 <div className="flex items-start gap-2.5 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
@@ -958,10 +985,10 @@ function UploadCard({
   onViewDetail: () => void;
   onDelete: () => void;
 }) {
-  const cfg = statusConfig[item.status] ?? {
-    label: item.status,
-    color: "light" as const,
-  };
+  const duplicate = isDuplicate(item);
+  const cfg = duplicate
+    ? statusConfig["DUPLICATE"]
+    : (statusConfig[item.status] ?? { label: item.status, color: "light" as const });
   const netFlow = item.totalCredit - item.totalDebit;
 
   return (
@@ -1045,6 +1072,22 @@ function UploadCard({
         {formatDate(item.periodStart)} – {formatDate(item.periodEnd)}
       </div>
 
+      {/* Banner duplikat */}
+      {duplicate && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 mb-4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0 mt-0.5">
+            <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div>
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Semua transaksi sudah ada</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {item.totalRows} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
@@ -1053,12 +1096,12 @@ function UploadCard({
             {item.totalRows}
           </p>
         </div>
-        <div className="text-center p-2 rounded-lg bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
-            Berhasil
+        <div className={`text-center p-2 rounded-lg ${duplicate ? "bg-gray-50 dark:bg-gray-800" : "bg-success-50 dark:bg-success-500/10"}`}>
+          <p className={`text-xs mb-0.5 ${duplicate ? "text-gray-400" : "text-success-600 dark:text-success-400"}`}>
+            {duplicate ? "Duplikat" : "Berhasil"}
           </p>
-          <p className="text-sm font-bold text-success-700 dark:text-success-400">
-            {item.parsedRows}
+          <p className={`text-sm font-bold ${duplicate ? "text-gray-500 dark:text-gray-400" : "text-success-700 dark:text-success-400"}`}>
+            {duplicate ? item.totalRows : item.parsedRows}
           </p>
         </div>
         <div className="text-center p-2 rounded-lg bg-error-50 dark:bg-error-500/10">
@@ -1072,39 +1115,36 @@ function UploadCard({
       </div>
 
       {/* Credit / Debit */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
-            Masuk
-          </p>
-          <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
-            +{formatIDR(item.totalCredit)}
+      {duplicate ? (
+        <div className="flex items-center justify-center p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 mb-4">
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            Data keuangan tersedia di upload sebelumnya
           </p>
         </div>
-        <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">
-            Keluar
-          </p>
-          <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
-            -{formatIDR(item.totalDebit)}
-          </p>
-        </div>
-      </div>
-
-      {/* Net flow */}
-      <div
-        className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}
-      >
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          Net Flow
-        </span>
-        <span
-          className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}
-        >
-          {netFlow >= 0 ? "+" : ""}
-          {formatIDR(netFlow)}
-        </span>
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
+              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Masuk</p>
+              <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
+                +{formatIDR(item.totalCredit)}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
+              <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Keluar</p>
+              <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
+                -{formatIDR(item.totalDebit)}
+              </p>
+            </div>
+          </div>
+          <div className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Net Flow</span>
+            <span className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}>
+              {netFlow >= 0 ? "+" : ""}{formatIDR(netFlow)}
+            </span>
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between">
@@ -1213,16 +1253,19 @@ export default function UploadPage() {
           if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
             clearInterval(poll);
             fetchUploads();
+            const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
             fire(
-              status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
-              status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
+              allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
+              allDuplicate ? "Transaksi Sudah Ada" : status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
               {
-                message: status === "SUCCESS"
-                  ? `${parsed} dari ${total} transaksi berhasil diproses.`
-                  : status === "PARTIAL"
-                    ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
-                    : "Terjadi kesalahan saat memproses file.",
-                duration: 5000,
+                message: allDuplicate
+                  ? `${total} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.`
+                  : status === "SUCCESS"
+                    ? `${parsed} dari ${total} transaksi berhasil diproses.`
+                    : status === "PARTIAL"
+                      ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
+                      : "Terjadi kesalahan saat memproses file.",
+                duration: 6000,
               },
             );
           }

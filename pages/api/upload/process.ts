@@ -9,11 +9,13 @@ import {
 } from "@prisma/client";
 import crypto from "crypto";
 
-// Vercel Pro/Hobby: max duration 60s, tapi QStash bisa retry
-// Set maxDuration ke 300 untuk Vercel Pro, atau biarkan default 60s untuk free
-export const config = { api: { bodyParser: true } };
+// Vercel: set maxDuration agar tidak timeout saat proses file besar
+export const config = {
+  api: { bodyParser: false },
+  maxDuration: 60,
+};
 
-// ── CSV parser ────────────────────────────────────────────────────────────────
+// CSV parser
 function parseCSV(content: string): string[][] {
   return content
     .split(/\r?\n/)
@@ -32,7 +34,7 @@ function parseCSV(content: string): string[][] {
     });
 }
 
-// ── Column mapping ────────────────────────────────────────────────────────────
+// Column mapping 
 const COLUMN_CANDIDATES = {
   date: ["tgl_tran", "tanggal transaksi", "tanggal", "transaction date", "date", "tgl"],
   valueDate: ["tgl_efektif", "tanggal efektif", "value date", "tgl valuta"],
@@ -69,23 +71,33 @@ function detectType(desc: string, debitVal: string, creditVal: string, signVal?:
   return TransactionType.DEBIT;
 }
 
-async function autoCategory(desc: string): Promise<string | null> {
+// Category rules (tanpa DB query per-row) 
+const CATEGORY_RULES: Record<string, string[]> = {
+  GAJ: ["gaji", "salary", "thr", "bonus", "payroll"],
+  UTL: ["listrik", "pln", "pdam", "air", "internet", "telkom", "indihome", "wifi", "bpjs"],
+  PAJ: ["pajak", "pph", "ppn", "bphtb"],
+  INV: ["investasi", "deposito", "saham", "reksa", "obligasi"],
+  OPS: ["operasional", "supplier", "vendor", "pembelian", "bahan"],
+};
+
+type CategoryMap = Map<string, string>; // code -> id
+
+// Load semua kategori sekali, kembalikan Map untuk lookup O(1)
+async function loadCategories(): Promise<CategoryMap> {
+  const cats = await prisma.transactionCategory.findMany({
+    select: { id: true, code: true },
+  });
+  return new Map(cats.map((c) => [c.code, c.id]));
+}
+
+function resolveCategoryId(desc: string, categoryMap: CategoryMap): string | null {
   const lower = desc.toLowerCase();
-  const categories = await prisma.transactionCategory.findMany({ select: { id: true, name: true, code: true } });
-  const rules: Record<string, string[]> = {
-    GAJ: ["gaji", "salary", "thr", "bonus", "payroll"],
-    UTL: ["listrik", "pln", "pdam", "air", "internet", "telkom", "indihome", "wifi", "bpjs"],
-    PAJ: ["pajak", "pph", "ppn", "bphtb"],
-    INV: ["investasi", "deposito", "saham", "reksa", "obligasi"],
-    OPS: ["operasional", "supplier", "vendor", "pembelian", "bahan"],
-  };
-  for (const [code, keywords] of Object.entries(rules)) {
+  for (const [code, keywords] of Object.entries(CATEGORY_RULES)) {
     if (keywords.some((k) => lower.includes(k))) {
-      const cat = categories.find((c) => c.code === code);
-      if (cat) return cat.id;
+      return categoryMap.get(code) ?? null;
     }
   }
-  return categories.find((c) => c.code === "LNY")?.id ?? null;
+  return categoryMap.get("LNY") ?? null;
 }
 
 type ParsedRow = {
@@ -152,37 +164,74 @@ function parseDate(val: string): Date | null {
 }
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const { PDFParse } = require("pdf-parse") as {
-    PDFParse: new (opts: { data: Buffer }) => { getText: () => Promise<{ text: string }> };
-  };
+  const { PDFParse } = require("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   const data = await parser.getText();
-  const text = data.text.replace(/\r/g, "").replace(/[ \t]+/g, " ");
+
+  // Strip footer/summary section — BRI PDF selalu punya "Saldo Awal" di akhir
+  // Potong teks sebelum baris summary agar tidak ikut ter-parse
+  let text = data.text.replace(/\r/g, "").replace(/[ \t]+/g, " ");
+  const summaryMarkers = [
+    "Saldo Awal",
+    "Opening Balance",
+    "Total Transaksi Debet",
+    "Terbilang",
+  ];
+  for (const marker of summaryMarkers) {
+    const idx = text.indexOf(marker);
+    if (idx > 0) {
+      text = text.slice(0, idx);
+      break;
+    }
+  }
+
   const rows: ParsedRow[] = [];
   const DATE_SPLIT = /(?=\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})/g;
-  const chunks = text.split(DATE_SPLIT).filter((c) => /^\d{2}\/\d{2}\/\d{2}/.test(c.trim()));
+  const chunks = text.split(DATE_SPLIT).filter((c: string) => /^\d{2}\/\d{2}\/\d{2}/.test(c.trim()));
+
   for (const chunk of chunks) {
     const clean = chunk.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
     const dateMatch = clean.match(/^(\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) /);
     if (!dateMatch) continue;
     const dateStr = dateMatch[1];
     const rest = clean.slice(dateMatch[0].length).trim();
+
+    // Cari semua angka format ribuan: 1,234.00 atau 0.00
     const allNums = [...rest.matchAll(/[\d,]+\.\d{2}/g)];
+    // Butuh minimal 3 angka: debit, kredit, saldo
     if (allNums.length < 3) continue;
+
     const balanceStr = allNums[allNums.length - 1][0];
     const creditStr = allNums[allNums.length - 2][0];
     const debitStr = allNums[allNums.length - 3][0];
     const firstNumIdx = allNums[allNums.length - 3].index!;
+
+    // Deskripsi = teks sebelum angka pertama, strip Teller ID di akhir
     let descRaw = rest.slice(0, firstNumIdx).trim();
-    descRaw = descRaw.replace(/\s+(\d{4,}|[A-Z]{3,}[A-Z0-9]*)$/, "").trim();
+    // Hapus Teller ID (angka 7+ digit atau kode huruf kapital) di akhir deskripsi
+    descRaw = descRaw.replace(/\s+(\d{5,}|[A-Z]{3,}[A-Z0-9]*)$/, "").trim();
     if (!descRaw) continue;
-    const sign = parseAmount(debitStr) > 0 ? "Db" : "Cr";
-    rows.push({ date: dateStr, valueDate: "", description: descRaw, debit: debitStr, credit: creditStr, openingBalance: "", balance: balanceStr, reference: "", sign });
+
+    // Tentukan sign dari nilai debit/kredit
+    const parseAmt = (v: string) => Math.abs(Number(v.replace(/[^0-9.-]/g, "")) || 0);
+    const sign = parseAmt(creditStr) > 0 ? "Cr" : "Db";
+
+    rows.push({
+      date: dateStr,
+      valueDate: "",
+      description: descRaw,
+      debit: debitStr,
+      credit: creditStr,
+      openingBalance: "",
+      balance: balanceStr,
+      reference: "",
+      sign,
+    });
   }
   return rows;
 }
 
-// ── Core processing logic (exported for direct call fallback) ─────────────────
+// Core processing logic 
 export async function processUpload(payload: {
   uploadId: string;
   sourceType: string;
@@ -195,12 +244,10 @@ export async function processUpload(payload: {
   const db = prisma as any;
 
   try {
-    // Download file dari Vercel Blob (authenticated)
-    const blobUrl = fileUrl.split("#")[0]; // strip hash suffix
+    // Download file dari Vercel Blob
+    const blobUrl = fileUrl.split("#")[0];
     const response = await fetch(blobUrl, {
-      headers: {
-        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-      },
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
     });
     if (!response.ok) throw new Error(`Gagal download file: ${response.status} ${response.statusText}`);
     const arrayBuffer = await response.arrayBuffer();
@@ -242,8 +289,24 @@ export async function processUpload(payload: {
       await db.walletStatementUpload.update({ where: { id: uploadId }, data: { periodStart: detectedStart, periodEnd: detectedEnd } });
     }
 
-    // Insert transactions
-    let successCount = 0, failCount = 0, totalCredit = 0, totalDebit = 0;
+    // Load kategori sekali saja (bukan per-row)
+    const categoryMap = await loadCategories();
+
+    // Build semua transaksi valid terlebih dahulu
+    type TxRecord = {
+      hash: string;
+      txDate: Date;
+      valueDate: Date | null;
+      description: string;
+      reference: string | null;
+      amount: number;
+      type: TransactionType;
+      balance: number | null;
+      catId: string | null;
+    };
+
+    const validTx: TxRecord[] = [];
+    let failCount = 0;
 
     for (const row of parsedRows) {
       if (!row.description && !row.date) { failCount++; continue; }
@@ -256,41 +319,141 @@ export async function processUpload(payload: {
       const type = detectType(row.description, row.debit, row.credit, row.sign);
       const balance = parseAmount(row.balance);
       const valueDate = parseDate(row.valueDate);
-      const catId = await autoCategory(row.description);
+      const catId = resolveCategoryId(row.description, categoryMap);
       const hash = crypto.createHash("md5").update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`).digest("hex");
+      validTx.push({ hash, txDate, valueDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, catId });
+    }
 
+    // Cek hash yang sudah ada di DB (satu query, bukan N queries)
+    const existingHashes = new Set<string>();
+    if (validTx.length > 0) {
+      const hashes = validTx.map((t) => t.hash);
+      if (sourceType === "BANK") {
+        const existing = await prisma.bankTransaction.findMany({
+          where: { hash: { in: hashes } },
+          select: { hash: true },
+        });
+        existing.forEach((e) => existingHashes.add(e.hash!));
+      } else {
+        const existing = await db.walletTransaction.findMany({
+          where: { hash: { in: hashes } },
+          select: { hash: true },
+        });
+        existing.forEach((e: any) => existingHashes.add(e.hash));
+      }
+    }
+
+    // Filter hanya transaksi baru (belum ada di DB)
+    const newTx = validTx.filter((t) => !existingHashes.has(t.hash));
+
+    // Batch insert dalam chunk 100 agar tidak overload DB
+    const BATCH_SIZE = 100;
+    let insertFailed = 0;
+
+    for (let i = 0; i < newTx.length; i += BATCH_SIZE) {
+      const chunk = newTx.slice(i, i + BATCH_SIZE);
       try {
         if (sourceType === "BANK") {
-          await prisma.bankTransaction.upsert({
-            where: { hash },
-            create: { bankAccountId: accountId, uploadId, transactionDate: txDate, valueDate: valueDate ?? undefined, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, status: EStatementStatus.VERIFIED, categoryId: catId, hash },
-            update: {},
+          await prisma.bankTransaction.createMany({
+            data: chunk.map((t) => ({
+              bankAccountId: accountId,
+              uploadId,
+              transactionDate: t.txDate,
+              valueDate: t.valueDate ?? undefined,
+              description: t.description,
+              reference: t.reference,
+              amount: t.amount,
+              type: t.type,
+              balance: t.balance,
+              status: EStatementStatus.VERIFIED,
+              categoryId: t.catId,
+              hash: t.hash,
+            })),
+            skipDuplicates: true,
           });
         } else {
-          await db.walletTransaction.upsert({
-            where: { hash },
-            create: { walletId: accountId, uploadId, transactionDate: txDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, status: EStatementStatus.VERIFIED, categoryId: catId, hash },
-            update: {},
+          await db.walletTransaction.createMany({
+            data: chunk.map((t) => ({
+              walletId: accountId,
+              uploadId,
+              transactionDate: t.txDate,
+              description: t.description,
+              reference: t.reference,
+              amount: t.amount,
+              type: t.type,
+              balance: t.balance,
+              status: EStatementStatus.VERIFIED,
+              categoryId: t.catId,
+              hash: t.hash,
+            })),
+            skipDuplicates: true,
           });
         }
-        if (type === TransactionType.CREDIT) totalCredit += amount;
-        else totalDebit += amount;
-        successCount++;
-      } catch { failCount++; }
+      } catch {
+        insertFailed += chunk.length;
+      }
     }
+
+    // Hitung summary langsung dari DB — sumber kebenaran tunggal
+    // Ini menangani kasus duplikat (semua skip) maupun insert sebagian
+    let actualCredit = 0;
+    let actualDebit = 0;
+    let actualCount = 0;
+
+    if (sourceType === "BANK") {
+      const agg = await prisma.bankTransaction.aggregate({
+        where: { uploadId },
+        _sum: { amount: true },
+        _count: { id: true },
+      });
+      const creditAgg = await prisma.bankTransaction.aggregate({
+        where: { uploadId, type: TransactionType.CREDIT },
+        _sum: { amount: true },
+      });
+      actualCount = agg._count.id;
+      actualCredit = Number(creditAgg._sum.amount ?? 0);
+      actualDebit = Number(agg._sum.amount ?? 0) - actualCredit;
+    } else {
+      const agg = await db.walletTransaction.aggregate({
+        where: { uploadId },
+        _sum: { amount: true },
+        _count: { id: true },
+      });
+      const creditAgg = await db.walletTransaction.aggregate({
+        where: { uploadId, type: TransactionType.CREDIT },
+        _sum: { amount: true },
+      });
+      actualCount = agg._count.id;
+      actualCredit = Number(creditAgg._sum.amount ?? 0);
+      actualDebit = Number(agg._sum.amount ?? 0) - actualCredit;
+    }
+
+    const successCount = actualCount;
+    const totalCredit = actualCredit;
+    const totalDebit = actualDebit;
+    // failCount = baris yang tidak bisa di-parse (bukan duplikat)
+    // insertFailed = baris yang gagal masuk DB karena error teknis
+    failCount += insertFailed;
 
     // Update summary
     const finalStatus = failCount === 0 ? UploadStatus.SUCCESS : successCount === 0 ? UploadStatus.FAILED : UploadStatus.PARTIAL;
-    const summaryData = { status: finalStatus, totalRows: parsedRows.length, parsedRows: successCount, failedRows: failCount, totalCredit, totalDebit };
+    const summaryData = {
+      status: finalStatus,
+      totalRows: parsedRows.length,
+      parsedRows: successCount,
+      failedRows: failCount,
+      totalCredit,
+      totalDebit,
+    };
 
     if (sourceType === "BANK") await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: summaryData });
     else await db.walletStatementUpload.update({ where: { id: uploadId }, data: summaryData });
 
-    // Hapus file dari Blob setelah selesai diproses
+    // Hapus file dari Blob setelah selesai
     try {
       const { del } = await import("@vercel/blob");
-      await del(fileUrl.split("#")[0], { token: process.env.BLOB_READ_WRITE_TOKEN });
-    } catch { /* tidak fatal jika gagal hapus */ }
+      await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    } catch { /* tidak fatal */ }
 
   } catch (error: any) {
     console.error("processUpload error:", error);
@@ -303,11 +466,19 @@ export async function processUpload(payload: {
   }
 }
 
-// ── HTTP handler (dipanggil oleh QStash) ─────────────────────────────────────
+// HTTP handler (dipanggil oleh QStash) 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  // Verifikasi request dari QStash
+  // Baca raw body untuk verifikasi signature QStash
+  const rawBody = await new Promise<string>((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => resolve(data));
+    req.on("error", reject);
+  });
+
+  // Verifikasi signature dari QStash
   const qstashSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   if (qstashSigningKey) {
     const signature = req.headers["upstash-signature"] as string;
@@ -319,20 +490,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
         nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
       });
-      const body = JSON.stringify(req.body);
-      const isValid = await receiver.verify({ signature, body });
+      const isValid = await receiver.verify({ signature, body: rawBody });
       if (!isValid) return res.status(401).json({ message: "Invalid QStash signature" });
     } catch (e: any) {
       return res.status(401).json({ message: "Signature verification failed: " + e.message });
     }
   }
 
-  const payload = req.body;
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return res.status(400).json({ message: "Invalid JSON body" });
+  }
+
   if (!payload?.uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
-  // Respond 200 dulu ke QStash agar tidak timeout, lalu proses
+  // Respond 200 ke QStash segera agar tidak dianggap timeout
   res.status(200).json({ message: "Processing started" });
 
-  // Proses di background (tidak block response)
+  // Proses di background setelah response dikirim
   processUpload(payload).catch((e) => console.error("Background process error:", e));
 }
