@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const db = prisma as any;
 
   try {
-    // ── 1. Semua transaksi CREDIT tahun ini (bank + wallet) ──────────────────
+    // 1. Semua transaksi CREDIT tahun ini (bank + wallet)
     const [bankTx, walletTx] = await Promise.all([
       prisma.bankTransaction.findMany({
         where: {
@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
     ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    // ── 2. Tren bulanan (12 bulan) ───────────────────────────────────────────
+    // 2. Tren bulanan (12 bulan)
     const monthlyTrend = Array.from({ length: 12 }, (_, m) => {
       const monthTx = allTx.filter((t) => t.date.getMonth() === m);
       return {
@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    // ── 3. Breakdown per kategori ────────────────────────────────────────────
+    // 3. Breakdown per kategori
     const catMap = new Map<string, { name: string; total: number; count: number }>();
     for (const t of allTx) {
       const existing = catMap.get(t.category) ?? { name: t.category, total: 0, count: 0 };
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const byCategory = Array.from(catMap.values())
       .sort((a, b) => b.total - a.total);
 
-    // ── 4. Breakdown per sumber (bank/wallet) ────────────────────────────────
+    // 4. Breakdown per sumber (bank/wallet)
     const sourceMap = new Map<string, { provider: string; accountName: string; source: string; total: number; count: number }>();
     for (const t of allTx) {
       const key = `${t.source}:${t.provider}:${t.accountName}`;
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const bySource = Array.from(sourceMap.values()).sort((a, b) => b.total - a.total);
 
-    // ── 5. Bulan ini vs bulan lalu ───────────────────────────────────────────
+    // 5. Bulan ini vs bulan lalu
     const now = new Date();
     const thisMonth = allTx.filter((t) => t.date.getMonth() === now.getMonth() && t.date.getFullYear() === year);
     const lastMonth = allTx.filter((t) => t.date.getMonth() === now.getMonth() - 1 && t.date.getFullYear() === year);
@@ -108,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lastTotal = lastMonth.reduce((s, t) => s + t.amount, 0);
     const pctChange = lastTotal === 0 ? null : ((thisTotal - lastTotal) / lastTotal) * 100;
 
-    // ── 6. Summary ───────────────────────────────────────────────────────────
+    // 6. Summary
     const grandTotal = allTx.reduce((s, t) => s + t.amount, 0);
     const avgMonthly = grandTotal / 12;
     const bestMonth = monthlyTrend.reduce((best, m) => m.total > best.total ? m : best, monthlyTrend[0]);

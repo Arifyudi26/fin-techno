@@ -185,7 +185,7 @@ const othersItems: NavItem[] = [
   },
 ];
 
-// ── Component ────────────────────────────────────────────────────────────────
+// Component
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const router = useRouter();
