@@ -7,7 +7,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  if (req.method !== "GET") return res.status(405).end();
+  if (req.method !== "GET" && req.method !== "DELETE") return res.status(405).end();
 
   let userId: string;
   try {
@@ -18,6 +18,38 @@ export default async function handler(
 
   const { id, type } = req.query;
   const sourceType = (type as string)?.toUpperCase() ?? "BANK";
+
+  // ── DELETE ────────────────────────────────────────────────────────────────
+  if (req.method === "DELETE") {
+    try {
+      if (sourceType === "WALLET") {
+        const upload = await (prisma as any).walletStatementUpload.findFirst({
+          where: { id: id as string, uploadedById: userId },
+        });
+        if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+
+        await (prisma as any).walletTransaction.deleteMany({ where: { uploadId: id as string } });
+        await (prisma as any).walletStatementUpload.delete({ where: { id: id as string } });
+      } else {
+        const upload = await prisma.bankStatementUpload.findFirst({
+          where: { id: id as string, uploadedById: userId },
+        });
+        if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+
+        // hapus mergeItems dulu karena ada relasi ke BankTransaction
+        await prisma.mergeReportItem.deleteMany({
+          where: { transaction: { uploadId: id as string } },
+        });
+        await prisma.bankTransaction.deleteMany({ where: { uploadId: id as string } });
+        await prisma.bankStatementUpload.delete({ where: { id: id as string } });
+      }
+
+      return res.status(200).json({ message: "Upload berhasil dihapus" });
+    } catch (error) {
+      console.error("upload delete error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
 
   try {
     if (sourceType === "WALLET") {

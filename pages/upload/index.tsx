@@ -46,6 +46,10 @@ interface UploadItem {
   uploadedAt: string;
 }
 
+// Upload dianggap duplikat jika SUCCESS tapi tidak ada transaksi baru yang masuk
+const isDuplicate = (item: Pick<UploadItem, "status" | "parsedRows" | "totalRows">) =>
+  item.status === "SUCCESS" && item.parsedRows === 0 && item.totalRows > 0;
+
 interface UploadDetail extends UploadItem {
   uploadedBy: string;
   transactions: TxRow[];
@@ -104,6 +108,7 @@ const statusConfig: Record<
   PARTIAL: { label: "Sebagian", color: "warning" },
   PROCESSING: { label: "Memproses", color: "info" },
   UPLOADING: { label: "Mengupload", color: "info" },
+  DUPLICATE: { label: "Duplikat", color: "light" },
 };
 
 // Upload Form Modal
@@ -178,7 +183,11 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         },
       });
       setProgress(100);
-      onSuccess(res.data);
+
+      // File sudah diupload & diterima server — langsung tutup modal
+      // Background processing berjalan di server, halaman utama akan polling
+      const { uploadId } = res.data;
+      onSuccess({ uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -490,15 +499,26 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {loading && (
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-gray-500">
-                <span>Memproses file...</span>
+                <span>
+                  {progress < 70
+                    ? "Mengupload file..."
+                    : progress < 100
+                      ? "Memproses transaksi di background..."
+                      : "Selesai"}
+                </span>
                 <span>{progress}%</span>
               </div>
               <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-brand-500 transition-all duration-300"
+                  className="h-full rounded-full bg-brand-500 transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              {progress >= 70 && progress < 100 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  File besar diproses di background. Mohon tunggu...
+                </p>
+              )}
             </div>
           )}
 
@@ -744,6 +764,28 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 ))}
               </div>
 
+              {/* Duplicate notice */}
+              {isDuplicate(detail) && (
+                <div className="flex items-start gap-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
+                      <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Semua transaksi sudah tercatat</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {detail.totalRows} transaksi dari file ini identik dengan data yang sudah diupload sebelumnya.
+                      Tidak ada transaksi baru yang ditambahkan untuk menghindari duplikasi data.
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                      Jika ini bukan yang diharapkan, pastikan kamu tidak mengupload file yang sama dua kali (misal: CSV dan PDF dari periode yang sama).
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Error message */}
               {detail.errorMessage && (
                 <div className="flex items-start gap-2.5 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
@@ -937,14 +979,16 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
 function UploadCard({
   item,
   onViewDetail,
+  onDelete,
 }: {
   item: UploadItem;
   onViewDetail: () => void;
+  onDelete: () => void;
 }) {
-  const cfg = statusConfig[item.status] ?? {
-    label: item.status,
-    color: "light" as const,
-  };
+  const duplicate = isDuplicate(item);
+  const cfg = duplicate
+    ? statusConfig["DUPLICATE"]
+    : (statusConfig[item.status] ?? { label: item.status, color: "light" as const });
   const netFlow = item.totalCredit - item.totalDebit;
 
   return (
@@ -1028,6 +1072,22 @@ function UploadCard({
         {formatDate(item.periodStart)} – {formatDate(item.periodEnd)}
       </div>
 
+      {/* Banner duplikat */}
+      {duplicate && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 mb-4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0 mt-0.5">
+            <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div>
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Semua transaksi sudah ada</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {item.totalRows} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
@@ -1036,12 +1096,12 @@ function UploadCard({
             {item.totalRows}
           </p>
         </div>
-        <div className="text-center p-2 rounded-lg bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
-            Berhasil
+        <div className={`text-center p-2 rounded-lg ${duplicate ? "bg-gray-50 dark:bg-gray-800" : "bg-success-50 dark:bg-success-500/10"}`}>
+          <p className={`text-xs mb-0.5 ${duplicate ? "text-gray-400" : "text-success-600 dark:text-success-400"}`}>
+            {duplicate ? "Duplikat" : "Berhasil"}
           </p>
-          <p className="text-sm font-bold text-success-700 dark:text-success-400">
-            {item.parsedRows}
+          <p className={`text-sm font-bold ${duplicate ? "text-gray-500 dark:text-gray-400" : "text-success-700 dark:text-success-400"}`}>
+            {duplicate ? item.totalRows : item.parsedRows}
           </p>
         </div>
         <div className="text-center p-2 rounded-lg bg-error-50 dark:bg-error-500/10">
@@ -1055,60 +1115,65 @@ function UploadCard({
       </div>
 
       {/* Credit / Debit */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">
-            Masuk
-          </p>
-          <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
-            +{formatIDR(item.totalCredit)}
+      {duplicate ? (
+        <div className="flex items-center justify-center p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 mb-4">
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            Data keuangan tersedia di upload sebelumnya
           </p>
         </div>
-        <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">
-            Keluar
-          </p>
-          <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
-            -{formatIDR(item.totalDebit)}
-          </p>
-        </div>
-      </div>
-
-      {/* Net flow */}
-      <div
-        className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}
-      >
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          Net Flow
-        </span>
-        <span
-          className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}
-        >
-          {netFlow >= 0 ? "+" : ""}
-          {formatIDR(netFlow)}
-        </span>
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
+              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Masuk</p>
+              <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
+                +{formatIDR(item.totalCredit)}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
+              <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Keluar</p>
+              <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
+                -{formatIDR(item.totalDebit)}
+              </p>
+            </div>
+          </div>
+          <div className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Net Flow</span>
+            <span className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}>
+              {netFlow >= 0 ? "+" : ""}{formatIDR(netFlow)}
+            </span>
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-400">
           {formatDate(item.uploadedAt)}
         </span>
-        <button
-          onClick={onViewDetail}
-          className="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors"
-        >
-          Lihat Detail
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M5 12h14M12 5l7 7-7 7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:text-error-400 dark:hover:bg-error-500/10 transition-colors"
+            title="Hapus"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            onClick={onViewDetail}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:text-brand-400 dark:hover:bg-brand-500/10 transition-colors"
+            title="Lihat Detail"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1125,6 +1190,8 @@ export default function UploadPage() {
     id: string;
     sourceType: "BANK" | "WALLET";
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UploadItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filterType, setFilterType] = useState<"ALL" | "BANK" | "WALLET">(
     "ALL",
   );
@@ -1168,15 +1235,51 @@ export default function UploadPage() {
   }) => {
     setShowForm(false);
     fetchUploads();
+
+    if (result.status === "PROCESSING" && result.uploadId) {
+      fire("info", "File sedang diproses", {
+        message: "Upload berhasil diterima. Hasil akan muncul otomatis setelah selesai.",
+        duration: 4000,
+      });
+      // Polling di background — refresh list setiap 5 detik sampai selesai
+      const uploadId = result.uploadId;
+      const maxAttempts = 60;
+      let attempt = 0;
+      const poll = setInterval(async () => {
+        attempt++;
+        try {
+          const res = await axiosGlobal.get(`/upload/${uploadId}`);
+          const { status, parsedRows: parsed, totalRows: total } = res.data;
+          if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
+            clearInterval(poll);
+            fetchUploads();
+            const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
+            fire(
+              allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
+              allDuplicate ? "Transaksi Sudah Ada" : status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
+              {
+                message: allDuplicate
+                  ? `${total} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.`
+                  : status === "SUCCESS"
+                    ? `${parsed} dari ${total} transaksi berhasil diproses.`
+                    : status === "PARTIAL"
+                      ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
+                      : "Terjadi kesalahan saat memproses file.",
+                duration: 6000,
+              },
+            );
+          }
+        } catch { /* lanjut polling */ }
+        if (attempt >= maxAttempts) clearInterval(poll);
+      }, 5000);
+      return;
+    }
+
     const isSuccess = result.status === "SUCCESS";
     const isPartial = result.status === "PARTIAL";
     fire(
       isSuccess ? "success" : isPartial ? "warning" : "error",
-      isSuccess
-        ? "Upload Berhasil"
-        : isPartial
-          ? "Upload Sebagian"
-          : "Upload Gagal",
+      isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
       {
         message: isSuccess
           ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
@@ -1186,6 +1289,21 @@ export default function UploadPage() {
         duration: 5000,
       },
     );
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await axiosGlobal.delete(`/upload/${deleteTarget.id}?type=${deleteTarget.sourceType}`);
+      setUploads((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      fire("success", "Upload dihapus", { message: "Data upload dan transaksi terkait berhasil dihapus.", duration: 3000 });
+    } catch {
+      fire("error", "Gagal menghapus upload");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredUploads = uploads.filter((u) => {
@@ -1545,6 +1663,7 @@ export default function UploadPage() {
               onViewDetail={() =>
                 setDetailItem({ id: item.id, sourceType: item.sourceType })
               }
+              onDelete={() => setDeleteTarget(item)}
             />
           ))}
         </div>
@@ -1564,6 +1683,57 @@ export default function UploadPage() {
           sourceType={detailItem.sourceType}
           onClose={() => setDetailItem(null)}
         />
+      )}
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-error-50 dark:bg-error-500/10 shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4M12 17h.01" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Hapus Upload?</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Tindakan ini tidak dapat dibatalkan</p>
+              </div>
+            </div>
+            <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {deleteTarget.provider} · {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
+              </p>
+              <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 rounded-lg bg-error-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-error-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Menghapus...
+                  </>
+                ) : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <Toast {...toastState} onClose={close} />
