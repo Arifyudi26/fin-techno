@@ -4,7 +4,6 @@ import TwitterProvider from "next-auth/providers/twitter";
 import db from "@/lib/db";
 import jwt from "jsonwebtoken";
 
-// Extend NextAuth types
 declare module "next-auth" {
   interface User {
     appToken?: string;
