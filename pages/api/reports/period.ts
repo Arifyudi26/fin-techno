@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       includeBank ? prisma.bankTransaction.findMany({
         where: { bankAccount: { ownerId: userId }, transactionDate: { gte: start, lte: end } },
         include: {
-          category: { select: { name: true } },
+          categories: { include: { category: { select: { name: true } } } },
           bankAccount: { select: { bankProvider: true, accountName: true, accountNumber: true } },
         },
         orderBy: { transactionDate: "asc" },
@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       includeWallet ? db.walletTransaction.findMany({
         where: { wallet: { ownerId: userId }, transactionDate: { gte: start, lte: end } },
         include: {
-          category: { select: { name: true } },
+          categories: { include: { category: { select: { name: true } } } },
           wallet: { select: { walletProvider: true, accountName: true, phoneNumber: true } },
         },
         orderBy: { transactionDate: "asc" },
@@ -47,7 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date: t.transactionDate.toISOString().split("T")[0],
         description: t.description, reference: t.reference,
         type: t.type, amount: Number(t.amount), balance: t.balance ? Number(t.balance) : null,
-        category: t.category?.name ?? "Lainnya",
+        category: t.categories[0]?.category?.name ?? "Lainnya",
+        categories: t.categories.map((c: any) => c.category.name),
         provider: t.bankAccount.bankProvider,
         accountName: t.bankAccount.accountName,
         identifier: t.bankAccount.accountNumber,
@@ -57,7 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date: t.transactionDate.toISOString().split("T")[0],
         description: t.description, reference: t.reference,
         type: t.type, amount: Number(t.amount), balance: t.balance ? Number(t.balance) : null,
-        category: t.category?.name ?? "Lainnya",
+        category: t.categories[0]?.category?.name ?? "Lainnya",
+        categories: t.categories.map((c: any) => c.category.name),
         provider: t.wallet.walletProvider,
         accountName: t.wallet.accountName,
         identifier: t.wallet.phoneNumber,

@@ -78,7 +78,7 @@ type CategoryEntry = { id: string; keywords: string[] };
 // Contoh: name="Gaji Karyawan" → keywords=["gaji", "karyawan"]
 async function loadCategories(userId: string): Promise<CategoryEntry[]> {
   const cats = await prisma.transactionCategory.findMany({
-    where: { userId, isActive: true },
+    where: { userId },
     select: { id: true, name: true },
   });
   return cats.map((c) => ({
@@ -87,14 +87,12 @@ async function loadCategories(userId: string): Promise<CategoryEntry[]> {
   }));
 }
 
-function resolveCategoryId(desc: string, categories: CategoryEntry[]): string | null {
+// Return semua category id yang match (many-to-many)
+function resolveCategoryIds(desc: string, categories: CategoryEntry[]): string[] {
   const lower = desc.toLowerCase();
-  for (const cat of categories) {
-    if (cat.keywords.some((k) => lower.includes(k))) {
-      return cat.id;
-    }
-  }
-  return null;
+  return categories
+    .filter((cat) => cat.keywords.some((k) => lower.includes(k)))
+    .map((cat) => cat.id);
 }
 
 type ParsedRow = {
@@ -353,7 +351,7 @@ export async function processUpload(payload: {
       amount: number;
       type: TransactionType;
       balance: number | null;
-      catId: string | null;
+      catIds: string[];
     };
 
     const validTx: TxRecord[] = [];
@@ -370,9 +368,9 @@ export async function processUpload(payload: {
       const type = detectType(row.description, row.debit, row.credit, row.sign);
       const balance = parseAmount(row.balance);
       const valueDate = parseDate(row.valueDate);
-      const catId = resolveCategoryId(row.description, categories);
+      const catIds = resolveCategoryIds(row.description, categories);
       const hash = crypto.createHash("md5").update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`).digest("hex");
-      validTx.push({ hash, txDate, valueDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, catId });
+      validTx.push({ hash, txDate, valueDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, catIds });
     }
 
     // Cek hash yang sudah ada di DB (satu query, bukan N queries)
@@ -418,11 +416,22 @@ export async function processUpload(payload: {
               type: t.type,
               balance: t.balance,
               status: EStatementStatus.VERIFIED,
-              categoryId: t.catId,
               hash: t.hash,
             })),
             skipDuplicates: true,
           });
+          // Insert junction rows for categories
+          const inserted = await prisma.bankTransaction.findMany({
+            where: { hash: { in: chunk.map((t) => t.hash) } },
+            select: { id: true, hash: true },
+          });
+          const hashToId = Object.fromEntries(inserted.map((r) => [r.hash!, r.id]));
+          const junctionRows = chunk.flatMap((t) =>
+            t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId }))
+          ).filter((r) => r.transactionId);
+          if (junctionRows.length > 0) {
+            await (prisma as any).bankTransactionCategory.createMany({ data: junctionRows, skipDuplicates: true });
+          }
         } else {
           await db.walletTransaction.createMany({
             data: chunk.map((t) => ({
@@ -435,11 +444,22 @@ export async function processUpload(payload: {
               type: t.type,
               balance: t.balance,
               status: EStatementStatus.VERIFIED,
-              categoryId: t.catId,
               hash: t.hash,
             })),
             skipDuplicates: true,
           });
+          // Insert junction rows for categories
+          const inserted = await db.walletTransaction.findMany({
+            where: { hash: { in: chunk.map((t) => t.hash) } },
+            select: { id: true, hash: true },
+          });
+          const hashToId = Object.fromEntries(inserted.map((r: any) => [r.hash!, r.id]));
+          const junctionRows = chunk.flatMap((t) =>
+            t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId }))
+          ).filter((r) => r.transactionId);
+          if (junctionRows.length > 0) {
+            await db.walletTransactionCategory.createMany({ data: junctionRows, skipDuplicates: true });
+          }
         }
       } catch {
         insertFailed += chunk.length;

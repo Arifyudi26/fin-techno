@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "DELETE") {
-    await prisma.transactionCategory.update({ where: { id }, data: { isActive: false } });
+    await prisma.transactionCategory.delete({ where: { id } });
     return res.status(200).json({ message: "Kategori dihapus" });
   }
 

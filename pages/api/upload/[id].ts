@@ -28,13 +28,11 @@ export default async function handler(
         });
         if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
 
-        // Hapus file dari Vercel Blob jika masih ada (misal upload FAILED/PROCESSING)
         if (upload.fileUrl) {
           try {
             const { del } = await import("@vercel/blob");
-            const blobUrl = upload.fileUrl.split("#")[0];
-            await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
-          } catch { /* file mungkin sudah dihapus setelah processing, tidak fatal */ }
+            await del(upload.fileUrl.split("#")[0], { token: process.env.BLOB_READ_WRITE_TOKEN });
+          } catch { /* tidak fatal */ }
         }
 
         await (prisma as any).walletTransaction.deleteMany({ where: { uploadId: id as string } });
@@ -45,16 +43,13 @@ export default async function handler(
         });
         if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
 
-        // Hapus file dari Vercel Blob jika masih ada (misal upload FAILED/PROCESSING)
         if (upload.fileUrl) {
           try {
             const { del } = await import("@vercel/blob");
-            const blobUrl = upload.fileUrl.split("#")[0];
-            await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
-          } catch { /* file mungkin sudah dihapus setelah processing, tidak fatal */ }
+            await del(upload.fileUrl.split("#")[0], { token: process.env.BLOB_READ_WRITE_TOKEN });
+          } catch { /* tidak fatal */ }
         }
 
-        // hapus mergeItems dulu karena ada relasi ke BankTransaction
         await prisma.mergeReportItem.deleteMany({
           where: { transaction: { uploadId: id as string } },
         });
@@ -69,29 +64,23 @@ export default async function handler(
     }
   }
 
+  // ── GET ───────────────────────────────────────────────────────────────────
   try {
     if (sourceType === "WALLET") {
       const upload = await (prisma as any).walletStatementUpload.findFirst({
         where: { id: id as string, uploadedById: userId },
         include: {
-          wallet: {
-            select: {
-              walletProvider: true,
-              phoneNumber: true,
-              accountName: true,
-            },
-          },
+          wallet: { select: { walletProvider: true, phoneNumber: true, accountName: true } },
           uploadedBy: { select: { name: true } },
           transactions: {
-            include: { category: { select: { name: true } } },
+            include: { categories: { include: { category: { select: { name: true } } } } },
             orderBy: { transactionDate: "desc" },
             take: 50,
           },
         },
       });
 
-      if (!upload)
-        return res.status(404).json({ message: "Upload tidak ditemukan" });
+      if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
 
       return res.status(200).json({
         id: upload.id,
@@ -113,29 +102,18 @@ export default async function handler(
         totalDebit: Number(upload.totalDebit),
         uploadedAt: upload.createdAt.toISOString(),
         uploadedBy: upload.uploadedBy.name,
-        transactions: upload.transactions.map(
-          (t: {
-            id: string;
-            transactionDate: Date;
-            description: string;
-            reference: string | null;
-            type: string;
-            amount: { toString(): string };
-            balance: { toString(): string } | null;
-            category: { name: string } | null;
-            status: string;
-          }) => ({
-            id: t.id,
-            date: t.transactionDate.toISOString().split("T")[0],
-            description: t.description,
-            reference: t.reference,
-            type: t.type,
-            amount: Number(t.amount),
-            balance: t.balance ? Number(t.balance) : null,
-            category: t.category?.name ?? "Lainnya",
-            status: t.status,
-          }),
-        ),
+        transactions: upload.transactions.map((t: any) => ({
+          id: t.id,
+          date: t.transactionDate.toISOString().split("T")[0],
+          description: t.description,
+          reference: t.reference,
+          type: t.type,
+          amount: Number(t.amount),
+          balance: t.balance ? Number(t.balance) : null,
+          category: t.categories[0]?.category?.name ?? "Lainnya",
+          categories: t.categories.map((c: any) => c.category.name),
+          status: t.status,
+        })),
       });
     }
 
@@ -143,24 +121,17 @@ export default async function handler(
     const upload = await prisma.bankStatementUpload.findFirst({
       where: { id: id as string, uploadedById: userId },
       include: {
-        bankAccount: {
-          select: {
-            bankProvider: true,
-            accountNumber: true,
-            accountName: true,
-          },
-        },
+        bankAccount: { select: { bankProvider: true, accountNumber: true, accountName: true } },
         uploadedBy: { select: { name: true } },
         transactions: {
-          include: { category: { select: { name: true } } },
+          include: { categories: { include: { category: { select: { name: true } } } } },
           orderBy: { transactionDate: "desc" },
           take: 50,
         },
       },
     });
 
-    if (!upload)
-      return res.status(404).json({ message: "Upload tidak ditemukan" });
+    if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
 
     return res.status(200).json({
       id: upload.id,
@@ -190,7 +161,8 @@ export default async function handler(
         type: t.type,
         amount: Number(t.amount),
         balance: t.balance ? Number(t.balance) : null,
-        category: t.category?.name ?? "Lainnya",
+        category: t.categories[0]?.category?.name ?? "Lainnya",
+        categories: t.categories.map((c) => c.category.name),
         status: t.status,
       })),
     });

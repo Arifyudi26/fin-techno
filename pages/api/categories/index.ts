@@ -18,16 +18,16 @@ export default async function handler(
   if (req.method === "GET") {
     try {
       const categories = await prisma.transactionCategory.findMany({
-        where: { userId, isActive: true },
+        where: { userId },
         orderBy: { name: "asc" },
       });
 
       const result = await Promise.all(
         categories.map(async (cat) => {
-          const bankCount = await prisma.bankTransaction.count({
+          const bankCount = await prisma.bankTransactionCategory.count({
             where: { categoryId: cat.id },
           });
-          const walletCount = await (prisma as any).walletTransaction.count({
+          const walletCount = await (prisma as any).walletTransactionCategory.count({
             where: { categoryId: cat.id },
           });
           return { ...cat, transactionCount: bankCount + walletCount };
@@ -47,13 +47,15 @@ export default async function handler(
       return res.status(400).json({ message: "name dan code wajib diisi" });
     const codeUpper = (code as string).toUpperCase().slice(0, 5);
     try {
+      // Verify user exists
+      const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!userExists) return res.status(401).json({ message: "User tidak ditemukan, silakan login ulang" });
+
       const existing = await prisma.transactionCategory.findFirst({
         where: { userId, code: codeUpper },
       });
       if (existing)
-        return res
-          .status(409)
-          .json({ message: "Kode kategori sudah digunakan" });
+        return res.status(409).json({ message: "Kode kategori sudah digunakan" });
       const cat = await prisma.transactionCategory.create({
         data: { userId, name, code: codeUpper, description },
       });

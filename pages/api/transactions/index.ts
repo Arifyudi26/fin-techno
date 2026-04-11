@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const bankWhere: any = {
       bankAccount: { ownerId: userId },
       ...(type && type !== "ALL" ? { type: type as string } : {}),
-      ...(category ? { categoryId: category as string } : {}),
+      ...(category ? { categories: { some: { categoryId: category as string } } } : {}),
       ...(search ? { description: { contains: search as string, mode: "insensitive" } } : {}),
       ...(dateFrom || dateTo ? {
         transactionDate: {
@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const walletWhere: any = {
       wallet: { ownerId: userId },
       ...(type && type !== "ALL" ? { type: type as string } : {}),
-      ...(category ? { categoryId: category as string } : {}),
+      ...(category ? { categories: { some: { categoryId: category as string } } } : {}),
       ...(search ? { description: { contains: search as string, mode: "insensitive" } } : {}),
       ...(dateFrom || dateTo ? {
         transactionDate: {
@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       includeBank ? prisma.bankTransaction.findMany({
         where: bankWhere,
         include: {
-          category: { select: { name: true, code: true } },
+          categories: { include: { category: { select: { name: true, code: true } } } },
           bankAccount: { select: { bankProvider: true, accountNumber: true, accountName: true } },
         },
         orderBy: { transactionDate: "desc" },
@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       includeWallet ? db.walletTransaction.findMany({
         where: walletWhere,
         include: {
-          category: { select: { name: true, code: true } },
+          categories: { include: { category: { select: { name: true, code: true } } } },
           wallet: { select: { walletProvider: true, phoneNumber: true, accountName: true } },
         },
         orderBy: { transactionDate: "desc" },
@@ -81,8 +81,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       type: t.type,
       amount: Number(t.amount),
       balance: t.balance ? Number(t.balance) : null,
-      category: t.category?.name ?? "Lainnya",
-      categoryCode: t.category?.code ?? "LNY",
+      categories: t.categories.map((c: any) => ({ name: c.category.name, code: c.category.code })),
+      category: t.categories[0]?.category?.name ?? "Lainnya",
+      categoryCode: t.categories[0]?.category?.code ?? "LNY",
       accountName: t.bankAccount.accountName,
       provider: t.bankAccount.bankProvider,
       status: t.status,
@@ -97,8 +98,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       type: t.type,
       amount: Number(t.amount),
       balance: t.balance ? Number(t.balance) : null,
-      category: t.category?.name ?? "Lainnya",
-      categoryCode: t.category?.code ?? "LNY",
+      categories: t.categories.map((c: any) => ({ name: c.category.name, code: c.category.code })),
+      category: t.categories[0]?.category?.name ?? "Lainnya",
+      categoryCode: t.categories[0]?.category?.code ?? "LNY",
       accountName: t.wallet.accountName,
       provider: t.wallet.walletProvider,
       status: t.status,
