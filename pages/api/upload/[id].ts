@@ -28,6 +28,15 @@ export default async function handler(
         });
         if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
 
+        // Hapus file dari Vercel Blob jika masih ada (misal upload FAILED/PROCESSING)
+        if (upload.fileUrl) {
+          try {
+            const { del } = await import("@vercel/blob");
+            const blobUrl = upload.fileUrl.split("#")[0];
+            await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
+          } catch { /* file mungkin sudah dihapus setelah processing, tidak fatal */ }
+        }
+
         await (prisma as any).walletTransaction.deleteMany({ where: { uploadId: id as string } });
         await (prisma as any).walletStatementUpload.delete({ where: { id: id as string } });
       } else {
@@ -35,6 +44,15 @@ export default async function handler(
           where: { id: id as string, uploadedById: userId },
         });
         if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+
+        // Hapus file dari Vercel Blob jika masih ada (misal upload FAILED/PROCESSING)
+        if (upload.fileUrl) {
+          try {
+            const { del } = await import("@vercel/blob");
+            const blobUrl = upload.fileUrl.split("#")[0];
+            await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
+          } catch { /* file mungkin sudah dihapus setelah processing, tidak fatal */ }
+        }
 
         // hapus mergeItems dulu karena ada relasi ke BankTransaction
         await prisma.mergeReportItem.deleteMany({

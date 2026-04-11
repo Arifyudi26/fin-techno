@@ -44,9 +44,21 @@ interface UploadItem {
   totalCredit: number;
   totalDebit: number;
   uploadedAt: string;
+  notes?: string | null;
 }
 
-// Upload dianggap duplikat jika SUCCESS tapi tidak ada transaksi baru yang masuk
+// Parse notes field: "new:38,duplicate:52,failed:0"
+function parseNotes(notes?: string | null): { new: number; duplicate: number; failed: number } | null {
+  if (!notes || !notes.startsWith("new:")) return null;
+  const parts = Object.fromEntries(notes.split(",").map((p) => p.split(":")));
+  return {
+    new: parseInt(parts.new ?? "0"),
+    duplicate: parseInt(parts.duplicate ?? "0"),
+    failed: parseInt(parts.failed ?? "0"),
+  };
+}
+
+// Upload dianggap duplikat penuh jika SUCCESS tapi tidak ada transaksi baru yang masuk
 const isDuplicate = (item: Pick<UploadItem, "status" | "parsedRows" | "totalRows">) =>
   item.status === "SUCCESS" && item.parsedRows === 0 && item.totalRows > 0;
 
@@ -174,20 +186,15 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     fd.append("notes", notes);
 
     try {
-      setProgress(40);
+      setProgress(30);
       const res = await axiosGlobal.post("/upload/submit", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (ev) => {
-          if (ev.total)
-            setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
+          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 60) + 30);
         },
       });
       setProgress(100);
-
-      // File sudah diupload & diterima server — langsung tutup modal
-      // Background processing berjalan di server, halaman utama akan polling
-      const { uploadId } = res.data;
-      onSuccess({ uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
+      onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -786,6 +793,45 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 </div>
               )}
 
+              {/* Overlap notice */}
+              {(() => {
+                const n = parseNotes(detail.notes);
+                if (!n || n.duplicate === 0 || isDuplicate(detail)) return null;
+                return (
+                  <div className="flex items-start gap-3 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 p-4">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-100 dark:bg-brand-500/20 shrink-0">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-brand-500 dark:text-brand-400">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">File mencakup periode yang overlap</p>
+                      <p className="text-sm text-brand-600/80 dark:text-brand-400/80 mt-1">
+                        File ini berisi <strong>{detail.totalRows} transaksi</strong> total:
+                      </p>
+                      <div className="flex gap-4 mt-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                          <span className="text-xs text-brand-600 dark:text-brand-400">
+                            <strong>{n.new}</strong> transaksi baru ditambahkan
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-gray-400 shrink-0" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <strong>{n.duplicate}</strong> sudah ada dari upload sebelumnya
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-brand-500/70 dark:text-brand-400/60 mt-2">
+                        Data yang ditampilkan di bawah hanya transaksi baru dari file ini.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Error message */}
               {detail.errorMessage && (
                 <div className="flex items-start gap-2.5 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
@@ -1072,21 +1118,45 @@ function UploadCard({
         {formatDate(item.periodStart)} – {formatDate(item.periodEnd)}
       </div>
 
-      {/* Banner duplikat */}
-      {duplicate && (
-        <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 mb-4">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0 mt-0.5">
-            <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div>
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Semua transaksi sudah ada</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              {item.totalRows} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Banner duplikat penuh atau overlap sebagian */}
+      {(() => {
+        const n = parseNotes(item.notes);
+        const hasOverlap = n && n.duplicate > 0 && n.new > 0;
+        if (duplicate) {
+          return (
+            <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 mb-4">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0 mt-0.5">
+                <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Semua transaksi sudah ada</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  {item.totalRows} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.
+                </p>
+              </div>
+            </div>
+          );
+        }
+        if (hasOverlap) {
+          return (
+            <div className="flex items-start gap-2.5 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 p-3 mb-4">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-brand-400 shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <div>
+                <p className="text-xs font-medium text-brand-600 dark:text-brand-400">File mencakup periode yang overlap</p>
+                <p className="text-xs text-brand-500/80 dark:text-brand-400/70 mt-0.5">
+                  <span className="font-semibold">{n!.new} transaksi baru</span> ditambahkan ·{" "}
+                  <span>{n!.duplicate} sudah ada</span> dari upload sebelumnya
+                </p>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
@@ -1096,21 +1166,34 @@ function UploadCard({
             {item.totalRows}
           </p>
         </div>
-        <div className={`text-center p-2 rounded-lg ${duplicate ? "bg-gray-50 dark:bg-gray-800" : "bg-success-50 dark:bg-success-500/10"}`}>
-          <p className={`text-xs mb-0.5 ${duplicate ? "text-gray-400" : "text-success-600 dark:text-success-400"}`}>
-            {duplicate ? "Duplikat" : "Berhasil"}
-          </p>
-          <p className={`text-sm font-bold ${duplicate ? "text-gray-500 dark:text-gray-400" : "text-success-700 dark:text-success-400"}`}>
-            {duplicate ? item.totalRows : item.parsedRows}
-          </p>
-        </div>
+        {(() => {
+          const n = parseNotes(item.notes);
+          if (duplicate) {
+            return (
+              <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <p className="text-xs text-gray-400 mb-0.5">Duplikat</p>
+                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{item.totalRows}</p>
+              </div>
+            );
+          }
+          if (n && n.duplicate > 0) {
+            return (
+              <div className="text-center p-2 rounded-lg bg-brand-50 dark:bg-brand-500/10">
+                <p className="text-xs text-brand-500 dark:text-brand-400 mb-0.5">Baru</p>
+                <p className="text-sm font-bold text-brand-600 dark:text-brand-400">{n.new}</p>
+              </div>
+            );
+          }
+          return (
+            <div className="text-center p-2 rounded-lg bg-success-50 dark:bg-success-500/10">
+              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Berhasil</p>
+              <p className="text-sm font-bold text-success-700 dark:text-success-400">{item.parsedRows}</p>
+            </div>
+          );
+        })()}
         <div className="text-center p-2 rounded-lg bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">
-            Gagal
-          </p>
-          <p className="text-sm font-bold text-error-700 dark:text-error-400">
-            {item.failedRows}
-          </p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Gagal</p>
+          <p className="text-sm font-bold text-error-700 dark:text-error-400">{item.failedRows}</p>
         </div>
       </div>
 
