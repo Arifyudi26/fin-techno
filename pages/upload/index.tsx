@@ -194,6 +194,21 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         },
       });
       setProgress(100);
+
+      // Debug logs — tampil di browser console untuk tracking masalah
+      if (res.data._debug?.length) {
+        console.group(`%c[Upload Debug] ${res.data.uploadId}`, "color: #6366f1; font-weight: bold");
+        for (const entry of res.data._debug) {
+          const ok = entry.step.includes("ERROR") || entry.step.includes("FATAL")
+            ? "color: #ef4444"
+            : entry.step.includes("OK") || entry.step === "DONE_OK"
+              ? "color: #22c55e"
+              : "color: #94a3b8";
+          console.log(`%c${entry.ts} [${entry.step}]${entry.detail ? " " + entry.detail : ""}`, ok);
+        }
+        console.groupEnd();
+      }
+
       onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =

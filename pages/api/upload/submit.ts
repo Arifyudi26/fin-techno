@@ -6,18 +6,19 @@ import { verifyToken } from "@lib/auth";
 import { FileFormat, UploadStatus } from "@prisma/client";
 import crypto from "crypto";
 import { put } from "@vercel/blob";
-import { Client } from "@upstash/qstash";
 import path from "path";
+import { processUpload } from "./process";
 
-export const config = { api: { bodyParser: false } };
+export const config = {
+  api: { bodyParser: false },
+  maxDuration: 60,
+};
 
-// Parse multipart via busboy — stream ke memory, tanpa disk I/O
 function parseMultipart(req: NextApiRequest): Promise<{
   fields: Record<string, string>;
   file: { buffer: Buffer; filename: string; size: number } | null;
 }> {
   return new Promise((resolve, reject) => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Busboy = require("busboy");
     const bb = Busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
     const fields: Record<string, string> = {};
@@ -109,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (existing) return res.status(409).json({ message: `Konten identik dengan "${existing.fileName}".`, code: "DUPLICATE_CONTENT" });
     }
 
-    // Upload ke Vercel Blob (server-side, private store)
+    // Upload ke Vercel Blob
     const blobPath = `statements/${userId}/${crypto.randomUUID()}_${fileName}`;
     const blob = await put(blobPath, file.buffer, {
       access: "private",
@@ -144,31 +145,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uploadId = upload.id;
     }
 
-    // Kirim ke QStash atau proses lokal
-    const appUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-    const qstashToken = process.env.QSTASH_TOKEN;
-    const isLocal = !process.env.VERCEL_URL;
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
-    if (!qstashToken || isLocal) {
-      res.status(202).json({ uploadId, status: "PROCESSING", message: "File sedang diproses." });
-      import("./process")
-        .then(({ processUpload }) => processUpload(jobPayload))
-        .catch((e) => console.error("process error:", e));
-    } else {
-      const qstash = new Client({ token: qstashToken, baseUrl: process.env.QSTASH_URL });
-      await qstash.publishJSON({
-        url: `${appUrl}/api/upload/process`,
-        body: jobPayload,
-        retries: 3,
-        delay: 1,
-      });
-      return res.status(202).json({ uploadId, status: "PROCESSING", message: "File sedang diproses di background." });
-    }
+    // Proses langsung — await sebelum respond agar tidak di-kill Vercel
+    console.log("[submit] Starting processUpload for", uploadId);
+    const { logs } = await processUpload(jobPayload);
+    console.log("[submit] processUpload done for", uploadId);
+
+    return res.status(202).json({
+      uploadId,
+      status: "PROCESSING",
+      message: "File berhasil diproses.",
+      _debug: logs,
+    });
+
   } catch (error: any) {
-    console.error("upload submit error:", error);
+    console.error("[submit] error:", error);
     return res.status(500).json({ message: "Internal server error: " + error.message });
   }
 }
