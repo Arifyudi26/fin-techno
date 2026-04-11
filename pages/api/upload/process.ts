@@ -186,7 +186,6 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   // Baris transaksi dimulai dengan dd/mm/yy HH:MM:SS
   // Baris angka trailing: <ref>\s{2,}<debit><credit><balance>
   const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
-  const AMOUNT_ONLY = /^\S+\s{2,}[\d,]+\.\d{2}[\d,]+\.\d{2}[\d,]+\.\d{2}$/;
 
   const merged: string[] = [];
   for (const line of lines) {
