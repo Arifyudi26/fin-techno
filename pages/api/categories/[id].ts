@@ -3,12 +3,19 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  try { verifyToken(req); }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  let userId: string;
+  try {
+    const decoded = verifyToken(req);
+    userId = decoded.id;
+  } catch {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
   const { id } = req.query as { id: string };
   const cat = await prisma.transactionCategory.findUnique({ where: { id } });
   if (!cat) return res.status(404).json({ message: "Kategori tidak ditemukan" });
+  // only allow modifying categories owned by this user (userId null = legacy global categories)
+  if (cat.userId !== userId) return res.status(403).json({ message: "Forbidden" });
 
   if (req.method === "PUT") {
     const { name, description } = req.body;

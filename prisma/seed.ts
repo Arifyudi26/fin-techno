@@ -45,12 +45,12 @@ async function main() {
 
   // 2. Categories
   const [catOps, catGaj, catPaj, catUtl, catInv, catLny] = await Promise.all([
-    prisma.transactionCategory.upsert({ where: { code: "OPS" }, update: {}, create: { name: "Operasional", code: "OPS", description: "Biaya operasional bisnis" } }),
-    prisma.transactionCategory.upsert({ where: { code: "GAJ" }, update: {}, create: { name: "Gaji", code: "GAJ", description: "Pembayaran gaji karyawan" } }),
-    prisma.transactionCategory.upsert({ where: { code: "PAJ" }, update: {}, create: { name: "Pajak", code: "PAJ", description: "Pembayaran pajak" } }),
-    prisma.transactionCategory.upsert({ where: { code: "UTL" }, update: {}, create: { name: "Utilitas", code: "UTL", description: "Listrik, air, internet" } }),
-    prisma.transactionCategory.upsert({ where: { code: "INV" }, update: {}, create: { name: "Investasi", code: "INV", description: "Pengeluaran investasi" } }),
-    prisma.transactionCategory.upsert({ where: { code: "LNY" }, update: {}, create: { name: "Lainnya", code: "LNY", description: "Transaksi lainnya" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "OPS" } }, update: {}, create: { name: "Operasional", code: "OPS", description: "Biaya operasional bisnis" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "GAJ" } }, update: {}, create: { name: "Gaji", code: "GAJ", description: "Pembayaran gaji karyawan" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "PAJ" } }, update: {}, create: { name: "Pajak", code: "PAJ", description: "Pembayaran pajak" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "UTL" } }, update: {}, create: { name: "Utilitas", code: "UTL", description: "Listrik, air, internet" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "INV" } }, update: {}, create: { name: "Investasi", code: "INV", description: "Pengeluaran investasi" } }),
+    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "LNY" } }, update: {}, create: { name: "Lainnya", code: "LNY", description: "Transaksi lainnya" } }),
   ]);
   console.log("✅ Categories: 6");
 
