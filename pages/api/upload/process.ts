@@ -71,33 +71,30 @@ function detectType(desc: string, debitVal: string, creditVal: string, signVal?:
   return TransactionType.DEBIT;
 }
 
-// Category rules (tanpa DB query per-row) 
-const CATEGORY_RULES: Record<string, string[]> = {
-  GAJ: ["gaji", "salary", "thr", "bonus", "payroll"],
-  UTL: ["listrik", "pln", "pdam", "air", "internet", "telkom", "indihome", "wifi", "bpjs"],
-  PAJ: ["pajak", "pph", "ppn", "bphtb"],
-  INV: ["investasi", "deposito", "saham", "reksa", "obligasi"],
-  OPS: ["operasional", "supplier", "vendor", "pembelian", "bahan"],
-};
+// CategoryEntry: id + keywords derived from category name
+type CategoryEntry = { id: string; keywords: string[] };
 
-type CategoryMap = Map<string, string>; // code -> id
-
-// Load semua kategori sekali, kembalikan Map untuk lookup O(1)
-async function loadCategories(): Promise<CategoryMap> {
+// Load kategori milik user, extract keywords dari nama kategori
+// Contoh: name="Gaji Karyawan" → keywords=["gaji", "karyawan"]
+async function loadCategories(userId: string): Promise<CategoryEntry[]> {
   const cats = await prisma.transactionCategory.findMany({
-    select: { id: true, code: true },
+    where: { userId, isActive: true },
+    select: { id: true, name: true },
   });
-  return new Map(cats.map((c) => [c.code, c.id]));
+  return cats.map((c) => ({
+    id: c.id,
+    keywords: c.name.toLowerCase().split(/\s+/).filter((w) => w.length > 2),
+  }));
 }
 
-function resolveCategoryId(desc: string, categoryMap: CategoryMap): string | null {
+function resolveCategoryId(desc: string, categories: CategoryEntry[]): string | null {
   const lower = desc.toLowerCase();
-  for (const [code, keywords] of Object.entries(CATEGORY_RULES)) {
-    if (keywords.some((k) => lower.includes(k))) {
-      return categoryMap.get(code) ?? null;
+  for (const cat of categories) {
+    if (cat.keywords.some((k) => lower.includes(k))) {
+      return cat.id;
     }
   }
-  return categoryMap.get("LNY") ?? null;
+  return null;
 }
 
 type ParsedRow = {
@@ -344,8 +341,8 @@ export async function processUpload(payload: {
     }
 
     // Load kategori sekali saja (bukan per-row)
-    const categoryMap = await loadCategories();
-    log("CATEGORIES_LOADED", `count=${categoryMap.size}`);
+    const categories = await loadCategories(payload.userId);
+    log("CATEGORIES_LOADED", `count=${categories.length}`);
     // Build semua transaksi valid terlebih dahulu
     type TxRecord = {
       hash: string;
@@ -373,7 +370,7 @@ export async function processUpload(payload: {
       const type = detectType(row.description, row.debit, row.credit, row.sign);
       const balance = parseAmount(row.balance);
       const valueDate = parseDate(row.valueDate);
-      const catId = resolveCategoryId(row.description, categoryMap);
+      const catId = resolveCategoryId(row.description, categories);
       const hash = crypto.createHash("md5").update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`).digest("hex");
       validTx.push({ hash, txDate, valueDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, catId });
     }
