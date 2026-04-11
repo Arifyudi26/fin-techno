@@ -107,6 +107,12 @@
 .apexcharts-tooltip.apexcharts-theme-light {
   @apply gap-1 !rounded-lg !border-gray-200 p-3 !shadow-theme-sm dark:!border-gray-800 dark:!bg-gray-900;
 }
+/* Custom tooltip — hapus wrapper bawaan ApexCharts */
+.apexcharts-tooltip.apexcharts-theme-light:has(.apexcharts-custom-tooltip),
+.apexcharts-tooltip.apexcharts-theme-dark:has(.apexcharts-custom-tooltip),
+.apexcharts-tooltip:has(.apexcharts-custom-tooltip) {
+  @apply !border-0 !bg-transparent !p-0 !shadow-none !rounded-none;
+}
 .apexcharts-tooltip-marker {
   @apply !mr-1.5 !h-1.5 !w-1.5;
 }
