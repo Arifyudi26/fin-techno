@@ -21,15 +21,14 @@ export default async function handler(
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     const db = prisma as any;
 
-    const [recentBankTx, recentWalletTx, bankCatExpenses, walletCatExpenses] =
-      await Promise.all([
+    const [recentBankTx, recentWalletTx] = await Promise.all([
         prisma.bankTransaction.findMany({
           where: {
             bankAccount: { ownerId: userId },
             transactionDate: { gte: ninetyDaysAgo },
           },
           include: {
-            category: true,
+            categories: { include: { category: { select: { id: true, name: true } } } },
             bankAccount: { select: { bankProvider: true } },
           },
           orderBy: { transactionDate: "desc" },
@@ -41,29 +40,11 @@ export default async function handler(
             transactionDate: { gte: ninetyDaysAgo },
           },
           include: {
-            category: true,
+            categories: { include: { category: { select: { id: true, name: true } } } },
             wallet: { select: { walletProvider: true } },
           },
           orderBy: { transactionDate: "desc" },
           take: 20,
-        }),
-        prisma.bankTransaction.groupBy({
-          by: ["categoryId"],
-          where: {
-            bankAccount: { ownerId: userId },
-            type: "DEBIT",
-            transactionDate: { gte: ninetyDaysAgo },
-          },
-          _sum: { amount: true },
-        }),
-        db.walletTransaction.groupBy({
-          by: ["categoryId"],
-          where: {
-            wallet: { ownerId: userId },
-            type: "DEBIT",
-            transactionDate: { gte: ninetyDaysAgo },
-          },
-          _sum: { amount: true },
         }),
       ]);
 
@@ -87,24 +68,44 @@ export default async function handler(
       )
       .slice(0, 10);
 
-    // Merge category expenses
-    const catMerge: Record<string, number> = {};
-    for (const c of [...bankCatExpenses, ...walletCatExpenses]) {
-      const key = c.categoryId ?? "__none__";
-      catMerge[key] = (catMerge[key] ?? 0) + Number(c._sum.amount ?? 0);
+    // Spending by category — aggregate from junction tables
+    const [bankCatRows, walletCatRows] = await Promise.all([
+      prisma.bankTransactionCategory.findMany({
+        where: {
+          transaction: {
+            bankAccount: { ownerId: userId },
+            type: "DEBIT",
+            transactionDate: { gte: ninetyDaysAgo },
+          },
+        },
+        include: {
+          transaction: { select: { amount: true } },
+          category: { select: { id: true, name: true } },
+        },
+      }),
+      db.walletTransactionCategory.findMany({
+        where: {
+          transaction: {
+            wallet: { ownerId: userId },
+            type: "DEBIT",
+            transactionDate: { gte: ninetyDaysAgo },
+          },
+        },
+        include: {
+          transaction: { select: { amount: true } },
+          category: { select: { id: true, name: true } },
+        },
+      }),
+    ]);
+
+    const catMerge: Record<string, { name: string; amount: number }> = {};
+    for (const row of [...bankCatRows, ...walletCatRows]) {
+      const key = row.category.id;
+      if (!catMerge[key]) catMerge[key] = { name: row.category.name, amount: 0 };
+      catMerge[key].amount += Number(row.transaction.amount);
     }
 
-    const categoryIds = Object.keys(catMerge).filter((k) => k !== "__none__");
-    const categories = await prisma.transactionCategory.findMany({
-      where: { id: { in: categoryIds } },
-      select: { id: true, name: true },
-    });
-    const catMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
-
-    const spendingByCategory = Object.entries(catMerge)
-      .filter(([k]) => k !== "__none__")
-      .map(([id, amount]) => ({ category: catMap[id] ?? "Lainnya", amount }))
-      .sort((a, b) => b.amount - a.amount);
+    const spendingByCategory = Object.values(catMerge).sort((a, b) => b.amount - a.amount);
 
     const recentTransactions = recentTx.map((t: any) => ({
       id: t.id,
@@ -112,7 +113,8 @@ export default async function handler(
       description: t.description,
       type: t.type,
       amount: Number(t.amount),
-      category: t.category?.name ?? "Lainnya",
+      categories: t.categories.map((c: any) => c.category.name),
+      category: t.categories[0]?.category?.name ?? "Lainnya",
       bankAccount: t._provider,
       source: t._source,
       status: t.status,

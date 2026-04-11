@@ -43,14 +43,20 @@ async function main() {
   });
   console.log("✅ User:", user.email);
 
-  // 2. Categories
+  // 2. Categories (global, userId = null)
+  async function upsertGlobalCategory(code: string, name: string, description: string) {
+    const existing = await prisma.transactionCategory.findFirst({ where: { userId: null, code } });
+    if (existing) return existing;
+    return prisma.transactionCategory.create({ data: { name, code, description } });
+  }
+
   const [catOps, catGaj, catPaj, catUtl, catInv, catLny] = await Promise.all([
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "OPS" } }, update: {}, create: { name: "Operasional", code: "OPS", description: "Biaya operasional bisnis" } }),
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "GAJ" } }, update: {}, create: { name: "Gaji", code: "GAJ", description: "Pembayaran gaji karyawan" } }),
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "PAJ" } }, update: {}, create: { name: "Pajak", code: "PAJ", description: "Pembayaran pajak" } }),
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "UTL" } }, update: {}, create: { name: "Utilitas", code: "UTL", description: "Listrik, air, internet" } }),
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "INV" } }, update: {}, create: { name: "Investasi", code: "INV", description: "Pengeluaran investasi" } }),
-    prisma.transactionCategory.upsert({ where: { userId_code: { userId: null as unknown as string, code: "LNY" } }, update: {}, create: { name: "Lainnya", code: "LNY", description: "Transaksi lainnya" } }),
+    upsertGlobalCategory("OPS", "Operasional", "Biaya operasional bisnis"),
+    upsertGlobalCategory("GAJ", "Gaji",        "Pembayaran gaji karyawan"),
+    upsertGlobalCategory("PAJ", "Pajak",       "Pembayaran pajak"),
+    upsertGlobalCategory("UTL", "Utilitas",    "Listrik, air, internet"),
+    upsertGlobalCategory("INV", "Investasi",   "Pengeluaran investasi"),
+    upsertGlobalCategory("LNY", "Lainnya",     "Transaksi lainnya"),
   ]);
   console.log("✅ Categories: 6");
 
@@ -159,46 +165,72 @@ async function main() {
     totalUploads += 2;
 
     // BCA transactions
-    const bcaTxData = bcaTemplates.map((tpl, txIdx) => {
+    const bcaTxInserts: Array<{ hash: string; catId: string; txData: object }> = [];
+    for (let txIdx = 0; txIdx < bcaTemplates.length; txIdx++) {
+      const tpl = bcaTemplates[txIdx];
       const date = new Date(m.start);
       date.setDate(txIdx + 1);
-      return {
-        bankAccountId: accBCA.id,
-        uploadId: uploadBCA.id,
-        transactionDate: date,
-        description: tpl.desc,
-        amount: tpl.amount + mIdx * 100_000, // sedikit variasi tiap bulan
-        type: tpl.type,
-        balance: 20_000_000 + mIdx * 1_500_000,
-        categoryId: tpl.catId,
-        status: EStatementStatus.VERIFIED,
+      bcaTxInserts.push({
         hash: `bca-${mIdx}-${txIdx}`,
-      };
-    });
+        catId: tpl.catId,
+        txData: {
+          bankAccountId: accBCA.id,
+          uploadId: uploadBCA.id,
+          transactionDate: date,
+          description: tpl.desc,
+          amount: tpl.amount + mIdx * 100_000,
+          type: tpl.type,
+          balance: 20_000_000 + mIdx * 1_500_000,
+          status: EStatementStatus.VERIFIED,
+          hash: `bca-${mIdx}-${txIdx}`,
+        },
+      });
+    }
 
     // BRI transactions
-    const briTxData = briTemplates.map((tpl, txIdx) => {
+    const briTxInserts: Array<{ hash: string; catId: string; txData: object }> = [];
+    for (let txIdx = 0; txIdx < briTemplates.length; txIdx++) {
+      const tpl = briTemplates[txIdx];
       const date = new Date(m.start);
       date.setDate(txIdx + 2);
-      return {
-        bankAccountId: accBRI.id,
-        uploadId: uploadBRI.id,
-        transactionDate: date,
-        description: tpl.desc,
-        amount: tpl.amount + mIdx * 50_000,
-        type: tpl.type,
-        balance: 10_000_000 + mIdx * 800_000,
-        categoryId: tpl.catId,
-        status: mIdx >= 10 ? EStatementStatus.PENDING : EStatementStatus.VERIFIED,
+      briTxInserts.push({
         hash: `bri-${mIdx}-${txIdx}`,
-      };
-    });
+        catId: tpl.catId,
+        txData: {
+          bankAccountId: accBRI.id,
+          uploadId: uploadBRI.id,
+          transactionDate: date,
+          description: tpl.desc,
+          amount: tpl.amount + mIdx * 50_000,
+          type: tpl.type,
+          balance: 10_000_000 + mIdx * 800_000,
+          status: mIdx >= 10 ? EStatementStatus.PENDING : EStatementStatus.VERIFIED,
+          hash: `bri-${mIdx}-${txIdx}`,
+        },
+      });
+    }
 
-    await prisma.bankTransaction.createMany({
-      data: [...bcaTxData, ...briTxData],
+    const allInserts = [...bcaTxInserts, ...briTxInserts];
+
+    // Batch insert transactions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.bankTransaction.createMany({ data: allInserts.map(i => i.txData) as any[], skipDuplicates: true });
+
+    // Fetch inserted tx ids by hash to create junction records
+    const insertedTx = await prisma.bankTransaction.findMany({
+      where: { hash: { in: allInserts.map(i => i.hash) } },
+      select: { id: true, hash: true },
+    });
+    const hashToId = Object.fromEntries(insertedTx.map(t => [t.hash!, t.id]));
+
+    await prisma.bankTransactionCategory.createMany({
+      data: allInserts
+        .filter(i => hashToId[i.hash])
+        .map(i => ({ transactionId: hashToId[i.hash], categoryId: i.catId })),
       skipDuplicates: true,
     });
-    totalTx += bcaTxData.length + briTxData.length;
+
+    totalTx += allInserts.length;
   }
 
   console.log(`✅ Uploads: ${totalUploads}`);

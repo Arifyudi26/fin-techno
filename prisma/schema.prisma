@@ -171,7 +171,6 @@ model BankTransaction {
   type            TransactionType
   balance         Decimal?         @db.Decimal(20, 2)
   status          EStatementStatus @default(PENDING)
-  categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?
   note            String?
@@ -181,9 +180,9 @@ model BankTransaction {
 
   bankAccount BankAccount          @relation(fields: [bankAccountId], references: [id])
   upload      BankStatementUpload  @relation(fields: [uploadId], references: [id])
-  category    TransactionCategory? @relation(fields: [categoryId], references: [id])
   verifiedBy  User?                @relation("VerifiedBy", fields: [verifiedById], references: [id])
   mergeItems  MergeReportItem[]
+  categories  BankTransactionCategory[]
 
   @@index([bankAccountId])
   @@index([uploadId])
@@ -199,12 +198,11 @@ model TransactionCategory {
   name        String
   code        String
   description String?
-  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions       BankTransaction[]
-  walletTransactions WalletTransaction[]
+  bankTransactions   BankTransactionCategory[]
+  walletTransactions WalletTransactionCategory[]
 
   @@unique([userId, name])
   @@unique([userId, code])
@@ -312,7 +310,6 @@ model WalletTransaction {
   type            TransactionType
   balance         Decimal?         @db.Decimal(20, 2)
   status          EStatementStatus @default(PENDING)
-  categoryId      String?
   verifiedById    String?
   verifiedAt      DateTime?
   note            String?
@@ -322,14 +319,38 @@ model WalletTransaction {
 
   wallet     DigitalWallet         @relation(fields: [walletId], references: [id])
   upload     WalletStatementUpload @relation(fields: [uploadId], references: [id])
-  category   TransactionCategory?  @relation(fields: [categoryId], references: [id])
   verifiedBy User?                 @relation("WalletVerifiedBy", fields: [verifiedById], references: [id])
+  categories WalletTransactionCategory[]
 
   @@index([walletId])
   @@index([uploadId])
   @@index([transactionDate])
   @@index([type])
   @@index([status])
+}
+
+model BankTransactionCategory {
+  transactionId String
+  categoryId    String
+
+  transaction BankTransaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  category    TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, categoryId])
+  @@index([transactionId])
+  @@index([categoryId])
+}
+
+model WalletTransactionCategory {
+  transactionId String
+  categoryId    String
+
+  transaction WalletTransaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  category    TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, categoryId])
+  @@index([transactionId])
+  @@index([categoryId])
 }
 
 model Notification {

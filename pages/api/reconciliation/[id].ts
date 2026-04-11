@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           include: {
             transaction: {
               include: {
-                category: { select: { name: true } },
+                categories: { include: { category: { select: { name: true } } } },
                 bankAccount: { select: { bankProvider: true, accountName: true } },
               },
             },
@@ -48,7 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: item.transaction.description,
         type: item.transaction.type,
         amount: Number(item.transaction.amount),
-        category: item.transaction.category?.name ?? "Lainnya",
+        category: item.transaction.categories[0]?.category?.name ?? "Lainnya",
+        categories: item.transaction.categories.map((c: { category: { name: string } }) => c.category.name),
         bank: item.transaction.bankAccount.bankProvider,
         accountName: item.transaction.bankAccount.accountName,
       })),
