@@ -435,8 +435,22 @@ export async function processUpload(payload: {
     // insertFailed = baris yang gagal masuk DB karena error teknis
     failCount += insertFailed;
 
+    // Hitung berapa baris yang overlap (sudah ada di DB dari upload lain)
+    const duplicateCount = validTx.length - newTx.length;
+    const newCount = newTx.length - insertFailed;
+
+    // Simpan info overlap di notes agar UI bisa menampilkan dengan jelas
+    // Format: "new:38,duplicate:52,failed:0" 
+    const overlapNotes = `new:${newCount},duplicate:${duplicateCount},failed:${failCount}`;
+
     // Update summary
-    const finalStatus = failCount === 0 ? UploadStatus.SUCCESS : successCount === 0 ? UploadStatus.FAILED : UploadStatus.PARTIAL;
+    const finalStatus =
+      failCount === 0
+        ? UploadStatus.SUCCESS
+        : successCount === 0 && newCount === 0
+          ? UploadStatus.FAILED
+          : UploadStatus.PARTIAL;
+
     const summaryData = {
       status: finalStatus,
       totalRows: parsedRows.length,
@@ -444,6 +458,7 @@ export async function processUpload(payload: {
       failedRows: failCount,
       totalCredit,
       totalDebit,
+      notes: overlapNotes,
     };
 
     if (sourceType === "BANK") await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: summaryData });

@@ -45,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalCredit: Number(u.totalCredit),
       totalDebit: Number(u.totalDebit),
       uploadedAt: u.createdAt.toISOString(),
+      notes: u.notes ?? null,
     }));
 
     const wallet = walletUploads.map((u: any) => ({
@@ -66,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalCredit: Number(u.totalCredit),
       totalDebit: Number(u.totalDebit),
       uploadedAt: u.createdAt.toISOString(),
+      notes: u.notes ?? null,
     }));
 
     const all = [...bank, ...wallet].sort(
