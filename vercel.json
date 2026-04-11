@@ -1,10 +1,7 @@
 {
   "functions": {
-    "pages/api/upload/process.ts": {
-      "maxDuration": 60
-    },
     "pages/api/upload/submit.ts": {
-      "maxDuration": 10
+      "maxDuration": 60
     }
   }
 }

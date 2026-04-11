@@ -164,9 +164,8 @@ function parseDate(val: string): Date | null {
 }
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const { PDFParse } = require("pdf-parse");
-  const parser = new PDFParse({ data: buffer, verbosity: 0 });
-  const data = await parser.getText();
+  const pdfParse = require("pdf-parse");
+  const data = await pdfParse(buffer);
 
   // Strip footer/summary section — BRI PDF selalu punya "Saldo Awal" di akhir
   // Potong teks sebelum baris summary agar tidak ikut ter-parse
