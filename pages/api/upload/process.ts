@@ -232,6 +232,8 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
 }
 
 // Core processing logic 
+export type ProcessLog = { ts: string; step: string; detail?: string };
+
 export async function processUpload(payload: {
   uploadId: string;
   sourceType: string;
@@ -239,13 +241,22 @@ export async function processUpload(payload: {
   fileUrl: string;
   fileFormat: string;
   userId: string;
-}) {
+}): Promise<{ logs: ProcessLog[] }> {
   const { uploadId, sourceType, accountId, fileUrl, fileFormat } = payload;
   const db = prisma as any;
+  const logs: ProcessLog[] = [];
+  const log = (step: string, detail?: string) => {
+    const entry: ProcessLog = { ts: new Date().toISOString(), step, detail };
+    logs.push(entry);
+    console.log(`[processUpload] ${step}${detail ? " | " + detail : ""}`);
+  };
 
   try {
+    log("START", `uploadId=${uploadId} format=${fileFormat} sourceType=${sourceType}`);
+
     // Download file dari Vercel Blob
     const blobUrl = fileUrl.split("#")[0];
+    log("DOWNLOAD_START", blobUrl);
     const response = await fetch(blobUrl, {
       headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
     });
@@ -253,29 +264,50 @@ export async function processUpload(payload: {
     const arrayBuffer = await response.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
     const fileContent = fileFormat !== "PDF" ? fileBuffer.toString("utf-8") : "";
+    log("DOWNLOAD_OK", `size=${fileBuffer.length} bytes`);
 
     // Parse file
     let parsedRows: ParsedRow[] = [];
     let parseError: string | null = null;
 
     if (fileFormat === "CSV") {
-      try { parsedRows = parseRows(parseCSV(fileContent)); }
-      catch (e: any) { parseError = "Gagal membaca CSV: " + e.message; }
+      try {
+        parsedRows = parseRows(parseCSV(fileContent));
+        log("PARSE_CSV_OK", `rows=${parsedRows.length}`);
+      } catch (e: any) {
+        parseError = "Gagal membaca CSV: " + e.message;
+        log("PARSE_CSV_ERROR", parseError);
+      }
     } else if (fileFormat === "PDF") {
       try {
+        log("PARSE_PDF_START");
         parsedRows = await parsePDF(fileBuffer);
-        if (parsedRows.length === 0) parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
-      } catch (e: any) { parseError = "Gagal membaca PDF: " + e.message; }
+        if (parsedRows.length === 0) {
+          parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
+          log("PARSE_PDF_EMPTY");
+        } else {
+          log("PARSE_PDF_OK", `rows=${parsedRows.length}`);
+        }
+      } catch (e: any) {
+        parseError = "Gagal membaca PDF: " + e.message;
+        log("PARSE_PDF_ERROR", parseError);
+      }
     } else {
-      try { parsedRows = parseRows(parseCSV(fileContent)); }
-      catch { parseError = "Gagal membaca file. Pastikan format sesuai template."; }
+      try {
+        parsedRows = parseRows(parseCSV(fileContent));
+        log("PARSE_OTHER_OK", `rows=${parsedRows.length}`);
+      } catch {
+        parseError = "Gagal membaca file. Pastikan format sesuai template.";
+        log("PARSE_OTHER_ERROR", parseError);
+      }
     }
 
     if (parseError) {
       const updateData = { status: UploadStatus.FAILED, errorMessage: parseError };
       if (sourceType === "BANK") await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: updateData });
       else await db.walletStatementUpload.update({ where: { id: uploadId }, data: updateData });
-      return;
+      log("DONE_FAILED", parseError);
+      return { logs };
     }
 
     // Auto-detect period
@@ -291,7 +323,7 @@ export async function processUpload(payload: {
 
     // Load kategori sekali saja (bukan per-row)
     const categoryMap = await loadCategories();
-
+    log("CATEGORIES_LOADED", `count=${categoryMap.size}`);
     // Build semua transaksi valid terlebih dahulu
     type TxRecord = {
       hash: string;
@@ -345,6 +377,7 @@ export async function processUpload(payload: {
 
     // Filter hanya transaksi baru (belum ada di DB)
     const newTx = validTx.filter((t) => !existingHashes.has(t.hash));
+    log("DEDUP_OK", `valid=${validTx.length} existing=${existingHashes.size} new=${newTx.length}`);
 
     // Batch insert dalam chunk 100 agar tidak overload DB
     const BATCH_SIZE = 100;
@@ -464,20 +497,26 @@ export async function processUpload(payload: {
     if (sourceType === "BANK") await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: summaryData });
     else await db.walletStatementUpload.update({ where: { id: uploadId }, data: summaryData });
 
+    log("DONE_OK", `status=${finalStatus} parsed=${successCount} new=${newCount} dup=${duplicateCount} failed=${failCount}`);
+
     // Hapus file dari Blob setelah selesai
     try {
       const { del } = await import("@vercel/blob");
       await del(blobUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      log("BLOB_DELETED");
     } catch { /* tidak fatal */ }
+
+    return { logs };
 
   } catch (error: any) {
     console.error("processUpload error:", error);
+    log("FATAL_ERROR", error.message);
     const errData = { status: UploadStatus.FAILED, errorMessage: "Internal error: " + error.message };
     try {
       if (sourceType === "BANK") await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: errData });
       else await (prisma as any).walletStatementUpload.update({ where: { id: uploadId }, data: errData });
     } catch { /* ignore */ }
-    throw error; // re-throw agar QStash bisa retry
+    throw error;
   }
 }
 
