@@ -119,7 +119,7 @@ export default function ExpenseReport() {
       }) => {
         const label = w.globals.categoryLabels[dataPointIndex] ?? "";
         const val = series[0][dataPointIndex] ?? 0;
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
             <div style="display:flex;align-items:center;gap:6px">
               <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0"></span>
@@ -130,7 +130,6 @@ export default function ExpenseReport() {
         </div>`;
       },
     },
-    theme: { mode: "dark" as const },
   };
 
   const donutOptions = {
@@ -159,7 +158,7 @@ export default function ExpenseReport() {
         const val = series[seriesIndex] ?? 0;
         const total = series.reduce((s: number, v: number) => s + v, 0);
         const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
             <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
             <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
@@ -175,7 +174,6 @@ export default function ExpenseReport() {
         </div>`;
       },
     },
-    theme: { mode: "dark" as const },
   };
 
   const years = Array.from(

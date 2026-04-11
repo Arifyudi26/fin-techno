@@ -188,14 +188,13 @@ export default function PeriodAnalysis() {
             </div>
             <span style="color:${color};font-size:12px;font-weight:600;white-space:nowrap">${formatIDR(val)}</span>
           </div>`;
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:220px;font-family:Outfit,sans-serif">
+        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:220px;font-family:Outfit,sans-serif">
           ${row("#22c55e", "Pemasukan", pemasukan, "#22c55e")}
           ${row("#ef4444", "Pengeluaran", pengeluaran, "#ef4444")}
           ${row(netColor, "Net Flow", Math.abs(net), netColor)}
         </div>`;
       },
     },
-    theme: { mode: "dark" as const },
   };
 
   const donutOptions = {
@@ -224,7 +223,7 @@ export default function PeriodAnalysis() {
         const val = series[seriesIndex] ?? 0;
         const total = series.reduce((s: number, v: number) => s + v, 0);
         const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
+        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
             <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
             <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
@@ -240,7 +239,6 @@ export default function PeriodAnalysis() {
         </div>`;
       },
     },
-    theme: { mode: "dark" as const },
   };
 
   // Quick period presets
