@@ -7,8 +7,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
+  let userId: string;
   try {
-    verifyToken(req);
+    const decoded = verifyToken(req);
+    userId = decoded.id;
   } catch {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -16,11 +18,10 @@ export default async function handler(
   if (req.method === "GET") {
     try {
       const categories = await prisma.transactionCategory.findMany({
-        where: { isActive: true },
+        where: { userId, isActive: true },
         orderBy: { name: "asc" },
       });
 
-      // count transactions per category (bank + wallet)
       const result = await Promise.all(
         categories.map(async (cat) => {
           const bankCount = await prisma.bankTransaction.count({
@@ -47,14 +48,14 @@ export default async function handler(
     const codeUpper = (code as string).toUpperCase().slice(0, 5);
     try {
       const existing = await prisma.transactionCategory.findFirst({
-        where: { code: codeUpper },
+        where: { userId, code: codeUpper },
       });
       if (existing)
         return res
           .status(409)
           .json({ message: "Kode kategori sudah digunakan" });
       const cat = await prisma.transactionCategory.create({
-        data: { name, code: codeUpper, description },
+        data: { userId, name, code: codeUpper, description },
       });
       return res.status(201).json({ category: cat });
     } catch (e) {

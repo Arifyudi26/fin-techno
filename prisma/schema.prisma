@@ -103,6 +103,7 @@ model User {
   uploadedWalletStmts  WalletStatementUpload[]
   verifiedWalletTx     WalletTransaction[]   @relation("WalletVerifiedBy")
   notifications        Notification[]
+  transactionCategories TransactionCategory[]
 }
 
 model BankAccount {
@@ -194,14 +195,20 @@ model BankTransaction {
 
 model TransactionCategory {
   id          String   @id @default(uuid())
-  name        String   @unique
-  code        String   @unique
+  userId      String?
+  name        String
+  code        String
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions       BankTransaction[]
   walletTransactions WalletTransaction[]
+
+  @@unique([userId, name])
+  @@unique([userId, code])
+  @@index([userId])
 }
 
 model MergeReport {
