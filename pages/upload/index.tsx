@@ -6,6 +6,8 @@ import BankProviderIcon from "@components/icons/providers/BankIcon";
 import WalletProviderIcon from "@components/icons/providers/WalletIcon";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
+import { useNotifications } from "@lib/context/NotificationContext";
+import { useModal } from "@lib/context/ModalContext";
 import axiosGlobal from "@/services/AxiosGlobal";
 import Badge from "@components/ui/badge/Badge";
 import {
@@ -145,6 +147,9 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const { openModal, closeModal } = useModal();
+
+  useEffect(() => { openModal(); return () => closeModal(); }, [openModal, closeModal]);
 
   const filtered = accounts.filter((a) => a.type === sourceType);
 
@@ -222,9 +227,9 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 100001 }}>
       <div
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+        className="absolute inset-0"
         onClick={!loading ? onClose : undefined}
       />
       <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
@@ -620,6 +625,9 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
   const [loading, setLoading] = useState(true);
   const [txFilter, setTxFilter] = useState<"ALL" | "CREDIT" | "DEBIT">("ALL");
   const [search, setSearch] = useState("");
+  const { openModal, closeModal } = useModal();
+
+  useEffect(() => { openModal(); return () => closeModal(); }, [openModal, closeModal]);
 
   useEffect(() => {
     axiosGlobal
@@ -640,9 +648,9 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
     }) ?? [];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 100001 }}>
       <div
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+        className="absolute inset-0"
         onClick={onClose}
       />
       <div className="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1296,6 +1304,8 @@ export default function UploadPage() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const { toastState, fire, close } = useToast();
+  const { addNotification } = useNotifications();
+  const { openModal, closeModal } = useModal();
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -1332,13 +1342,10 @@ export default function UploadPage() {
     totalRows: number;
   }) => {
     setShowForm(false);
+    closeModal();
     fetchUploads();
 
     if (result.status === "PROCESSING" && result.uploadId) {
-      fire("info", "File sedang diproses", {
-        message: "Upload berhasil diterima. Hasil akan muncul otomatis setelah selesai.",
-        duration: 4000,
-      });
       // Polling di background — refresh list setiap 5 detik sampai selesai
       const uploadId = result.uploadId;
       const maxAttempts = 60;
@@ -1347,25 +1354,23 @@ export default function UploadPage() {
         attempt++;
         try {
           const res = await axiosGlobal.get(`/upload/${uploadId}`);
-          const { status, parsedRows: parsed, totalRows: total } = res.data;
+          const { status, parsedRows: parsed, totalRows: total, fileName } = res.data;
           if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
             clearInterval(poll);
             fetchUploads();
             const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
-            fire(
-              allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
-              allDuplicate ? "Transaksi Sudah Ada" : status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
-              {
-                message: allDuplicate
-                  ? `${total} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.`
-                  : status === "SUCCESS"
-                    ? `${parsed} dari ${total} transaksi berhasil diproses.`
-                    : status === "PARTIAL"
-                      ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
-                      : "Terjadi kesalahan saat memproses file.",
-                duration: 6000,
-              },
-            );
+            addNotification({
+              type: allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
+              title: allDuplicate ? "Transaksi Sudah Ada" : status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
+              message: allDuplicate
+                ? `${total} transaksi dari file ini sudah tercatat sebelumnya.`
+                : status === "SUCCESS"
+                  ? `${parsed} dari ${total} transaksi berhasil diproses.`
+                  : status === "PARTIAL"
+                    ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
+                    : "Terjadi kesalahan saat memproses file.",
+              fileName: fileName,
+            });
           }
         } catch { /* lanjut polling */ }
         if (attempt >= maxAttempts) clearInterval(poll);
@@ -1375,18 +1380,15 @@ export default function UploadPage() {
 
     const isSuccess = result.status === "SUCCESS";
     const isPartial = result.status === "PARTIAL";
-    fire(
-      isSuccess ? "success" : isPartial ? "warning" : "error",
-      isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
-      {
-        message: isSuccess
-          ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
-          : isPartial
-            ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil. Beberapa baris gagal diproses.`
-            : "Terjadi kesalahan saat memproses file.",
-        duration: 5000,
-      },
-    );
+    addNotification({
+      type: isSuccess ? "success" : isPartial ? "warning" : "error",
+      title: isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
+      message: isSuccess
+        ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
+        : isPartial
+          ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil. Beberapa baris gagal diproses.`
+          : "Terjadi kesalahan saat memproses file.",
+    });
   };
 
   const handleDelete = async () => {
@@ -1396,6 +1398,7 @@ export default function UploadPage() {
       await axiosGlobal.delete(`/upload/${deleteTarget.id}?type=${deleteTarget.sourceType}`);
       setUploads((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
+      closeModal();
       fire("success", "Upload dihapus", { message: "Data upload dan transaksi terkait berhasil dihapus.", duration: 3000 });
     } catch {
       fire("error", "Gagal menghapus upload");
@@ -1761,7 +1764,7 @@ export default function UploadPage() {
               onViewDetail={() =>
                 setDetailItem({ id: item.id, sourceType: item.sourceType })
               }
-              onDelete={() => setDeleteTarget(item)}
+              onDelete={() => { setDeleteTarget(item); openModal(); }}
             />
           ))}
         </div>
@@ -1785,7 +1788,7 @@ export default function UploadPage() {
 
       {/* Modal Konfirmasi Hapus */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 flex items-center justify-center px-4" style={{ zIndex: 100001 }}>
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-error-50 dark:bg-error-500/10 shrink-0">
@@ -1808,7 +1811,7 @@ export default function UploadPage() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => { setDeleteTarget(null); closeModal(); }}
                 disabled={deleting}
                 className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
               >

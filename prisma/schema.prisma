@@ -79,6 +79,13 @@ enum MergeStatus {
   CONFLICT
 }
 
+enum NotifType {
+  success
+  error
+  warning
+  info
+}
+
 model User {
   id            String        @id @default(uuid())
   name          String        @default("user")
@@ -95,6 +102,7 @@ model User {
   wallets              DigitalWallet[]
   uploadedWalletStmts  WalletStatementUpload[]
   verifiedWalletTx     WalletTransaction[]   @relation("WalletVerifiedBy")
+  notifications        Notification[]
 }
 
 model BankAccount {
@@ -315,4 +323,21 @@ model WalletTransaction {
   @@index([transactionDate])
   @@index([type])
   @@index([status])
+}
+
+model Notification {
+  id        String     @id @default(uuid())
+  userId    String
+  type      NotifType
+  title     String
+  message   String
+  fileName  String?
+  read      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
 }
