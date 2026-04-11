@@ -165,7 +165,7 @@ function parseDate(val: string): Date | null {
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   const { PDFParse } = require("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
+  const parser = new PDFParse({ data: buffer, verbosity: 0 });
   const data = await parser.getText();
 
   // Strip footer/summary section — BRI PDF selalu punya "Saldo Awal" di akhir
@@ -497,7 +497,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const qstashSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   if (qstashSigningKey) {
     const signature = req.headers["upstash-signature"] as string;
-    if (!signature) return res.status(401).json({ message: "Missing QStash signature" });
+    if (!signature) {
+      console.error("[process] Missing QStash signature header");
+      return res.status(401).json({ message: "Missing QStash signature" });
+    }
 
     try {
       const { Receiver } = await import("@upstash/qstash");
@@ -506,8 +509,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
       });
       const isValid = await receiver.verify({ signature, body: rawBody });
-      if (!isValid) return res.status(401).json({ message: "Invalid QStash signature" });
+      if (!isValid) {
+        console.error("[process] Invalid QStash signature");
+        return res.status(401).json({ message: "Invalid QStash signature" });
+      }
     } catch (e: any) {
+      console.error("[process] Signature verification failed:", e.message);
       return res.status(401).json({ message: "Signature verification failed: " + e.message });
     }
   }
@@ -521,9 +528,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!payload?.uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
-  // Respond 200 ke QStash segera agar tidak dianggap timeout
-  res.status(200).json({ message: "Processing started" });
+  console.log("[process] Starting processUpload for uploadId:", payload.uploadId);
 
-  // Proses di background setelah response dikirim
-  processUpload(payload).catch((e) => console.error("Background process error:", e));
+  // Di Vercel serverless, JANGAN respond dulu lalu proses di background
+  // karena function akan di-kill setelah res.end().
+  // QStash menunggu response, jadi proses dulu baru respond.
+  try {
+    await processUpload(payload);
+    console.log("[process] processUpload completed for uploadId:", payload.uploadId);
+    return res.status(200).json({ message: "Processing completed" });
+  } catch (e: any) {
+    console.error("[process] processUpload failed:", e.message);
+    // Return 500 agar QStash retry
+    return res.status(500).json({ message: "Processing failed: " + e.message });
+  }
 }
