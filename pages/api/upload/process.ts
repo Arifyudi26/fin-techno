@@ -167,66 +167,90 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   const pdfParse = require("pdf-parse");
   const data = await pdfParse(buffer);
 
-  // Strip footer/summary section — BRI PDF selalu punya "Saldo Awal" di akhir
-  // Potong teks sebelum baris summary agar tidak ikut ter-parse
-  let text = data.text.replace(/\r/g, "").replace(/[ \t]+/g, " ");
-  const summaryMarkers = [
-    "Saldo Awal",
-    "Opening Balance",
-    "Total Transaksi Debet",
-    "Terbilang",
-  ];
+  // Split per baris, buang yang kosong
+  const allLines: string[] = data.text
+    .split("\n")
+    .map((l: string) => l.trimEnd())
+    .filter((l: string) => l.trim());
+
+  // Potong sebelum summary section
+  const summaryMarkers = ["Saldo Awal", "Opening Balance", "Total Transaksi Debet", "Terbilang"];
+  let endIdx = allLines.length;
   for (const marker of summaryMarkers) {
-    const idx = text.indexOf(marker);
-    if (idx > 0) {
-      text = text.slice(0, idx);
-      break;
+    const idx = allLines.findIndex((l) => l.includes(marker));
+    if (idx > 0 && idx < endIdx) endIdx = idx;
+  }
+  const lines = allLines.slice(0, endIdx);
+
+  // Gabungkan baris lanjutan ke baris transaksi sebelumnya.
+  // Baris transaksi dimulai dengan dd/mm/yy HH:MM:SS
+  // Baris angka trailing: <ref>\s{2,}<debit><credit><balance>
+  const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
+  const AMOUNT_ONLY = /^\S+\s{2,}[\d,]+\.\d{2}[\d,]+\.\d{2}[\d,]+\.\d{2}$/;
+
+  const merged: string[] = [];
+  for (const line of lines) {
+    if (DATE_PREFIX.test(line)) {
+      merged.push(line);
+    } else if (merged.length > 0) {
+      merged[merged.length - 1] += " " + line.trim();
     }
   }
 
   const rows: ParsedRow[] = [];
-  const DATE_SPLIT = /(?=\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})/g;
-  const chunks = text.split(DATE_SPLIT).filter((c: string) => /^\d{2}\/\d{2}\/\d{2}/.test(c.trim()));
 
-  for (const chunk of chunks) {
-    const clean = chunk.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-    const dateMatch = clean.match(/^(\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) /);
-    if (!dateMatch) continue;
-    const dateStr = dateMatch[1];
-    const rest = clean.slice(dateMatch[0].length).trim();
+  for (const line of merged) {
+    const dateStr = line.slice(0, 17); // "dd/mm/yy HH:MM:SS"
+    const rest = line.slice(17).trim();
 
-    // Cari semua angka format ribuan: 1,234.00 atau 0.00
-    const allNums = [...rest.matchAll(/[\d,]+\.\d{2}/g)];
-    // Butuh minimal 3 angka: debit, kredit, saldo
+    // Extract semua angka format ribuan dari rest ([\d,]+\.\d{2})
+    // 3 angka terakhir = debit, credit, balance (nempel tanpa spasi)
+    // Sebelum angka pertama dari 3 terakhir ada ref (dipisah \s{2,})
+    const allNums = [...rest.matchAll(/([\d,]+\.\d{2})/g)];
     if (allNums.length < 3) continue;
 
-    const balanceStr = allNums[allNums.length - 1][0];
-    const creditStr = allNums[allNums.length - 2][0];
-    const debitStr = allNums[allNums.length - 3][0];
-    const firstNumIdx = allNums[allNums.length - 3].index!;
+    const balanceMatch = allNums[allNums.length - 1];
+    const creditMatch  = allNums[allNums.length - 2];
+    const debitMatch   = allNums[allNums.length - 3];
 
-    // Deskripsi = teks sebelum angka pertama, strip Teller ID di akhir
-    let descRaw = rest.slice(0, firstNumIdx).trim();
-    // Hapus Teller ID (angka 7+ digit atau kode huruf kapital) di akhir deskripsi
-    descRaw = descRaw.replace(/\s+(\d{5,}|[A-Z]{3,}[A-Z0-9]*)$/, "").trim();
-    if (!descRaw) continue;
+    const balanceStr = balanceMatch[0];
+    const creditStr  = creditMatch[0];
+    const debitStr   = debitMatch[0];
 
-    // Tentukan sign dari nilai debit/kredit
-    const parseAmt = (v: string) => Math.abs(Number(v.replace(/[^0-9.-]/g, "")) || 0);
+    // Teks sebelum debit (index dari debitMatch)
+    const beforeDebit = rest.slice(0, debitMatch.index!).trimEnd();
+
+    // Pisahkan desc dan ref: ref adalah token terakhir setelah \s{2,}
+    const refSplit = beforeDebit.match(/^(.*?)\s{2,}(\S+)$/);
+    let desc: string;
+    let ref: string;
+    if (refSplit) {
+      desc = refSplit[1].trim();
+      ref  = refSplit[2].trim();
+    } else {
+      // Tidak ada ref terpisah — seluruhnya deskripsi
+      desc = beforeDebit.trim();
+      ref  = "";
+    }
+
+    if (!desc) continue;
+
+    const parseAmt = (v: string) => Math.abs(Number(v.replace(/[^0-9.]/g, "")) || 0);
     const sign = parseAmt(creditStr) > 0 ? "Cr" : "Db";
 
     rows.push({
       date: dateStr,
       valueDate: "",
-      description: descRaw,
+      description: desc,
       debit: debitStr,
       credit: creditStr,
       openingBalance: "",
       balance: balanceStr,
-      reference: "",
+      reference: ref,
       sign,
     });
   }
+
   return rows;
 }
 
