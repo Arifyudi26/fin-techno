@@ -164,9 +164,8 @@ function parseDate(val: string): Date | null {
 }
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const { PDFParse } = require("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-  const data = await parser.getText();
+  const pdfParse = require("pdf-parse");
+  const data = await pdfParse(buffer);
 
   // Strip footer/summary section — BRI PDF selalu punya "Saldo Awal" di akhir
   // Potong teks sebelum baris summary agar tidak ikut ter-parse
@@ -521,9 +520,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!payload?.uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
-  // Respond 200 ke QStash segera agar tidak dianggap timeout
-  res.status(200).json({ message: "Processing started" });
-
-  // Proses di background setelah response dikirim
-  processUpload(payload).catch((e) => console.error("Background process error:", e));
+  // Proses dulu, baru respond ke QStash
+  // Vercel kills the function after response — jangan fire-and-forget
+  try {
+    await processUpload(payload);
+    res.status(200).json({ message: "Processing completed" });
+  } catch (e: any) {
+    console.error("processUpload failed:", e);
+    // Return 500 agar QStash retry
+    res.status(500).json({ message: "Processing failed: " + e.message });
+  }
 }
