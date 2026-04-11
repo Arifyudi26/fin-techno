@@ -186,20 +186,15 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     fd.append("notes", notes);
 
     try {
-      setProgress(40);
+      setProgress(30);
       const res = await axiosGlobal.post("/upload/submit", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (ev) => {
-          if (ev.total)
-            setProgress(Math.round((ev.loaded / ev.total) * 60) + 10);
+          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 60) + 30);
         },
       });
       setProgress(100);
-
-      // File sudah diupload & diterima server — langsung tutup modal
-      // Background processing berjalan di server, halaman utama akan polling
-      const { uploadId } = res.data;
-      onSuccess({ uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
+      onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
