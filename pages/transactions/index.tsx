@@ -6,6 +6,7 @@ import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -192,7 +193,7 @@ export default function Transactions() {
                   </TableRow>
                 ) : transactions.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
+                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
                     <TableCell className="py-3 px-4">
                       <p className="text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">{tx.description}</p>
                       {tx.reference && <p className="text-xs text-gray-400">{tx.reference}</p>}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Badge from "@components/ui/badge/Badge";
 import { RecentTransaction } from "@/lib/types/dashboard";
+import { fmtDate } from "@/lib/utils";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -86,7 +87,7 @@ export default function RecentTransactions({ data = [], loading }: Props) {
               ) : (
                 filtered.map((tx) => (
                   <TableRow key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
+                    <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
                     <TableCell className="py-3">
                       <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90 max-w-[200px] truncate" title={tx.description}>{tx.description}</p>
                       {tx.reference && (

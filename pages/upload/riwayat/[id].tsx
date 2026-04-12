@@ -8,6 +8,7 @@ import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
 
 const formatIDR = (val: number) =>
@@ -153,7 +154,7 @@ export default function UploadDetail() {
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">{upload.fileFormat} · {formatBytes(upload.fileSizeBytes)}</span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">{upload.uploadedAt.slice(0, 16).replace("T", " ")}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{fmtDate(upload.uploadedAt)}</span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">oleh {upload.uploadedBy}</span>
               </div>
@@ -177,7 +178,7 @@ export default function UploadDetail() {
       {/* Stats grid */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Periode", value: `${upload.periodStart}`, sub: `s/d ${upload.periodEnd}` },
+          { label: "Periode", value: `${fmtDate(upload.periodStart)}`, sub: `s/d ${fmtDate(upload.periodEnd)}` },
           { label: "Total Baris", value: String(upload.totalRows), sub: `Sukses: ${successRate}%` },
           { label: "Berhasil", value: String(upload.parsedRows), sub: "baris diproses", valueClass: "text-success-600 dark:text-success-400" },
           { label: "Gagal", value: String(upload.failedRows), sub: "baris error", valueClass: upload.failedRows > 0 ? "text-error-600 dark:text-error-400" : "text-gray-400" },
@@ -240,7 +241,7 @@ export default function UploadDetail() {
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {pagedTx.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell className="py-3 px-5 text-gray-500 text-theme-sm dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
+                    <TableCell className="py-3 px-5 text-gray-500 text-theme-sm dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
                     <TableCell className="py-3">
                       <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90 max-w-[220px] truncate">{tx.description}</p>
                     </TableCell>

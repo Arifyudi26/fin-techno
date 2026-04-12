@@ -12,6 +12,7 @@ import {
 } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 
 const PeriodCashFlowChart = dynamic(() => import("@components/finance/PeriodCashFlowChart"), { ssr: false });
 const PeriodDonutChart = dynamic(() => import("@components/finance/PeriodDonutChart"), { ssr: false });
@@ -572,7 +573,7 @@ export default function PeriodAnalysis() {
                     pagedTx.map((tx) => (
                       <TableRow key={tx.id}>
                         <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {tx.date}
+                          {fmtDate(tx.date)}
                         </TableCell>
                         <TableCell className="py-3 px-4">
                           <p className="text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">

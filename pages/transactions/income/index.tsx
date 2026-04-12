@@ -6,6 +6,7 @@ import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -85,7 +86,7 @@ export default function IncomePage() {
                   <TableRow><TableCell className="py-12 text-center text-sm text-gray-400" colSpan={6}>Tidak ada pemasukan</TableCell></TableRow>
                 ) : transactions.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
+                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
                     <TableCell className="py-3 px-4 text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">{tx.description}</TableCell>
                     <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">{tx.accountName}</TableCell>
                     <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">{tx.category}</TableCell>
