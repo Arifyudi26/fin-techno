@@ -7,14 +7,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try { userId = verifyToken(req).id; }
   catch { return res.status(401).json({ message: "Unauthorized" }); }
 
-  // GET — fetch notifications
+  // GET — fetch notifications (single query with unread count)
   if (req.method === "GET") {
     const notifications = await prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    const unreadCount = await prisma.notification.count({ where: { userId, read: false } });
+    const unreadCount = notifications.filter((n) => !n.read).length;
     return res.status(200).json({ notifications, unreadCount });
   }
 

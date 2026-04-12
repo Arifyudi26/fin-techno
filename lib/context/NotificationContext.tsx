@@ -1,5 +1,14 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  ReactNode,
+} from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
+import useAuthStore from "@/store/authStore";
 
 export type NotifType = "success" | "error" | "warning" | "info";
 
@@ -24,36 +33,93 @@ interface NotificationContextValue {
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<UploadNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const token = useAuthStore((s) => s.token);
+
+  // Refs for SSE lifecycle — mutations only, no re-renders needed
+  const esRef = useRef<EventSource | null>(null);
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connectedTokenRef = useRef<string | null>(null);
+
+  const applyData = (data: { notifications: UploadNotification[]; unreadCount: number }) => {
+    setNotifications(data.notifications);
+    setUnreadCount(data.unreadCount);
+  };
+
   const refresh = useCallback(async () => {
     try {
       const res = await axiosGlobal.get("/notifications");
-      setNotifications(res.data.notifications);
-      setUnreadCount(res.data.unreadCount);
-    } catch {
-      // silently fail — user might not be logged in yet
-    }
+      applyData(res.data);
+    } catch { /* silently fail */ }
   }, []);
 
-  // Initial load + poll every 30s for new notifications
+  const disconnect = () => {
+    if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    connectedTokenRef.current = null;
+  };
+
+  const connect = useCallback((t: string) => {
+    if (connectedTokenRef.current === t && esRef.current) return; // already connected
+    disconnect();
+
+    const es = new EventSource(`${API_BASE}/notifications/stream?token=${encodeURIComponent(t)}`);
+    esRef.current = es;
+    connectedTokenRef.current = t;
+
+    es.onmessage = (e) => {
+      try { applyData(JSON.parse(e.data)); } catch { /* ignore */ }
+    };
+
+    es.onerror = () => {
+      es.close();
+      esRef.current = null;
+      connectedTokenRef.current = null;
+      const latest = useAuthStore.getState().token;
+      if (latest) retryRef.current = setTimeout(() => connect(latest), 10_000);
+    };
+  }, []);
+
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 30_000);
-    return () => clearInterval(interval);
-  }, [refresh]);
+    if (typeof window === "undefined") return;
 
-  const addNotification = useCallback(async (n: { type: NotifType; title: string; message: string; fileName?: string }) => {
-    try {
-      const res = await axiosGlobal.post("/notifications", n);
-      setNotifications((prev) => [res.data, ...prev.slice(0, 49)]);
-      setUnreadCount((c) => c + 1);
-    } catch { /* ignore */ }
-  }, []);
+    if (!token) {
+      disconnect();
+      if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    if (typeof EventSource !== "undefined") {
+      connect(token);
+    } else {
+      // SSE not supported — fallback polling
+      refresh();
+      if (!fallbackRef.current) fallbackRef.current = setInterval(refresh, 60_000);
+    }
+
+    return () => {
+      disconnect();
+      if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
+    };
+  }, [token, connect, refresh]);
+
+  const addNotification = useCallback(
+    async (n: { type: NotifType; title: string; message: string; fileName?: string }) => {
+      try {
+        const res = await axiosGlobal.post("/notifications", n);
+        setNotifications((prev) => [res.data, ...prev.slice(0, 49)]);
+        setUnreadCount((c) => c + 1);
+      } catch { /* ignore */ }
+    }, []);
 
   const markAllRead = useCallback(async () => {
     try {
