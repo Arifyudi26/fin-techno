@@ -262,7 +262,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
         <form
           onSubmit={handleSubmit}
-          className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+          className="p-6 space-y-5 max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {/* Source type toggle */}
           <div>
@@ -674,7 +674,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <svg

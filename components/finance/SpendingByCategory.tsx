@@ -16,10 +16,9 @@ interface Props {
 
 export default function SpendingByCategory({ data = [], loading }: Props) {
   const [view, setView] = useState<"donut" | "bar">("donut");
-  const [showTop, setShowTop] = useState(6);
 
   const sorted = [...data].sort((a, b) => b.amount - a.amount);
-  const displayed = sorted.slice(0, showTop);
+  const displayed = sorted;
   const total = data.reduce((a, b) => a + b.amount, 0);
 
   const labels = displayed.map((d) => d.category);
@@ -87,20 +86,6 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
           </p>
         </div>
         <div className="flex items-end gap-3">
-          {/* Top N filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilkan</label>
-            <select
-              value={showTop}
-              onChange={(e) => setShowTop(parseInt(e.target.value))}
-              className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none"
-            >
-              <option value={5}>Top 5</option>
-              <option value={6}>Top 6</option>
-              <option value={8}>Top 8</option>
-              <option value={999}>Semua</option>
-            </select>
-          </div>
           {/* View toggle */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilan</label>

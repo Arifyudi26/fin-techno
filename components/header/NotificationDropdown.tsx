@@ -103,7 +103,7 @@ export default function NotificationDropdown() {
         </div>
 
         {/* List */}
-        <ul className="flex flex-col flex-1 overflow-y-auto custom-scrollbar gap-1">
+        <ul className="flex flex-col flex-1 overflow-y-auto gap-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {notifications.length === 0 ? (
             <li className="flex flex-col items-center justify-center flex-1 py-10 text-center">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="text-gray-300 dark:text-gray-600 mb-3">

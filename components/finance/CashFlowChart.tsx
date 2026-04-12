@@ -136,7 +136,7 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
       {loading ? (
         <div className="h-[220px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
       ) : (
-        <div className="max-w-full overflow-x-auto custom-scrollbar">
+        <div className="max-w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="min-w-[500px]">
             <Chart
               key={view}

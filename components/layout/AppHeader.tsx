@@ -1,15 +1,29 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useSidebar } from "@lib/context/SidebarContext";
 import { ThemeToggleButton } from "@components/common/ThemeToggleButton";
 import NotificationDropdown from "@components/header/NotificationDropdown";
 import UserDropdown from "@components/header/UserDropdown";
+import { ALL_MENUS } from "@lib/config/menuConfig";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const router = useRouter();
+
+  const filteredMenus = searchQuery.trim()
+    ? ALL_MENUS.filter(
+        (m) =>
+          m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          m.group.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : ALL_MENUS;
 
   const handleToggle = () => {
     if (window.innerWidth >= 991) {
@@ -24,20 +38,60 @@ const AppHeader: React.FC = () => {
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSelect = (path: string) => {
+    router.push(path);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+    inputRef.current?.blur();
+  };
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [searchQuery]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
         event.preventDefault();
         inputRef.current?.focus();
+        setIsSearchOpen(true);
+      }
+      if (!isSearchOpen) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex((prev) => Math.min(prev + 1, filteredMenus.length - 1));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((prev) => Math.max(prev - 1, 0));
+      } else if (event.key === "Enter" && filteredMenus[activeIndex]) {
+        handleSelect(filteredMenus[activeIndex].path);
+      } else if (event.key === "Escape") {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+        inputRef.current?.blur();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSearchOpen, activeIndex, filteredMenus]);
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        !inputRef.current?.contains(e.target as Node)
+      ) {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+      }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -121,7 +175,7 @@ const AppHeader: React.FC = () => {
           </button>
 
           <div className="hidden lg:block">
-            <form>
+            <div className="relative">
               <div className="relative">
                 <span className="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
                   <svg
@@ -143,16 +197,56 @@ const AppHeader: React.FC = () => {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search or type command..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchOpen(true)}
+                  placeholder="Cari menu..."
                   className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
                 />
-
-                <button className="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
+                <button
+                  type="button"
+                  className="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400"
+                >
                   <span> ⌘ </span>
                   <span> K </span>
                 </button>
               </div>
-            </form>
+
+              {isSearchOpen && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute left-0 top-full mt-2 w-full xl:w-[430px] rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-900 z-50 overflow-hidden"
+                >
+                  {filteredMenus.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+                      Menu tidak ditemukan
+                    </p>
+                  ) : (
+                    <ul className="max-h-72 overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                      {filteredMenus.map((menu, i) => (
+                        <li key={menu.path}>
+                          <button
+                            type="button"
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onClick={() => handleSelect(menu.path)}
+                            className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${
+                              i === activeIndex
+                                ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
+                                : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                            }`}
+                          >
+                            <span>{menu.name}</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              {menu.group}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div
