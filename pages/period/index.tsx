@@ -12,11 +12,9 @@ import {
 } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
-import { multiSeriestooltip, donutTooltip } from "@/lib/apexTooltip";
 
-const ReactApexChart = dynamic(() => import("react-apexcharts"), {
-  ssr: false,
-});
+const PeriodCashFlowChart = dynamic(() => import("@components/finance/PeriodCashFlowChart"), { ssr: false });
+const PeriodDonutChart = dynamic(() => import("@components/finance/PeriodDonutChart"), { ssr: false });
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -137,46 +135,6 @@ export default function PeriodAnalysis() {
 
   const txTotalPages = Math.ceil(filteredTx.length / txLimit);
   const pagedTx = filteredTx.slice((txPage - 1) * txLimit, txPage * txLimit);
-
-  const chartOptions = {
-    chart: { toolbar: { show: false }, background: "transparent" },
-    colors: ["#22c55e", "#ef4444"],
-    xaxis: {
-      categories: daily.map((d) => d.date),
-      labels: { style: { colors: "#9ca3af", fontSize: "10px" }, rotate: -45 },
-    },
-    yaxis: {
-      labels: {
-        formatter: (v: number) => `${(v / 1_000_000).toFixed(1)}jt`,
-        style: { colors: "#9ca3af", fontSize: "11px" },
-      },
-    },
-    grid: { borderColor: "#1f2937", strokeDashArray: 4 },
-    plotOptions: { bar: { borderRadius: 3, columnWidth: "70%" } },
-    dataLabels: { enabled: false },
-    legend: { labels: { colors: "#9ca3af" } },
-    tooltip: {
-      shared: true,
-      intersect: false,
-      marker: { show: false },
-      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
-        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#22c55e", "#ef4444"], 220),
-    },
-  };
-
-  const donutOptions = {
-    chart: { background: "transparent" },
-    labels: byCategory.slice(0, 8).map((c) => c.name),
-    colors: COLORS,
-    legend: { position: "bottom" as const, fontSize: "11px" },
-    dataLabels: { enabled: false },
-    plotOptions: { pie: { donut: { size: "65%" } } },
-    tooltip: {
-      marker: { show: false },
-      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { globals: { labels: string[]; colors: string[] } } }) =>
-        donutTooltip(series[seriesIndex] ?? 0, series.reduce((a, b) => a + b, 0), w.globals.labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
-    },
-  };
 
   // Quick period presets
   const setPreset = (preset: string) => {
@@ -407,15 +365,7 @@ export default function PeriodAnalysis() {
               <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">
                 Cash Flow Harian — Gabungan Semua Sumber
               </h3>
-              <ReactApexChart
-                type="bar"
-                height={240}
-                series={[
-                  { name: "Pemasukan", data: daily.map((d) => d.credit) },
-                  { name: "Pengeluaran", data: daily.map((d) => d.debit) },
-                ]}
-                options={chartOptions}
-              />
+              <PeriodCashFlowChart data={daily} />
             </div>
           )}
 
@@ -479,20 +429,9 @@ export default function PeriodAnalysis() {
                   Tidak ada data pengeluaran
                 </p>
               ) : (
-                <ReactApexChart
-                  type="donut"
-                  height={260}
-                  series={byCategory
-                    .filter((c) => c.debit > 0)
-                    .slice(0, 8)
-                    .map((c) => c.debit)}
-                  options={{
-                    ...donutOptions,
-                    labels: byCategory
-                      .filter((c) => c.debit > 0)
-                      .slice(0, 8)
-                      .map((c) => c.name),
-                  }}
+                <PeriodDonutChart
+                  labels={byCategory.filter((c) => c.debit > 0).slice(0, 8).map((c) => c.name)}
+                  series={byCategory.filter((c) => c.debit > 0).slice(0, 8).map((c) => c.debit)}
                 />
               )}
             </div>
