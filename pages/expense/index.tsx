@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
@@ -6,6 +6,7 @@ import PageMeta from "@components/common/PageMeta";
 import Link from "next/link";
 import axiosGlobal from "@/services/AxiosGlobal";
 import ReportFilters, { ReportFilterState } from "@components/finance/ReportFilters";
+import { singleSeriesTooltip, donutTooltip } from "@/lib/apexTooltip";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -33,21 +34,23 @@ const DEFAULT_FILTERS: ReportFilterState = {
   accountType: null,
 };
 
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
 export default function ExpenseReport() {
   const [filters, setFilters] = useState<ReportFilterState>(DEFAULT_FILTERS);
-  const [summary, setSummary]     = useState<Summary | null>(null);
-  const [monthly, setMonthly]     = useState<MonthlyTrend[]>([]);
+  const [summary, setSummary]       = useState<Summary | null>(null);
+  const [monthly, setMonthly]       = useState<MonthlyTrend[]>([]);
   const [byCategory, setByCategory] = useState<ByCategory[]>([]);
-  const [bySource, setBySource]   = useState<BySource[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [bySource, setBySource]     = useState<BySource[]>([]);
+  const [loading, setLoading]       = useState(true);
 
   const fetchData = useCallback(async (f: ReportFilterState) => {
     setLoading(true);
     try {
       const p: Record<string, string> = { year: String(f.year) };
-      if (f.month != null)    p.month       = String(f.month);
-      if (f.accountId)        p.accountId   = f.accountId;
-      if (f.accountType)      p.accountType = f.accountType;
+      if (f.month != null) p.month       = String(f.month);
+      if (f.accountId)     p.accountId   = f.accountId;
+      if (f.accountType)   p.accountType = f.accountType;
       const res = await axiosGlobal.get("/reports/expense", { params: p });
       setSummary(res.data.summary);
       setMonthly(res.data.monthlyTrend);
@@ -64,6 +67,10 @@ export default function ExpenseReport() {
   };
   const handleReset = () => { setFilters(DEFAULT_FILTERS); fetchData(DEFAULT_FILTERS); };
 
+  const periodLabel = filters.month != null
+    ? `${MONTH_SHORT[filters.month - 1]} ${filters.year}`
+    : `Tahun ${filters.year}`;
+
   const barOptions = {
     chart: { toolbar: { show: false }, background: "transparent" },
     colors: ["#ef4444"],
@@ -74,14 +81,9 @@ export default function ExpenseReport() {
     dataLabels: { enabled: false },
     tooltip: {
       shared: true, intersect: false,
-      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) => {
-        const val = series[0][dataPointIndex] ?? 0;
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;font-family:Outfit,sans-serif">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-            <span style="color:#9ca3af;font-size:12px">Pengeluaran</span>
-            <span style="color:#ef4444;font-size:12px;font-weight:600">${fmt(val)}</span>
-          </div></div>`;
-      },
+      marker: { show: false },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
+        singleSeriesTooltip(series[0][dataPointIndex] ?? 0, "Pengeluaran", "#ef4444"),
     },
   };
 
@@ -89,30 +91,13 @@ export default function ExpenseReport() {
     chart: { background: "transparent" },
     labels: byCategory.slice(0, 8).map((c) => c.name),
     colors: COLORS,
-    legend: { position: "bottom" as const, labels: { colors: "#9ca3af" }, fontSize: "12px" },
+    legend: { position: "bottom" as const, fontSize: "12px" },
     dataLabels: { enabled: false },
     plotOptions: { pie: { donut: { size: "65%" } } },
     tooltip: {
-      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { globals: { labels: string[]; colors: string[] } } }) => {
-        const label = w.globals.labels[seriesIndex] ?? "";
-        const color = w.globals.colors[seriesIndex] ?? "#ef4444";
-        const val = series[seriesIndex] ?? 0;
-        const total = series.reduce((s: number, v: number) => s + v, 0);
-        const p = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
-            <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;gap:16px">
-            <span style="color:#9ca3af;font-size:12px">Jumlah</span>
-            <span style="color:${color};font-size:12px;font-weight:600">${fmt(val)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;gap:16px;margin-top:3px">
-            <span style="color:#9ca3af;font-size:12px">Porsi</span>
-            <span style="color:#9ca3af;font-size:12px;font-weight:600">${p}%</span>
-          </div></div>`;
-      },
+      marker: { show: false },
+      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { globals: { labels: string[]; colors: string[] } } }) =>
+        donutTooltip(series[seriesIndex] ?? 0, series.reduce((a, b) => a + b, 0), w.globals.labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
     },
   };
 
@@ -140,11 +125,10 @@ export default function ExpenseReport() {
       ) : !summary ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">Belum ada data pengeluaran untuk periode ini</p>
-          <Link href="/upload" className="mt-3 text-sm text-brand-500 hover:underline">Upload e-Statement sekarang →</Link>
+          <Link href="/upload" className="mt-3 text-sm text-brand-500 hover:underline">Upload e-Statement sekarang</Link>
         </div>
       ) : (
         <>
-          {/* Summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
               <p className="text-xs text-error-600 dark:text-error-400 mb-1">Total Pengeluaran</p>
@@ -170,16 +154,14 @@ export default function ExpenseReport() {
             </div>
           </div>
 
-          {/* Bar chart */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 mb-6">
             <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">
-              Tren Pengeluaran — {filters.month != null ? `${["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][filters.month - 1]} ${filters.year}` : `Tahun ${filters.year}`}
+              Tren Pengeluaran &mdash; {periodLabel}
             </h3>
             <Chart type="bar" height={260} series={[{ name: "Pengeluaran", data: monthly.map((m) => m.total) }]} options={barOptions} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Donut per kategori */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5">
               <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">Pengeluaran per Kategori</h3>
               {byCategory.length === 0 ? (
@@ -189,7 +171,6 @@ export default function ExpenseReport() {
               )}
             </div>
 
-            {/* Per sumber */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5">
               <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 mb-4">Pengeluaran per Sumber</h3>
               {bySource.length === 0 ? (
@@ -203,14 +184,14 @@ export default function ExpenseReport() {
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${s.source === "BANK" ? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"}`}>{s.source}</span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{s.provider} · {s.accountName}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{s.provider} &middot; {s.accountName}</span>
                           </div>
                           <span className="text-sm font-semibold text-error-600 dark:text-error-400">-{fmt(s.total)}</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                           <div className="h-full rounded-full bg-error-500" style={{ width: `${p}%` }} />
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{p.toFixed(1)}% · {s.count} transaksi</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{p.toFixed(1)}% &middot; {s.count} transaksi</p>
                       </div>
                     );
                   })}
@@ -219,7 +200,6 @@ export default function ExpenseReport() {
             </div>
           </div>
 
-          {/* Category table */}
           {byCategory.length > 0 && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">

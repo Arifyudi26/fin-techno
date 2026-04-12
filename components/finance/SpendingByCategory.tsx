@@ -2,6 +2,7 @@ import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { SpendingCategory } from "@/lib/types/dashboard";
+import { donutTooltip, singleSeriesTooltip } from "@/lib/apexTooltip";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -48,7 +49,11 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
         },
       },
     },
-    tooltip: { y: { formatter: (val) => fmt(val) } },
+    tooltip: {
+      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { globals: { labels: string[]; colors: string[] } } }) =>
+        donutTooltip(series[seriesIndex] ?? 0, series.reduce((a, b) => a + b, 0), w.globals.labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
+      marker: { show: false },
+    },
   };
 
   const barOptions: ApexOptions = {
@@ -65,7 +70,11 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
     },
     yaxis: { labels: { style: { fontSize: "11px" } } },
     grid: { xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
-    tooltip: { y: { formatter: (val) => fmt(val) } },
+    tooltip: {
+      custom: ({ series, seriesIndex, w }: { series: number[][]; seriesIndex: number; w: { globals: { colors: string[] } } }) =>
+        singleSeriesTooltip(series[0][seriesIndex] ?? 0, labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
+      marker: { show: false },
+    },
   };
 
   return (

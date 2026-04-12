@@ -2,6 +2,7 @@ import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { NetFlowPoint } from "@/lib/types/dashboard";
+import { multiSeriestooltip } from "@/lib/apexTooltip";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -35,23 +36,10 @@ export default function NetFlowChart({ data = [], loading }: Props) {
     grid: { xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } } },
     dataLabels: { enabled: false },
     tooltip: {
-      shared: true,
-      intersect: false,
-      style: { fontFamily: "Outfit, sans-serif" },
-      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) => {
-        const names = ["Net Flow", "Rata-rata"];
-        const colors = ["#465FFF", "#9CB9FF"];
-        const rows = series.map((s, i) =>
-          `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px${i > 0 ? ";margin-top:6px" : ""}">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};flex-shrink:0"></span>
-              <span style="color:#9ca3af;font-size:12px">${names[i]}</span>
-            </div>
-            <span style="color:${colors[i]};font-size:12px;font-weight:600">${fmt(s[dataPointIndex] ?? 0)}</span>
-          </div>`
-        ).join("");
-        return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">${rows}</div>`;
-      },
+      shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" },
+      marker: { show: false },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
+        multiSeriestooltip(series, dataPointIndex, ["Net Flow", "Rata-rata"], ["#465FFF", "#9CB9FF"]),
     },
     xaxis: { type: "category", categories, axisBorder: { show: false }, axisTicks: { show: false } },
     yaxis: {

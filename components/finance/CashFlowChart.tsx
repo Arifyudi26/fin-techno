@@ -2,6 +2,7 @@ import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { CashFlowMonth } from "@/lib/types/dashboard";
+import { multiSeriestooltip } from "@/lib/apexTooltip";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -39,7 +40,7 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
         <span style="color:${colors[i]};font-size:12px;font-weight:600">${fmt(s[dataPointIndex] ?? 0)}</span>
       </div>`
     ).join("");
-    return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">${rows}</div>`;
+    return `<div class="apexcharts-custom-tooltip" style="border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">${rows}</div>`;
   };
 
   const commonOptions: ApexOptions = {
@@ -50,7 +51,12 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
     legend: { show: true, position: "top", horizontalAlign: "left", fontFamily: "Outfit" },
     yaxis: { labels: { formatter: (val) => `${(val / 1_000_000).toFixed(0)}jt` } },
     grid: { yaxis: { lines: { show: true } } },
-    tooltip: { shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" }, custom: tooltipFn },
+    tooltip: {
+      shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" },
+      marker: { show: false },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
+        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#12B76A", "#F04438"]),
+    },
   };
 
   const barOptions: ApexOptions = {
