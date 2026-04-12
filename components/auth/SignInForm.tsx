@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@components/icons";
+import { EyeCloseIcon, EyeIcon } from "@components/icons";
 import Label from "@components/form/Label";
 import Input from "@components/form/input/InputField";
 import Checkbox from "@components/form/input/Checkbox";
@@ -56,12 +56,6 @@ export default function SignInForm() {
       <Toast {...toastState} onClose={close} />
 
       <div className="flex flex-col flex-1">
-        <div className="w-full max-w-md pt-10 mx-auto">
-          <Link href="/" className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-            <ChevronLeftIcon className="size-5" />
-            Back to dashboard
-          </Link>
-        </div>
         <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
           <div>
             <div className="mb-5 sm:mb-8">
@@ -81,7 +75,7 @@ export default function SignInForm() {
                 </button>
                 <button type="button" onClick={() => handleOAuth("facebook")} className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" fill="#1877F2"/>
+                    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" fill="#1877F2" />
                   </svg>
                   Sign in with Facebook
                 </button>
