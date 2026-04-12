@@ -97,7 +97,7 @@ export default function ExpensePage() {
             </Table>
           </div>
         )}
-        <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} onLimitChange={setLimit} />
+        <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} onLimitChange={(l) => { setLimit(l); setPage(1); }} />
       </div>
     </AppLayout>
   );

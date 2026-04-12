@@ -2,6 +2,7 @@ import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { CashFlowMonth } from "@/lib/types/dashboard";
+import { multiSeriestooltip } from "@/lib/apexTooltip";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -27,21 +28,6 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
   const totalCredit = creditData.reduce((a, b) => a + b, 0);
   const totalDebit = debitData.reduce((a, b) => a + b, 0);
 
-  const tooltipFn = ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) => {
-    const names = ["Pemasukan", "Pengeluaran"];
-    const colors = ["#12B76A", "#F04438"];
-    const rows = series.map((s, i) =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px${i > 0 ? ";margin-top:6px" : ""}">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};flex-shrink:0"></span>
-          <span style="color:#9ca3af;font-size:12px">${names[i]}</span>
-        </div>
-        <span style="color:${colors[i]};font-size:12px;font-weight:600">${fmt(s[dataPointIndex] ?? 0)}</span>
-      </div>`
-    ).join("");
-    return `<div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">${rows}</div>`;
-  };
-
   const commonOptions: ApexOptions = {
     colors: ["#12B76A", "#F04438"],
     chart: { fontFamily: "Outfit, sans-serif", toolbar: { show: false } },
@@ -50,7 +36,12 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
     legend: { show: true, position: "top", horizontalAlign: "left", fontFamily: "Outfit" },
     yaxis: { labels: { formatter: (val) => `${(val / 1_000_000).toFixed(0)}jt` } },
     grid: { yaxis: { lines: { show: true } } },
-    tooltip: { shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" }, custom: tooltipFn },
+    tooltip: {
+      shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" },
+      marker: { show: false },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
+        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#12B76A", "#F04438"]),
+    },
   };
 
   const barOptions: ApexOptions = {

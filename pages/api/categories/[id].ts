@@ -24,6 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "DELETE") {
+    // Junction rows (BankTransactionCategory & WalletTransactionCategory) akan
+    // otomatis terhapus via onDelete: Cascade di schema Prisma.
+    // Transaksi yang tadinya pakai kategori ini akan jadi "Lainnya" (tidak punya kategori).
     await prisma.transactionCategory.delete({ where: { id } });
     return res.status(200).json({ message: "Kategori dihapus" });
   }

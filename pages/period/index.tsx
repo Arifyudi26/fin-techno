@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
@@ -13,6 +12,7 @@ import {
 } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { multiSeriestooltip, donutTooltip } from "@/lib/apexTooltip";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
@@ -158,42 +158,9 @@ export default function PeriodAnalysis() {
     tooltip: {
       shared: true,
       intersect: false,
-      custom: ({
-        series,
-        dataPointIndex,
-        w,
-      }: {
-        series: number[][];
-        dataPointIndex: number;
-        w: { globals: { categoryLabels: string[] } };
-      }) => {
-        const rawDate = w.globals.categoryLabels[dataPointIndex] ?? "";
-        const d = new Date(rawDate);
-        const label = isNaN(d.getTime())
-          ? rawDate
-          : d.toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            });
-        const pemasukan = series[0][dataPointIndex] ?? 0;
-        const pengeluaran = series[1][dataPointIndex] ?? 0;
-        const net = pemasukan - pengeluaran;
-        const netColor = net >= 0 ? "#22c55e" : "#ef4444";
-        const row = (dot: string, name: string, val: number, color: string) =>
-          `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:3px 0">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0"></span>
-              <span style="color:#9ca3af;font-size:12px">${name}</span>
-            </div>
-            <span style="color:${color};font-size:12px;font-weight:600;white-space:nowrap">${formatIDR(val)}</span>
-          </div>`;
-        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:220px;font-family:Outfit,sans-serif">
-          ${row("#22c55e", "Pemasukan", pemasukan, "#22c55e")}
-          ${row("#ef4444", "Pengeluaran", pengeluaran, "#ef4444")}
-          ${row(netColor, "Net Flow", Math.abs(net), netColor)}
-        </div>`;
-      },
+      marker: { show: false },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
+        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#22c55e", "#ef4444"], 220),
     },
   };
 
@@ -201,43 +168,13 @@ export default function PeriodAnalysis() {
     chart: { background: "transparent" },
     labels: byCategory.slice(0, 8).map((c) => c.name),
     colors: COLORS,
-    legend: {
-      position: "bottom" as const,
-      labels: { colors: "#9ca3af" },
-      fontSize: "11px",
-    },
+    legend: { position: "bottom" as const, fontSize: "11px" },
     dataLabels: { enabled: false },
     plotOptions: { pie: { donut: { size: "65%" } } },
     tooltip: {
-      custom: ({
-        series,
-        seriesIndex,
-        w,
-      }: {
-        series: number[];
-        seriesIndex: number;
-        w: { globals: { labels: string[]; colors: string[] } };
-      }) => {
-        const label = w.globals.labels[seriesIndex] ?? "";
-        const color = w.globals.colors[seriesIndex] ?? "#465FFF";
-        const val = series[seriesIndex] ?? 0;
-        const total = series.reduce((s: number, v: number) => s + v, 0);
-        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-        return `<div class="apexcharts-custom-tooltip" style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
-            <span style="color:#e5e7eb;font-size:12px;font-weight:600">${label}</span>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-            <span style="color:#9ca3af;font-size:12px">Jumlah</span>
-            <span style="color:${color};font-size:12px;font-weight:600">${formatIDR(val)}</span>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:3px">
-            <span style="color:#9ca3af;font-size:12px">Porsi</span>
-            <span style="color:#9ca3af;font-size:12px;font-weight:600">${pct}%</span>
-          </div>
-        </div>`;
-      },
+      marker: { show: false },
+      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { globals: { labels: string[]; colors: string[] } } }) =>
+        donutTooltip(series[seriesIndex] ?? 0, series.reduce((a, b) => a + b, 0), w.globals.labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
     },
   };
 

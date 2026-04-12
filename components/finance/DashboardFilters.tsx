@@ -1,9 +1,9 @@
-import type { BankAccountBalance, DashboardFilters, SpendingCategory } from "@/lib/types/dashboard";
+import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
 
 interface Props {
   filters: DashboardFilters;
   accounts: BankAccountBalance[];
-  categories: SpendingCategory[];
+  categories: { id: string; name: string }[];
   activePeriodLabel?: string;
   onChange: (f: Partial<DashboardFilters>) => void;
   onReset: () => void;
@@ -21,7 +21,7 @@ export default function DashboardFilters({ filters, accounts, categories, active
   const hasActiveFilter =
     filters.month != null || filters.year != null ||
     filters.accountId != null || filters.categoryId != null ||
-    filters.txType != null || filters.search !== "";
+    filters.txType != null;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -87,7 +87,7 @@ export default function DashboardFilters({ filters, accounts, categories, active
           >
             <option value="">Semua Kategori</option>
             {categories.map((c) => (
-              <option key={c.id ?? c.category} value={c.id ?? c.category}>{c.category}</option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         )}
@@ -102,20 +102,6 @@ export default function DashboardFilters({ filters, accounts, categories, active
           <option value="CREDIT">Pemasukan</option>
           <option value="DEBIT">Pengeluaran</option>
         </select>
-
-        {/* Search */}
-        <div className="relative flex-1 min-w-[160px]">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Cari transaksi..."
-            value={filters.search}
-            onChange={(e) => onChange({ search: e.target.value })}
-            className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-          />
-        </div>
 
         {/* Reset */}
         {hasActiveFilter && (
