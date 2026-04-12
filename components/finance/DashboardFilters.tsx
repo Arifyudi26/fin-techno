@@ -1,9 +1,9 @@
-import type { BankAccountBalance, DashboardFilters, SpendingCategory } from "@/lib/types/dashboard";
+import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
 
 interface Props {
   filters: DashboardFilters;
   accounts: BankAccountBalance[];
-  categories: SpendingCategory[];
+  categories: { id: string; name: string }[];
   activePeriodLabel?: string;
   onChange: (f: Partial<DashboardFilters>) => void;
   onReset: () => void;
@@ -87,7 +87,7 @@ export default function DashboardFilters({ filters, accounts, categories, active
           >
             <option value="">Semua Kategori</option>
             {categories.map((c) => (
-              <option key={c.id ?? c.category} value={c.id ?? c.category}>{c.category}</option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         )}

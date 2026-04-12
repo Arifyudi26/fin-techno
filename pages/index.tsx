@@ -66,6 +66,8 @@ export default function Home() {
     recentTransactions: [],
   });
 
+  const [allCategories, setAllCategories] = useState<{ id: string; name: string }[]>([]);
+
   const [loading, setLoading] = useState<LoadingState>({
     metrics: true,
     cashflow: true,
@@ -116,6 +118,13 @@ export default function Home() {
     }
   }, []);
 
+  const fetchAllCategories = useCallback(async () => {
+    try {
+      const res = await axiosGlobal.get("/categories");
+      setAllCategories(res.data.categories.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+    } catch { /* non-critical */ }
+  }, []);
+
   const fetchTransactions = useCallback(async (f: IFilters) => {
     setLoading((prev) => ({ ...prev, transactions: true }));
     try {
@@ -139,7 +148,8 @@ export default function Home() {
     fetchCashflow(DEFAULT_FILTERS, 12);
     fetchAccounts();
     fetchTransactions(DEFAULT_FILTERS);
-  }, [fetchMetrics, fetchCashflow, fetchAccounts, fetchTransactions]);
+    fetchAllCategories();
+  }, [fetchMetrics, fetchCashflow, fetchAccounts, fetchTransactions, fetchAllCategories]);
 
   // Re-fetch when filters change (debounce search)
   const handleFilterChange = useCallback((partial: Partial<IFilters>) => {
@@ -192,7 +202,7 @@ export default function Home() {
         <DashboardFilters
           filters={filters}
           accounts={data.bankAccounts}
-          categories={data.spendingByCategory}
+          categories={allCategories}
           activePeriodLabel={data.metrics?.activePeriod?.label}
           onChange={handleFilterChange}
           onReset={handleReset}
