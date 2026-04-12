@@ -123,7 +123,7 @@ export default function NetFlowChart({ data = [], loading }: Props) {
       {loading ? (
         <div className="h-[220px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
       ) : (
-        <div className="max-w-full overflow-x-auto custom-scrollbar">
+        <div className="max-w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="min-w-[500px]">
             <Chart options={options} series={series} type="area" height={220} />
           </div>

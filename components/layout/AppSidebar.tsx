@@ -129,61 +129,30 @@ const CardIcon = () => (
   </svg>
 );
 
-const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [
-      { name: "Overview Keuangan", path: "/" },
-      { name: "Laporan Pemasukan", path: "/income" },
-      { name: "Laporan Pengeluaran", path: "/expense" },
-      { name: "Analisis Periode", path: "/period" },
-    ],
-  },
-  {
-    icon: <WalletIcon />,
-    name: "Transaksi",
-    subItems: [
-      { name: "Semua Transaksi", path: "/transactions" },
-      { name: "Pemasukan", path: "/transactions/income" },
-      { name: "Pengeluaran", path: "/transactions/expense" },
-    ],
-  },
-  {
-    icon: <UploadIcon />,
-    name: "Upload e-Statement",
-    subItems: [
-      { name: "Upload Baru", path: "/upload" },
-      { name: "Riwayat Upload", path: "/upload/riwayat" },
-    ],
-  },
-  {
-    icon: <MergeIcon />,
-    name: "Rekonsiliasi",
-    path: "/reconciliation",
-  },
-  {
-    icon: <CardIcon />,
-    name: "Rekening",
-    subItems: [
-      { name: "Rekening Bank", path: "/bank-accounts" },
-      { name: "Dompet Digital", path: "/wallets" },
-    ],
-  },
-  {
-    icon: <TagIcon />,
-    name: "Kategori",
-    path: "/categories",
-  },
-];
+import {
+  navItems as navItemsConfig,
+  othersItems as othersItemsConfig,
+} from "@lib/config/menuConfig";
 
-const othersItems: NavItem[] = [
-  {
-    icon: <CalenderIcon />,
-    name: "Kalender",
-    path: "/calendar",
-  },
-];
+const iconMap: Record<string, React.ReactNode> = {
+  Dashboard: <GridIcon />,
+  Transaksi: <WalletIcon />,
+  "Upload e-Statement": <UploadIcon />,
+  Rekonsiliasi: <MergeIcon />,
+  Rekening: <CardIcon />,
+  Kategori: <TagIcon />,
+  Kalender: <CalenderIcon />,
+};
+
+const navItems: NavItem[] = navItemsConfig.map((item) => ({
+  ...item,
+  icon: iconMap[item.name],
+}));
+
+const othersItems: NavItem[] = othersItemsConfig.map((item) => ({
+  ...item,
+  icon: iconMap[item.name],
+}));
 
 // Component
 const AppSidebar: React.FC = () => {
@@ -388,7 +357,7 @@ const AppSidebar: React.FC = () => {
         </Link>
       </div>
 
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
