@@ -86,33 +86,39 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
             {data.length} kategori · Total {fmt(total)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-end gap-3">
           {/* Top N filter */}
-          <select
-            value={showTop}
-            onChange={(e) => setShowTop(parseInt(e.target.value))}
-            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none"
-          >
-            <option value={5}>Top 5</option>
-            <option value={6}>Top 6</option>
-            <option value={8}>Top 8</option>
-            <option value={999}>Semua</option>
-          </select>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilkan</label>
+            <select
+              value={showTop}
+              onChange={(e) => setShowTop(parseInt(e.target.value))}
+              className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none"
+            >
+              <option value={5}>Top 5</option>
+              <option value={6}>Top 6</option>
+              <option value={8}>Top 8</option>
+              <option value={999}>Semua</option>
+            </select>
+          </div>
           {/* View toggle */}
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["donut", "bar"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-2.5 py-1 text-xs font-medium transition-colors ${
-                  view === v
-                    ? "bg-brand-500 text-white"
-                    : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-              >
-                {v === "donut" ? "Donut" : "Bar"}
-              </button>
-            ))}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilan</label>
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {(["donut", "bar"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                    view === v
+                      ? "bg-brand-500 text-white"
+                      : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {v === "donut" ? "Donut" : "Bar"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
