@@ -129,6 +129,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       catMerge[key].count += 1;
     }
 
+    // Hitung transaksi DEBIT yang tidak punya kategori → masuk "Lainnya"
+    const [uncatBankRows, uncatWalletRows] = await Promise.all([
+      skipBank ? Promise.resolve([]) : prisma.bankTransaction.findMany({
+        where: {
+          bankAccount: { ownerId: userId },
+          type: "DEBIT",
+          transactionDate: catDateWhere,
+          ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
+          categories: { none: {} },
+        },
+        select: { amount: true },
+      }),
+      skipWallet ? Promise.resolve([]) : db.walletTransaction.findMany({
+        where: {
+          wallet: { ownerId: userId },
+          type: "DEBIT",
+          transactionDate: catDateWhere,
+          ...(accountId && !skipWallet ? { walletId: accountId } : {}),
+          categories: { none: {} },
+        },
+        select: { amount: true },
+      }),
+    ]);
+
+    const uncatTotal = [...uncatBankRows, ...uncatWalletRows]
+      .reduce((s: number, t: { amount: unknown }) => s + Number(t.amount), 0);
+    const uncatCount = uncatBankRows.length + uncatWalletRows.length;
+
+    if (uncatTotal > 0 && !categoryId) {
+      catMerge["__lainnya__"] = { name: "Lainnya", amount: uncatTotal, count: uncatCount };
+    }
+
     const spendingByCategory = Object.entries(catMerge)
       .map(([id, v]) => ({ id, category: v.name, amount: v.amount, count: v.count }))
       .sort((a, b) => b.amount - a.amount);
