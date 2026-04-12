@@ -6,6 +6,7 @@ import Link from "next/link";
 import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
+import { fmtDate } from "@/lib/utils";
 
 const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -208,8 +209,8 @@ export default function UploadRiwayat() {
 
                   {/* Periode */}
                   <div className="sm:col-span-2 sm:flex sm:flex-col sm:justify-center">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{u.periodStart} s/d</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{u.periodEnd}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(u.periodStart)} s/d</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(u.periodEnd)}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {u.parsedRows}/{u.totalRows} baris
                       {u.failedRows > 0 && <span className="text-error-500 ml-1">({u.failedRows} gagal)</span>}
@@ -288,7 +289,7 @@ export default function UploadRiwayat() {
             <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
               <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {deleteTarget.provider} · {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
+                {deleteTarget.provider} · {fmtDate(deleteTarget.periodStart)} s/d {fmtDate(deleteTarget.periodEnd)}
               </p>
               <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
             </div>

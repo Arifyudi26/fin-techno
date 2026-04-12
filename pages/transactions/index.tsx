@@ -6,6 +6,10 @@ import Badge from "@components/ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
+import dynamic from "next/dynamic";
+
+const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -154,15 +158,21 @@ export default function Transactions() {
             </select>
           </div>
           {/* Dari Tanggal */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
-            <input type="date" value={filters.dateFrom} onChange={(e) => setFilter("dateFrom", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30" />
-          </div>
+          <DatePicker
+            id="tx-filter-from"
+            label="Dari Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={filters.dateFrom}
+            onChange={(v) => setFilter("dateFrom", v)}
+          />
           {/* Sampai Tanggal */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
-            <input type="date" value={filters.dateTo} onChange={(e) => setFilter("dateTo", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30" />
-          </div>
+          <DatePicker
+            id="tx-filter-to"
+            label="Sampai Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={filters.dateTo}
+            onChange={(v) => setFilter("dateTo", v)}
+          />
         </div>
       </div>
 
@@ -192,7 +202,7 @@ export default function Transactions() {
                   </TableRow>
                 ) : transactions.map((tx) => (
                   <TableRow key={tx.id}>
-                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{tx.date}</TableCell>
+                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
                     <TableCell className="py-3 px-4">
                       <p className="text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">{tx.description}</p>
                       {tx.reference && <p className="text-xs text-gray-400">{tx.reference}</p>}

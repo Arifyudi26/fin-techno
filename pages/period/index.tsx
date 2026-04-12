@@ -12,6 +12,9 @@ import {
 } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
+
+const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 const PeriodCashFlowChart = dynamic(() => import("@components/finance/PeriodCashFlowChart"), { ssr: false });
 const PeriodDonutChart = dynamic(() => import("@components/finance/PeriodDonutChart"), { ssr: false });
@@ -207,25 +210,21 @@ export default function PeriodAnalysis() {
         {/* Filter grid */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {/* Dari Tanggal */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-            />
-          </div>
+          <DatePicker
+            id="period-from"
+            label="Dari Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={dateFrom}
+            onChange={(v) => setDateFrom(v)}
+          />
           {/* Sampai Tanggal */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-            />
-          </div>
+          <DatePicker
+            id="period-to"
+            label="Sampai Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={dateTo}
+            onChange={(v) => setDateTo(v)}
+          />
           {/* Sumber */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sumber</label>
@@ -572,7 +571,7 @@ export default function PeriodAnalysis() {
                     pagedTx.map((tx) => (
                       <TableRow key={tx.id}>
                         <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {tx.date}
+                          {fmtDate(tx.date)}
                         </TableCell>
                         <TableCell className="py-3 px-4">
                           <p className="text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">

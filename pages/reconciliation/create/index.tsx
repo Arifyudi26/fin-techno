@@ -13,6 +13,7 @@ import Badge from "@components/ui/badge/Badge";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 
 const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -262,7 +263,7 @@ export default function CreateReconciliation() {
                             </svg>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-gray-800 dark:text-white/90 truncate">{tx.description}</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">{tx.date} · {tx.bank}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{fmtDate(tx.date)} · {tx.bank}</p>
                             </div>
                             <span className={`text-xs font-semibold shrink-0 ${tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>
                               {tx.type === "CREDIT" ? "+" : "-"}{formatIDR(tx.amount)}
@@ -359,7 +360,7 @@ export default function CreateReconciliation() {
                                   <Badge size="sm" color="warning">Duplikat</Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">{tx.date} · {tx.bank}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{fmtDate(tx.date)} · {tx.bank}</p>
                             </div>
                             <span className={`text-xs font-semibold shrink-0 ${tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>
                               {tx.type === "CREDIT" ? "+" : "-"}{formatIDR(tx.amount)}

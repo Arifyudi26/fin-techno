@@ -7,6 +7,7 @@ import Badge from "@components/ui/badge/Badge";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { fmtDate } from "@/lib/utils";
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -108,7 +109,7 @@ export default function Reconciliation() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h4 className="font-semibold text-gray-800 dark:text-white/90">{r.name}</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{r.periodStart} – {r.periodEnd}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{fmtDate(r.periodStart)} – {fmtDate(r.periodEnd)}</p>
                 </div>
                 <Badge size="sm" color={statusColor(r.status)}>{statusLabel(r.status)}</Badge>
               </div>
@@ -136,7 +137,7 @@ export default function Reconciliation() {
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-xs text-gray-400 dark:text-gray-500">Dibuat: {r.createdAt}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Dibuat: {fmtDate(r.createdAt)}</p>
                 <div className="flex gap-1">
                   {r.status === "DRAFT" && (
                     <button
