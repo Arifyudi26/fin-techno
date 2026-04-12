@@ -28,21 +28,6 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
   const totalCredit = creditData.reduce((a, b) => a + b, 0);
   const totalDebit = debitData.reduce((a, b) => a + b, 0);
 
-  const tooltipFn = ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) => {
-    const names = ["Pemasukan", "Pengeluaran"];
-    const colors = ["#12B76A", "#F04438"];
-    const rows = series.map((s, i) =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px${i > 0 ? ";margin-top:6px" : ""}">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};flex-shrink:0"></span>
-          <span style="color:#9ca3af;font-size:12px">${names[i]}</span>
-        </div>
-        <span style="color:${colors[i]};font-size:12px;font-weight:600">${fmt(s[dataPointIndex] ?? 0)}</span>
-      </div>`
-    ).join("");
-    return `<div class="apexcharts-custom-tooltip" style="border-radius:10px;padding:10px 14px;min-width:180px;font-family:Outfit,sans-serif">${rows}</div>`;
-  };
-
   const commonOptions: ApexOptions = {
     colors: ["#12B76A", "#F04438"],
     chart: { fontFamily: "Outfit, sans-serif", toolbar: { show: false } },

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import AppLayout from "@components/layout/AppLayout";
