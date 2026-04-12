@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import axiosGlobal from "@/services/AxiosGlobal";
 import type { BankAccountBalance } from "@/lib/types/dashboard";
+
+const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 export interface ReportFilterState {
   dateFrom: string;
@@ -15,7 +18,7 @@ interface Props {
   onReset: () => void;
 }
 
-const inputCls =
+const selectCls =
   "h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
 function formatDateLabel(dateFrom: string, dateTo: string): string {
@@ -32,7 +35,6 @@ function formatDateLabel(dateFrom: string, dateTo: string): string {
 
 export default function ReportFilters({ filters, onChange, onReset }: Props) {
   const [accounts, setAccounts] = useState<BankAccountBalance[]>([]);
-  // Local state — baru hit parent saat Apply
   const [local, setLocal] = useState({
     dateFrom: filters.dateFrom,
     dateTo: filters.dateTo,
@@ -104,37 +106,27 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
 
       {/* Filter grid */}
       <div className={`grid gap-3 grid-cols-2 ${accounts.length > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
-        {/* Dari Tanggal */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
-          <input
-            type="date"
-            value={local.dateFrom}
-            onChange={(e) => set("dateFrom", e.target.value)}
-            className={inputCls}
-          />
-        </div>
+        <DatePicker
+          id="report-filter-from"
+          label="Dari Tanggal"
+          placeholder="dd/mm/yyyy"
+          value={local.dateFrom}
+          onChange={(v) => set("dateFrom", v)}
+        />
 
-        {/* Sampai Tanggal */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
-          <input
-            type="date"
-            value={local.dateTo}
-            onChange={(e) => set("dateTo", e.target.value)}
-            className={inputCls}
-          />
-        </div>
+        <DatePicker
+          id="report-filter-to"
+          label="Sampai Tanggal"
+          placeholder="dd/mm/yyyy"
+          value={local.dateTo}
+          onChange={(v) => set("dateTo", v)}
+        />
 
         {/* Rekening */}
         {accounts.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
-            <select
-              value={local.accountId}
-              onChange={(e) => set("accountId", e.target.value)}
-              className={inputCls}
-            >
+            <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectCls}>
               <option value="">Semua Rekening</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -151,7 +143,6 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
           <button
             onClick={handleApply}
             disabled={!isDirty}
-            title="Terapkan filter"
             className="h-9 w-full rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed px-4 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">

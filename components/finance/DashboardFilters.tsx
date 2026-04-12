@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
+
+const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 interface Props {
   filters: DashboardFilters;
@@ -10,7 +13,7 @@ interface Props {
   onReset: () => void;
 }
 
-const inputClass =
+const selectClass =
   "h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
 export default function DashboardFilters({
@@ -21,7 +24,6 @@ export default function DashboardFilters({
   onChange,
   onReset,
 }: Props) {
-  // Semua filter disimpan lokal — baru hit parent saat Apply
   const [local, setLocal] = useState({
     dateFrom: filters.dateFrom ?? "",
     dateTo: filters.dateTo ?? "",
@@ -68,7 +70,6 @@ export default function DashboardFilters({
     filters.categoryId != null ||
     filters.txType != null;
 
-  // Dirty = local berbeda dari applied filters
   const isDirty =
     (local.dateFrom || null) !== filters.dateFrom ||
     (local.dateTo || null) !== filters.dateTo ||
@@ -101,36 +102,28 @@ export default function DashboardFilters({
       {/* Filter grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {/* Dari Tanggal */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
-          <input
-            type="date"
-            value={local.dateFrom}
-            onChange={(e) => set("dateFrom", e.target.value)}
-            className={inputClass}
-          />
-        </div>
+        <DatePicker
+          id="dash-filter-from"
+          label="Dari Tanggal"
+          placeholder="dd/mm/yyyy"
+          value={local.dateFrom}
+          onChange={(v) => set("dateFrom", v)}
+        />
 
         {/* Sampai Tanggal */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
-          <input
-            type="date"
-            value={local.dateTo}
-            onChange={(e) => set("dateTo", e.target.value)}
-            className={inputClass}
-          />
-        </div>
+        <DatePicker
+          id="dash-filter-to"
+          label="Sampai Tanggal"
+          placeholder="dd/mm/yyyy"
+          value={local.dateTo}
+          onChange={(v) => set("dateTo", v)}
+        />
 
         {/* Rekening */}
         {accounts.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
-            <select
-              value={local.accountId}
-              onChange={(e) => set("accountId", e.target.value)}
-              className={inputClass}
-            >
+            <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectClass}>
               <option value="">Semua Rekening</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -145,11 +138,7 @@ export default function DashboardFilters({
         {categories.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Kategori</label>
-            <select
-              value={local.categoryId}
-              onChange={(e) => set("categoryId", e.target.value)}
-              className={inputClass}
-            >
+            <select value={local.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={selectClass}>
               <option value="">Semua Kategori</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -161,11 +150,7 @@ export default function DashboardFilters({
         {/* Tipe transaksi */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe Transaksi</label>
-          <select
-            value={local.txType}
-            onChange={(e) => set("txType", e.target.value)}
-            className={inputClass}
-          >
+          <select value={local.txType} onChange={(e) => set("txType", e.target.value)} className={selectClass}>
             <option value="">Semua Tipe</option>
             <option value="CREDIT">Pemasukan</option>
             <option value="DEBIT">Pengeluaran</option>
@@ -178,7 +163,6 @@ export default function DashboardFilters({
           <button
             onClick={handleApply}
             disabled={!isDirty}
-            title="Terapkan filter"
             className="h-9 w-full rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed px-4 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
