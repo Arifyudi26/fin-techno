@@ -181,96 +181,90 @@ export default function PeriodAnalysis() {
       <PageBreadcrumb pageTitle="Analisis Periode" />
 
       {/* Filter bar */}
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-5 mb-6">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          Pilih Periode & Sumber
-        </p>
-        <div className="flex flex-wrap gap-3 items-end">
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Dari Tanggal
-            </label>
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] px-4 py-4 mb-6">
+        {/* Header */}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pilih Periode & Sumber</span>
+          {/* Quick presets */}
+          <div className="hidden sm:flex gap-2">
+            {[
+              ["thisMonth", "Bulan Ini"],
+              ["lastMonth", "Bulan Lalu"],
+              ["last3", "3 Bulan"],
+              ["thisYear", "Tahun Ini"],
+            ].map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setPreset(k)}
+                className="px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter grid */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* Dari Tanggal */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Sampai Tanggal
-            </label>
+          {/* Sampai Tanggal */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Sumber
-            </label>
+          {/* Sumber */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sumber</label>
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none"
+              className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             >
               <option value="ALL">Bank + Dompet</option>
               <option value="BANK">Bank saja</option>
               <option value="WALLET">Dompet saja</option>
             </select>
           </div>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 px-5 py-2 text-sm font-medium text-white transition-colors flex items-center gap-2"
-          >
-            {loading ? (
-              <svg
-                className="animate-spin"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle
-                  cx="11"
-                  cy="11"
-                  r="8"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M21 21l-4.35-4.35"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            )}
-            Analisis
-          </button>
+          {/* Tombol Analisis */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-transparent select-none">Aksi</label>
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="h-9 rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-50 px-5 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                  <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              )}
+              Analisis
+            </button>
+          </div>
         </div>
-        {/* Quick presets */}
-        <div className="flex flex-wrap gap-2 mt-3">
+
+        {/* Quick presets mobile */}
+        <div className="flex sm:hidden flex-wrap gap-2 mt-3">
           {[
             ["thisMonth", "Bulan Ini"],
             ["lastMonth", "Bulan Lalu"],
@@ -505,55 +499,42 @@ export default function PeriodAnalysis() {
 
           {/* Transaction list */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-3">
-              <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 flex-1">
-                Semua Transaksi ({filteredTx.length}){" "}
-              </h3>
-              <div className="relative">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="8"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M21 21l-4.35-4.35"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Cari..."
-                  value={txSearch}
-                  onChange={(e) => {
-                    setTxSearch(e.target.value);
-                    setTxPage(1);
-                  }}
-                  className="pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none w-40"
-                />
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Semua Transaksi ({filteredTx.length})
+                </h3>
               </div>
-              <select
-                value={txFilter}
-                onChange={(e) => {
-                  setTxFilter(e.target.value as "ALL" | "CREDIT" | "DEBIT");
-                  setTxPage(1);
-                }}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 focus:outline-none"
-              >
-                <option value="ALL">Semua</option>
-                <option value="CREDIT">Masuk</option>
-                <option value="DEBIT">Keluar</option>
-              </select>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Cari</label>
+                  <div className="relative">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                      <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                      <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Cari keterangan..."
+                      value={txSearch}
+                      onChange={(e) => { setTxSearch(e.target.value); setTxPage(1); }}
+                      className="h-8 w-full pl-7 pr-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
+                  <select
+                    value={txFilter}
+                    onChange={(e) => { setTxFilter(e.target.value as "ALL" | "CREDIT" | "DEBIT"); setTxPage(1); }}
+                    className="h-8 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                  >
+                    <option value="ALL">Semua</option>
+                    <option value="CREDIT">Masuk</option>
+                    <option value="DEBIT">Keluar</option>
+                  </select>
+                </div>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <Table>

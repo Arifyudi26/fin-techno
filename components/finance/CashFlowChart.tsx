@@ -72,39 +72,45 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Cash Flow Bulanan</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">Pemasukan vs Pengeluaran per bulan</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-end gap-3 flex-wrap">
           {/* Toggle view */}
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["bar", "line"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  view === v
-                    ? "bg-brand-500 text-white"
-                    : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-              >
-                {v === "bar" ? "Batang" : "Garis"}
-              </button>
-            ))}
-          </div>
-          {/* Months filter */}
-          {onMonthsChange && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilan</label>
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {MONTH_OPTIONS.map((m) => (
+              {(["bar", "line"] as const).map((v) => (
                 <button
-                  key={m}
-                  onClick={() => onMonthsChange(m)}
+                  key={v}
+                  onClick={() => setView(v)}
                   className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    months === m
+                    view === v
                       ? "bg-brand-500 text-white"
                       : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
-                  {m}B
+                  {v === "bar" ? "Batang" : "Garis"}
                 </button>
               ))}
+            </div>
+          </div>
+          {/* Months filter */}
+          {onMonthsChange && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Periode</label>
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                {MONTH_OPTIONS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => onMonthsChange(m)}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      months === m
+                        ? "bg-brand-500 text-white"
+                        : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {m}B
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -106,31 +106,64 @@ export default function Transactions() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="relative flex-1 min-w-[200px]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Cari keterangan..."
-            value={filters.search}
-            onChange={(e) => setFilter("search", e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-          />
+      <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-5">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+          {(filters.type !== "ALL" || filters.source !== "ALL" || filters.search || filters.dateFrom || filters.dateTo) && (
+            <button
+              onClick={() => setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1 }))}
+              className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
+            >
+              Reset Filter
+            </button>
+          )}
         </div>
-        <select value={filters.type} onChange={(e) => setFilter("type", e.target.value)} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none">
-          <option value="ALL">Semua Tipe</option>
-          <option value="CREDIT">Pemasukan</option>
-          <option value="DEBIT">Pengeluaran</option>
-        </select>
-        <select value={filters.source} onChange={(e) => setFilter("source", e.target.value)} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none">
-          <option value="ALL">Bank & Dompet</option>
-          <option value="BANK">Bank</option>
-          <option value="WALLET">Dompet Digital</option>
-        </select>
-        <input type="date" value={filters.dateFrom} onChange={(e) => setFilter("dateFrom", e.target.value)} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none" />
-        <input type="date" value={filters.dateTo} onChange={(e) => setFilter("dateTo", e.target.value)} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {/* Cari */}
+          <div className="flex flex-col gap-1 col-span-2 sm:col-span-3 lg:col-span-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Cari</label>
+            <div className="relative">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Cari keterangan..."
+                value={filters.search}
+                onChange={(e) => setFilter("search", e.target.value)}
+                className="h-9 w-full pl-8 pr-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              />
+            </div>
+          </div>
+          {/* Tipe */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
+            <select value={filters.type} onChange={(e) => setFilter("type", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+              <option value="ALL">Semua Tipe</option>
+              <option value="CREDIT">Pemasukan</option>
+              <option value="DEBIT">Pengeluaran</option>
+            </select>
+          </div>
+          {/* Sumber */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sumber</label>
+            <select value={filters.source} onChange={(e) => setFilter("source", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+              <option value="ALL">Bank & Dompet</option>
+              <option value="BANK">Bank</option>
+              <option value="WALLET">Dompet Digital</option>
+            </select>
+          </div>
+          {/* Dari Tanggal */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
+            <input type="date" value={filters.dateFrom} onChange={(e) => setFilter("dateFrom", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30" />
+          </div>
+          {/* Sampai Tanggal */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
+            <input type="date" value={filters.dateTo} onChange={(e) => setFilter("dateTo", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30" />
+          </div>
+        </div>
       </div>
 
       {/* Table */}
