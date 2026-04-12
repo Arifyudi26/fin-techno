@@ -25,22 +25,34 @@ export default async function handler(
   try {
     const now = new Date();
 
-    // Bulan ini
-    const thisStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisEnd = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-    );
-
-    // Bulan lalu
-    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-
+    // Cari transaksi terbaru milik user untuk menentukan "bulan aktif"
     const db = prisma as any;
+
+    const latestBankTx = await prisma.bankTransaction.findFirst({
+      where: { bankAccount: { ownerId: userId } },
+      orderBy: { transactionDate: "desc" },
+      select: { transactionDate: true },
+    });
+    const latestWalletTx = await db.walletTransaction.findFirst({
+      where: { wallet: { ownerId: userId } },
+      orderBy: { transactionDate: "desc" },
+      select: { transactionDate: true },
+    });
+
+    // Gunakan bulan dari transaksi terbaru, fallback ke bulan sekarang
+    const latestDates = [latestBankTx?.transactionDate, latestWalletTx?.transactionDate]
+      .filter(Boolean) as Date[];
+    const activeDate = latestDates.length > 0
+      ? new Date(Math.max(...latestDates.map((d) => d.getTime())))
+      : now;
+
+    // Bulan aktif (bisa bulan lalu jika belum ada data bulan ini)
+    const thisStart = new Date(activeDate.getFullYear(), activeDate.getMonth(), 1);
+    const thisEnd = new Date(activeDate.getFullYear(), activeDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Bulan sebelumnya
+    const prevStart = new Date(activeDate.getFullYear(), activeDate.getMonth() - 1, 1);
+    const prevEnd = new Date(activeDate.getFullYear(), activeDate.getMonth(), 0, 23, 59, 59, 999);
 
     const [
       thisBankTx,
@@ -146,6 +158,11 @@ export default async function handler(
       netFlow: thisIncome - thisExpense,
       totalBalance,
       transactionCount: thisCount,
+      activePeriod: {
+        month: activeDate.getMonth() + 1,
+        year: activeDate.getFullYear(),
+        label: activeDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+      },
       changes: {
         income: pctChange(thisIncome, prevIncome),
         expense: pctChange(thisExpense, prevExpense),
