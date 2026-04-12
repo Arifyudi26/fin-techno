@@ -7,7 +7,6 @@ export interface ReportFilterState {
   month: number | null;
   accountId: string | null;
   accountType: "BANK" | "WALLET" | null;
-  categoryId: string | null;
 }
 
 interface Props {
@@ -25,14 +24,12 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 export default function ReportFilters({ filters, onChange, onReset }: Props) {
   const [accounts, setAccounts] = useState<BankAccountBalance[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     axiosGlobal.get("/dashboard/accounts").then((r) => setAccounts(r.data)).catch(() => {});
-    axiosGlobal.get("/categories").then((r) => setCategories(r.data.categories)).catch(() => {});
   }, []);
 
-  const hasFilter = filters.month != null || filters.accountId != null || filters.categoryId != null;
+  const hasFilter = filters.month != null || filters.accountId != null;
 
   const selectCls = "h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
@@ -73,18 +70,6 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
                 {a.bankProvider} {a.source === "WALLET" ? "(Wallet)" : ""} ***{a.accountNumber.slice(-4)}
               </option>
             ))}
-          </select>
-        )}
-
-        {/* Kategori */}
-        {categories.length > 0 && (
-          <select
-            value={filters.categoryId ?? ""}
-            onChange={(e) => onChange({ categoryId: e.target.value || null })}
-            className={selectCls}
-          >
-            <option value="">Semua Kategori</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
 

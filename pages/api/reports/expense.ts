@@ -17,7 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const qMonth = req.query.month ? parseInt(req.query.month as string) : null;
   const accountId   = req.query.accountId   as string | undefined;
   const accountType = req.query.accountType as "BANK" | "WALLET" | undefined;
-  const categoryId  = req.query.categoryId  as string | undefined;
 
   const year = qYear ?? now.getFullYear();
   const dateStart = qMonth != null
@@ -35,14 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     type: "DEBIT",
     transactionDate: { gte: dateStart, lte: dateEnd },
     ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
-    ...(categoryId ? { categories: { some: { categoryId } } } : {}),
   };
   const walletWhere: any = {
     wallet: { ownerId: userId },
     type: "DEBIT",
     transactionDate: { gte: dateStart, lte: dateEnd },
     ...(accountId && !skipWallet ? { walletId: accountId } : {}),
-    ...(categoryId ? { categories: { some: { categoryId } } } : {}),
   };
 
   try {
@@ -131,7 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       year,
       month: qMonth,
-      filters: { accountId, accountType, categoryId },
+      filters: { accountId, accountType },
       summary: {
         grandTotal,
         avgMonthly,

@@ -13,12 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const db = prisma as any;
   const now = new Date();
 
-  // Filter params — sama seperti dashboard
+  // Filter params
   const qYear  = req.query.year  ? parseInt(req.query.year  as string) : null;
   const qMonth = req.query.month ? parseInt(req.query.month as string) : null; // 1-12, null = seluruh tahun
   const accountId   = req.query.accountId   as string | undefined;
   const accountType = req.query.accountType as "BANK" | "WALLET" | undefined;
-  const categoryId  = req.query.categoryId  as string | undefined;
 
   // Tentukan range
   const year = qYear ?? now.getFullYear();
@@ -37,14 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     type: "CREDIT",
     transactionDate: { gte: dateStart, lte: dateEnd },
     ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
-    ...(categoryId ? { categories: { some: { categoryId } } } : {}),
   };
   const walletWhere: any = {
     wallet: { ownerId: userId },
     type: "CREDIT",
     transactionDate: { gte: dateStart, lte: dateEnd },
     ...(accountId && !skipWallet ? { walletId: accountId } : {}),
-    ...(categoryId ? { categories: { some: { categoryId } } } : {}),
   };
 
   try {
@@ -137,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       year,
       month: qMonth,
-      filters: { accountId, accountType, categoryId },
+      filters: { accountId, accountType },
       summary: {
         grandTotal,
         avgMonthly,

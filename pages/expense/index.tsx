@@ -31,7 +31,6 @@ const DEFAULT_FILTERS: ReportFilterState = {
   month: null,
   accountId: null,
   accountType: null,
-  categoryId: null,
 };
 
 export default function ExpenseReport() {
@@ -49,7 +48,6 @@ export default function ExpenseReport() {
       if (f.month != null)    p.month       = String(f.month);
       if (f.accountId)        p.accountId   = f.accountId;
       if (f.accountType)      p.accountType = f.accountType;
-      if (f.categoryId)       p.categoryId  = f.categoryId;
       const res = await axiosGlobal.get("/reports/expense", { params: p });
       setSummary(res.data.summary);
       setMonthly(res.data.monthlyTrend);
