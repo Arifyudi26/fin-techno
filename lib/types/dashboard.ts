@@ -4,6 +4,11 @@ export interface DashboardMetrics {
   netFlow: number;
   totalBalance: number;
   transactionCount: number;
+  activePeriod?: {
+    month: number;
+    year: number;
+    label: string;
+  };
   changes: {
     income: string;
     expense: string;
