@@ -75,8 +75,8 @@ export interface DashboardData {
 }
 
 export interface DashboardFilters {
-  month: number | null;
-  year: number | null;
+  dateFrom: string | null;
+  dateTo: string | null;
   accountId: string | null;
   accountType: "BANK" | "WALLET" | null;
   categoryId: string | null;

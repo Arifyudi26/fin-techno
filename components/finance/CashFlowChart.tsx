@@ -10,20 +10,15 @@ const fmt = (val: number) =>
 interface Props {
   data?: CashFlowMonth[];
   loading?: boolean;
-  months?: number;
-  onMonthsChange?: (m: number) => void;
+  periodLabel?: string;
 }
 
-const MONTH_OPTIONS = [3, 6, 12];
-
-export default function CashFlowChart({ data = [], loading, months = 12, onMonthsChange }: Props) {
+export default function CashFlowChart({ data = [], loading, periodLabel }: Props) {
   const [view, setView] = useState<"bar" | "line">("bar");
 
-  // Slice data sesuai pilihan bulan
-  const sliced = data.slice(-months);
-  const categories = sliced.map((d) => d.month);
-  const creditData = sliced.map((d) => d.credit);
-  const debitData = sliced.map((d) => d.debit);
+  const categories = data.map((d) => d.month);
+  const creditData = data.map((d) => d.credit);
+  const debitData = data.map((d) => d.debit);
 
   const totalCredit = creditData.reduce((a, b) => a + b, 0);
   const totalDebit = debitData.reduce((a, b) => a + b, 0);
@@ -69,8 +64,10 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Cash Flow Bulanan</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Pemasukan vs Pengeluaran per bulan</p>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Cash Flow</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {periodLabel ?? "Pemasukan vs Pengeluaran"}
+          </p>
         </div>
         <div className="flex items-end gap-3 flex-wrap">
           {/* Toggle view */}
@@ -92,27 +89,6 @@ export default function CashFlowChart({ data = [], loading, months = 12, onMonth
               ))}
             </div>
           </div>
-          {/* Months filter */}
-          {onMonthsChange && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Periode</label>
-              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {MONTH_OPTIONS.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => onMonthsChange(m)}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                      months === m
-                        ? "bg-brand-500 text-white"
-                        : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    {m}B
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

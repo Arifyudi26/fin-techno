@@ -3,8 +3,8 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import type { BankAccountBalance } from "@/lib/types/dashboard";
 
 export interface ReportFilterState {
-  year: number;
-  month: number | null;
+  dateFrom: string;
+  dateTo: string;
   accountId: string | null;
   accountType: "BANK" | "WALLET" | null;
 }
@@ -15,33 +15,76 @@ interface Props {
   onReset: () => void;
 }
 
-const MONTHS = [
-  "Januari","Februari","Maret","April","Mei","Juni",
-  "Juli","Agustus","September","Oktober","November","Desember",
-];
-const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
-
-const selectCls =
+const inputCls =
   "h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
+
+function formatDateLabel(dateFrom: string, dateTo: string): string {
+  if (!dateFrom && !dateTo) return "Semua Periode";
+  const fmt = (d: string) => {
+    if (!d) return "";
+    const [y, m, day] = d.split("-");
+    return `${day}/${m}/${y}`;
+  };
+  if (dateFrom && dateTo) return `${fmt(dateFrom)} – ${fmt(dateTo)}`;
+  if (dateFrom) return `Dari ${fmt(dateFrom)}`;
+  return `Sampai ${fmt(dateTo)}`;
+}
 
 export default function ReportFilters({ filters, onChange, onReset }: Props) {
   const [accounts, setAccounts] = useState<BankAccountBalance[]>([]);
+  // Local state — baru hit parent saat Apply
+  const [local, setLocal] = useState({
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    accountId: filters.accountId ?? "",
+  });
 
   useEffect(() => {
     axiosGlobal.get("/dashboard/accounts").then((r) => setAccounts(r.data)).catch(() => {});
   }, []);
 
-  const hasFilter = filters.month != null || filters.accountId != null;
+  // Sync saat parent reset
+  useEffect(() => {
+    setLocal({
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      accountId: filters.accountId ?? "",
+    });
+  }, [filters.dateFrom, filters.dateTo, filters.accountId]);
 
-  const activePeriodLabel =
-    filters.month != null
-      ? `${MONTHS[filters.month - 1]} ${filters.year}`
-      : `Tahun ${filters.year}`;
+  const set = (key: keyof typeof local, val: string) =>
+    setLocal((prev) => ({ ...prev, [key]: val }));
+
+  const handleApply = () => {
+    const acc = accounts.find((a) => a.id === local.accountId);
+    onChange({
+      dateFrom: local.dateFrom,
+      dateTo: local.dateTo,
+      accountId: local.accountId || null,
+      accountType: local.accountId ? (acc?.source ?? null) : null,
+    });
+  };
+
+  const handleReset = () => {
+    setLocal({ dateFrom: getDefaultFrom(), dateTo: getDefaultTo(), accountId: "" });
+    onReset();
+  };
+
+  const isDirty =
+    local.dateFrom !== filters.dateFrom ||
+    local.dateTo !== filters.dateTo ||
+    (local.accountId || null) !== filters.accountId;
+
+  const hasFilter =
+    filters.accountId != null ||
+    filters.dateFrom !== getDefaultFrom() ||
+    filters.dateTo !== getDefaultTo();
+
+  const activePeriodLabel = formatDateLabel(filters.dateFrom, filters.dateTo);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-6">
-      {/* Header row */}
+      {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
@@ -51,7 +94,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
         </div>
         {hasFilter && (
           <button
-            onClick={onReset}
+            onClick={handleReset}
             className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
           >
             Reset Filter
@@ -60,26 +103,27 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
       </div>
 
       {/* Filter grid */}
-      <div className={`grid gap-3 ${accounts.length > 0 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
-        {/* Tahun */}
+      <div className={`grid gap-3 grid-cols-2 ${accounts.length > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+        {/* Dari Tanggal */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tahun</label>
-          <select value={filters.year} onChange={(e) => onChange({ year: parseInt(e.target.value) })} className={selectCls}>
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
+          <input
+            type="date"
+            value={local.dateFrom}
+            onChange={(e) => set("dateFrom", e.target.value)}
+            className={inputCls}
+          />
         </div>
 
-        {/* Bulan */}
+        {/* Sampai Tanggal */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Bulan</label>
-          <select
-            value={filters.month ?? ""}
-            onChange={(e) => onChange({ month: e.target.value ? parseInt(e.target.value) : null })}
-            className={selectCls}
-          >
-            <option value="">Semua Bulan</option>
-            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
+          <input
+            type="date"
+            value={local.dateTo}
+            onChange={(e) => set("dateTo", e.target.value)}
+            className={inputCls}
+          />
         </div>
 
         {/* Rekening */}
@@ -87,14 +131,9 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
             <select
-              value={filters.accountId ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val) return onChange({ accountId: null, accountType: null });
-                const acc = accounts.find((a) => a.id === val);
-                onChange({ accountId: val, accountType: acc?.source ?? null });
-              }}
-              className={selectCls}
+              value={local.accountId}
+              onChange={(e) => set("accountId", e.target.value)}
+              className={inputCls}
             >
               <option value="">Semua Rekening</option>
               {accounts.map((a) => (
@@ -105,7 +144,33 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
             </select>
           </div>
         )}
+
+        {/* Tombol Apply */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-transparent select-none">Cari</label>
+          <button
+            onClick={handleApply}
+            disabled={!isDirty}
+            title="Terapkan filter"
+            className="h-9 w-full rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed px-4 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Terapkan
+          </button>
+        </div>
       </div>
     </div>
   );
+}
+
+function getDefaultFrom(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
+}
+
+function getDefaultTo(): string {
+  return new Date().toISOString().split("T")[0];
 }

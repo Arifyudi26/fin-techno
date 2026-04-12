@@ -9,7 +9,10 @@ function pctChange(current: number, previous: number): string {
   return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "GET") return res.status(405).end();
 
   let userId: string;
@@ -35,74 +38,158 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { transactionDate: true },
     });
 
-    const latestDates = [latestBankTx?.transactionDate, latestWalletTx?.transactionDate]
-      .filter(Boolean) as Date[];
-    const defaultDate = latestDates.length > 0
-      ? new Date(Math.max(...latestDates.map((d) => d.getTime())))
-      : now;
+    const latestDates = [
+      latestBankTx?.transactionDate,
+      latestWalletTx?.transactionDate,
+    ].filter(Boolean) as Date[];
+    const defaultDate =
+      latestDates.length > 0
+        ? new Date(Math.max(...latestDates.map((d) => d.getTime())))
+        : now;
 
     // Ambil filter dari query param, fallback ke bulan aktif
-    const qMonth = req.query.month ? parseInt(req.query.month as string) : null;
-    const qYear = req.query.year ? parseInt(req.query.year as string) : null;
+    const qDateFrom = req.query.dateFrom as string | undefined;
+    const qDateTo = req.query.dateTo as string | undefined;
     const accountId = req.query.accountId as string | undefined;
     const accountType = req.query.accountType as "BANK" | "WALLET" | undefined; // "BANK" | "WALLET"
 
-    const activeYear = qYear ?? defaultDate.getFullYear();
-    const activeMonth = qMonth != null ? qMonth - 1 : defaultDate.getMonth(); // 0-indexed
-
-    const thisStart = new Date(activeYear, activeMonth, 1);
-    const thisEnd = new Date(activeYear, activeMonth + 1, 0, 23, 59, 59, 999);
-    const prevStart = new Date(activeYear, activeMonth - 1, 1);
-    const prevEnd = new Date(activeYear, activeMonth, 0, 23, 59, 59, 999);
+    let thisStart: Date, thisEnd: Date;
+    if (qDateFrom || qDateTo) {
+      thisStart = qDateFrom
+        ? new Date(qDateFrom + "T00:00:00")
+        : new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1);
+      thisEnd = qDateTo
+        ? new Date(qDateTo + "T23:59:59")
+        : new Date(
+            defaultDate.getFullYear(),
+            defaultDate.getMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999,
+          );
+    } else {
+      thisStart = new Date(
+        defaultDate.getFullYear(),
+        defaultDate.getMonth(),
+        1,
+      );
+      thisEnd = new Date(
+        defaultDate.getFullYear(),
+        defaultDate.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+    }
+    // Periode sebelumnya: durasi yang sama sebelum thisStart
+    const durationMs = thisEnd.getTime() - thisStart.getTime();
+    const prevEnd = new Date(thisStart.getTime() - 1);
+    const prevStart = new Date(prevEnd.getTime() - durationMs);
 
     // Build where clause berdasarkan filter akun
     const bankWhere: any = { bankAccount: { ownerId: userId } };
     const walletWhere: any = { wallet: { ownerId: userId } };
     if (accountId) {
-      if (!accountType || accountType === "BANK") bankWhere.bankAccountId = accountId;
-      if (!accountType || accountType === "WALLET") walletWhere.walletId = accountId;
+      if (!accountType || accountType === "BANK")
+        bankWhere.bankAccountId = accountId;
+      if (!accountType || accountType === "WALLET")
+        walletWhere.walletId = accountId;
     }
 
     const skipBank = accountType === "WALLET";
     const skipWallet = accountType === "BANK";
 
-    const [thisBankTx, prevBankTx, thisWalletTx, prevWalletTx, bankAccounts, wallets] =
-      await Promise.all([
-        skipBank ? Promise.resolve([]) : prisma.bankTransaction.findMany({
-          where: { ...bankWhere, transactionDate: { gte: thisStart, lte: thisEnd } },
-          select: { type: true, amount: true },
-        }),
-        skipBank ? Promise.resolve([]) : prisma.bankTransaction.findMany({
-          where: { ...bankWhere, transactionDate: { gte: prevStart, lte: prevEnd } },
-          select: { type: true, amount: true },
-        }),
-        skipWallet ? Promise.resolve([]) : db.walletTransaction.findMany({
-          where: { ...walletWhere, transactionDate: { gte: thisStart, lte: thisEnd } },
-          select: { type: true, amount: true },
-        }),
-        skipWallet ? Promise.resolve([]) : db.walletTransaction.findMany({
-          where: { ...walletWhere, transactionDate: { gte: prevStart, lte: prevEnd } },
-          select: { type: true, amount: true },
-        }),
-        skipBank ? Promise.resolve([]) : prisma.bankAccount.findMany({
-          where: { ownerId: userId, isActive: true, ...(accountId && accountType !== ("WALLET" as string) ? { id: accountId } : {}) },
-          select: { id: true },
-        }),
-        skipWallet ? Promise.resolve([]) : db.digitalWallet.findMany({
-          where: { ownerId: userId, isActive: true, ...(accountId && accountType !== ("BANK" as string) ? { id: accountId } : {}) },
-          select: { id: true },
-        }),
-      ]);
+    const [
+      thisBankTx,
+      prevBankTx,
+      thisWalletTx,
+      prevWalletTx,
+      bankAccounts,
+      wallets,
+    ] = await Promise.all([
+      skipBank
+        ? Promise.resolve([])
+        : prisma.bankTransaction.findMany({
+            where: {
+              ...bankWhere,
+              transactionDate: { gte: thisStart, lte: thisEnd },
+            },
+            select: { type: true, amount: true },
+          }),
+      skipBank
+        ? Promise.resolve([])
+        : prisma.bankTransaction.findMany({
+            where: {
+              ...bankWhere,
+              transactionDate: { gte: prevStart, lte: prevEnd },
+            },
+            select: { type: true, amount: true },
+          }),
+      skipWallet
+        ? Promise.resolve([])
+        : db.walletTransaction.findMany({
+            where: {
+              ...walletWhere,
+              transactionDate: { gte: thisStart, lte: thisEnd },
+            },
+            select: { type: true, amount: true },
+          }),
+      skipWallet
+        ? Promise.resolve([])
+        : db.walletTransaction.findMany({
+            where: {
+              ...walletWhere,
+              transactionDate: { gte: prevStart, lte: prevEnd },
+            },
+            select: { type: true, amount: true },
+          }),
+      skipBank
+        ? Promise.resolve([])
+        : prisma.bankAccount.findMany({
+            where: {
+              ownerId: userId,
+              isActive: true,
+              ...(accountId && accountType !== ("WALLET" as string)
+                ? { id: accountId }
+                : {}),
+            },
+            select: { id: true },
+          }),
+      skipWallet
+        ? Promise.resolve([])
+        : db.digitalWallet.findMany({
+            where: {
+              ownerId: userId,
+              isActive: true,
+              ...(accountId && accountType !== ("BANK" as string)
+                ? { id: accountId }
+                : {}),
+            },
+            select: { id: true },
+          }),
+    ]);
 
     const thisTx = [...thisBankTx, ...thisWalletTx];
     const prevTx = [...prevBankTx, ...prevWalletTx];
 
-    const thisIncome = thisTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
-    const thisExpense = thisTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const thisIncome = thisTx
+      .filter((t: any) => t.type === "CREDIT")
+      .reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const thisExpense = thisTx
+      .filter((t: any) => t.type === "DEBIT")
+      .reduce((s: number, t: any) => s + Number(t.amount), 0);
     const thisCount = thisTx.length;
 
-    const prevIncome = prevTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
-    const prevExpense = prevTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const prevIncome = prevTx
+      .filter((t: any) => t.type === "CREDIT")
+      .reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const prevExpense = prevTx
+      .filter((t: any) => t.type === "DEBIT")
+      .reduce((s: number, t: any) => s + Number(t.amount), 0);
     const prevCount = prevTx.length;
 
     // Total balance dari saldo terakhir tiap rekening + wallet
@@ -125,10 +212,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ),
     );
     const totalBalance =
-      bankBalances.reduce((s: number, b: any) => s + Number(b?.balance ?? 0), 0) +
-      walletBalances.reduce((s: number, b: any) => s + Number(b?.balance ?? 0), 0);
+      bankBalances.reduce(
+        (s: number, b: any) => s + Number(b?.balance ?? 0),
+        0,
+      ) +
+      walletBalances.reduce(
+        (s: number, b: any) => s + Number(b?.balance ?? 0),
+        0,
+      );
 
-    const activeDate = new Date(activeYear, activeMonth, 1);
+    const activeDate = thisStart;
 
     return res.status(200).json({
       totalIncome: thisIncome,
@@ -137,9 +230,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalBalance,
       transactionCount: thisCount,
       activePeriod: {
-        month: activeMonth + 1,
-        year: activeYear,
-        label: activeDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+        month: thisStart.getMonth() + 1,
+        year: thisStart.getFullYear(),
+        label:
+          qDateFrom || qDateTo
+            ? `${qDateFrom ?? "..."} – ${qDateTo ?? "..."}`
+            : activeDate.toLocaleDateString("id-ID", {
+                month: "long",
+                year: "numeric",
+              }),
       },
       changes: {
         income: pctChange(thisIncome, prevIncome),
