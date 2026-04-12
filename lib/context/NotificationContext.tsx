@@ -42,7 +42,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const token = useAuthStore((s) => s.token);
 
-  // Refs for SSE lifecycle — not state, no re-renders
+  // Refs for SSE lifecycle — mutations only, no re-renders needed
   const esRef = useRef<EventSource | null>(null);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -58,7 +58,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const res = await axiosGlobal.get("/notifications");
       applyData(res.data);
     } catch { /* silently fail */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const disconnect = () => {
     if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
@@ -85,7 +85,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const latest = useAuthStore.getState().token;
       if (latest) retryRef.current = setTimeout(() => connect(latest), 10_000);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -101,6 +101,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (typeof EventSource !== "undefined") {
       connect(token);
     } else {
+      // SSE not supported — fallback polling
       refresh();
       if (!fallbackRef.current) fallbackRef.current = setInterval(refresh, 60_000);
     }
@@ -118,7 +119,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setNotifications((prev) => [res.data, ...prev.slice(0, 49)]);
         setUnreadCount((c) => c + 1);
       } catch { /* ignore */ }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
   const markAllRead = useCallback(async () => {
     try {
@@ -126,7 +127,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch { /* ignore */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const clearAll = useCallback(async () => {
     setLoading(true);
@@ -136,7 +137,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setUnreadCount(0);
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, loading, addNotification, markAllRead, clearAll, refresh }}>
