@@ -36,11 +36,14 @@ export interface BankAccountBalance {
   accountName: string;
   currency: string;
   balance: number;
+  source?: "BANK" | "WALLET";
 }
 
 export interface SpendingCategory {
+  id?: string;
   category: string;
   amount: number;
+  count?: number;
 }
 
 export interface RecentTransaction {
@@ -50,7 +53,9 @@ export interface RecentTransaction {
   type: "CREDIT" | "DEBIT";
   amount: number;
   category: string;
+  categories?: { id: string; name: string }[];
   bankAccount: string;
+  source?: "BANK" | "WALLET";
   status: string;
   reference: string | null;
 }
@@ -67,4 +72,14 @@ export interface DashboardData {
   spendingByCategory: SpendingCategory[];
   recentTransactions: RecentTransaction[];
   netFlowTrend: NetFlowPoint[];
+}
+
+export interface DashboardFilters {
+  month: number | null;   // 1-12, null = auto (latest)
+  year: number | null;
+  accountId: string | null;
+  accountType: "BANK" | "WALLET" | null;
+  categoryId: string | null;
+  txType: "CREDIT" | "DEBIT" | null;
+  search: string;
 }
