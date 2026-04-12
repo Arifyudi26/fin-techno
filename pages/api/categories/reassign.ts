@@ -58,14 +58,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true, description: true },
     });
 
-    let assigned = 0;
+    let assignedTxCount = 0;
 
     // Bank transactions
     const bankJunctionRows: { transactionId: string; categoryId: string }[] = [];
     for (const tx of bankTx) {
       const catIds = resolveCategoryIds(tx.description, categories);
-      for (const catId of catIds) {
-        bankJunctionRows.push({ transactionId: tx.id, categoryId: catId });
+      if (catIds.length > 0) {
+        assignedTxCount++;
+        for (const catId of catIds) {
+          bankJunctionRows.push({ transactionId: tx.id, categoryId: catId });
+        }
       }
     }
     if (bankJunctionRows.length > 0) {
@@ -73,15 +76,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: bankJunctionRows,
         skipDuplicates: true,
       });
-      assigned += bankJunctionRows.length;
     }
 
     // Wallet transactions
     const walletJunctionRows: { transactionId: string; categoryId: string }[] = [];
     for (const tx of walletTx) {
       const catIds = resolveCategoryIds(tx.description, categories);
-      for (const catId of catIds) {
-        walletJunctionRows.push({ transactionId: tx.id, categoryId: catId });
+      if (catIds.length > 0) {
+        assignedTxCount++;
+        for (const catId of catIds) {
+          walletJunctionRows.push({ transactionId: tx.id, categoryId: catId });
+        }
       }
     }
     if (walletJunctionRows.length > 0) {
@@ -89,14 +94,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: walletJunctionRows,
         skipDuplicates: true,
       });
-      assigned += walletJunctionRows.length;
     }
 
+    const totalTx = bankTx.length + walletTx.length;
+    const unmatched = totalTx - assignedTxCount;
+
     return res.status(200).json({
-      message: `Berhasil assign ${assigned} kategori ke ${bankTx.length + walletTx.length} transaksi`,
-      assigned,
-      bankTxCount: bankTx.length,
-      walletTxCount: walletTx.length,
+      message: `${assignedTxCount} dari ${totalTx} transaksi berhasil di-assign kategori${unmatched > 0 ? `, ${unmatched} tidak cocok keyword manapun` : ""}`,
+      assignedTxCount,
+      totalTx,
+      unmatched,
+      junctionRowsCreated: bankJunctionRows.length + walletJunctionRows.length,
     });
   } catch (error: any) {
     console.error("reassign error:", error);

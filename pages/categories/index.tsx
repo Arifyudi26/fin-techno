@@ -84,11 +84,10 @@ export default function Categories() {
   };
 
   const handleDelete = async (cat: Category) => {
-    if (cat.transactionCount > 0) {
-      fire("warning", "Tidak bisa dihapus", { message: `Kategori ini digunakan oleh ${cat.transactionCount} transaksi.`, duration: 4000 });
-      return;
-    }
-    const ok = await confirm("error", "Hapus Kategori?", { message: `"${cat.name}" akan dihapus permanen.`, confirmText: "Hapus", cancelText: "Batal" });
+    const msg = cat.transactionCount > 0
+      ? `"${cat.name}" digunakan oleh ${cat.transactionCount} transaksi. Transaksi tersebut akan menjadi "Lainnya".`
+      : `"${cat.name}" akan dihapus permanen.`;
+    const ok = await confirm("error", "Hapus Kategori?", { message: msg, confirmText: "Hapus", cancelText: "Batal" });
     if (!ok) return;
     try {
       await axiosGlobal.delete(`/categories/${cat.id}`);
