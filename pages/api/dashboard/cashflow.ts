@@ -3,10 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
 
   let userId: string;
@@ -17,63 +14,66 @@ export default async function handler(
   }
 
   try {
-    const now = new Date();
-    const ninetyDaysAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
     const db = prisma as any;
+    const now = new Date();
+
+    // Filter params
+    const accountId = req.query.accountId as string | undefined;
+    const accountType = req.query.accountType as "BANK" | "WALLET" | undefined;
+    const months = req.query.months ? parseInt(req.query.months as string) : 12;
+    const categoryId = req.query.categoryId as string | undefined;
+
+    const lookbackMs = Math.max(months, 12) * 31 * 24 * 60 * 60 * 1000;
+    const startDate = new Date(now.getTime() - lookbackMs);
+
+    const skipBank = accountType === "WALLET";
+    const skipWallet = accountType === "BANK";
+
+    const bankWhere: any = {
+      bankAccount: { ownerId: userId },
+      transactionDate: { gte: startDate },
+      ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
+    };
+    const walletWhere: any = {
+      wallet: { ownerId: userId },
+      transactionDate: { gte: startDate },
+      ...(accountId && !skipWallet ? { walletId: accountId } : {}),
+    };
+
+    // Filter by category via junction table
+    if (categoryId) {
+      bankWhere.categories = { some: { categoryId } };
+      walletWhere.categories = { some: { categoryId } };
+    }
 
     const [bankTx, walletTx] = await Promise.all([
-      prisma.bankTransaction.findMany({
-        where: {
-          bankAccount: { ownerId: userId },
-          transactionDate: { gte: ninetyDaysAgo },
-        },
+      skipBank ? Promise.resolve([]) : prisma.bankTransaction.findMany({
+        where: bankWhere,
         select: { type: true, amount: true, transactionDate: true },
       }),
-      db.walletTransaction.findMany({
-        where: {
-          wallet: { ownerId: userId },
-          transactionDate: { gte: ninetyDaysAgo },
-        },
+      skipWallet ? Promise.resolve([]) : db.walletTransaction.findMany({
+        where: walletWhere,
         select: { type: true, amount: true, transactionDate: true },
       }),
     ]);
 
     const transactions = [...bankTx, ...walletTx];
 
-    // Build 12-month cashflow
     const cashFlow = [];
     const netFlowTrend = [];
 
-    for (let i = 11; i >= 0; i--) {
+    for (let i = months - 1; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStart = new Date(
-        monthDate.getFullYear(),
-        monthDate.getMonth(),
-        1,
-      );
-      const monthEnd = new Date(
-        monthDate.getFullYear(),
-        monthDate.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-      );
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
       const monthTx = transactions.filter(
-        (t) => t.transactionDate >= monthStart && t.transactionDate <= monthEnd,
+        (t: any) => t.transactionDate >= monthStart && t.transactionDate <= monthEnd,
       );
 
-      const credit = monthTx
-        .filter((t) => t.type === "CREDIT")
-        .reduce((s, t) => s + Number(t.amount), 0);
-      const debit = monthTx
-        .filter((t) => t.type === "DEBIT")
-        .reduce((s, t) => s + Number(t.amount), 0);
-      const month = monthDate.toLocaleDateString("id-ID", {
-        year: "numeric",
-        month: "short",
-      });
+      const credit = monthTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+      const debit = monthTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+      const month = monthDate.toLocaleDateString("id-ID", { year: "numeric", month: "short" });
 
       cashFlow.push({ month, credit, debit });
       netFlowTrend.push({ month, netFlow: credit - debit });
