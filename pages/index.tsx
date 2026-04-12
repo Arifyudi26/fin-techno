@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageMeta from "@components/common/PageMeta";
 import FinanceMetrics from "@components/finance/FinanceMetrics";
@@ -42,7 +42,6 @@ const DEFAULT_FILTERS: IFilters = {
   accountType: null,
   categoryId: null,
   txType: null,
-  search: "",
 };
 
 function buildParams(filters: IFilters, extra?: Record<string, string | number>) {
@@ -53,7 +52,6 @@ function buildParams(filters: IFilters, extra?: Record<string, string | number>)
   if (filters.accountType) p.accountType = filters.accountType;
   if (filters.categoryId) p.categoryId = filters.categoryId;
   if (filters.txType) p.type = filters.txType;
-  if (filters.search) p.search = filters.search;
   if (extra) Object.entries(extra).forEach(([k, v]) => { p[k] = String(v); });
   return p;
 }
@@ -78,9 +76,6 @@ export default function Home() {
   const [errors, setErrors] = useState<Partial<Record<keyof LoadingState, string>>>({});
   const [filters, setFilters] = useState<IFilters>(DEFAULT_FILTERS);
   const [cashflowMonths, setCashflowMonths] = useState(12);
-
-  // Debounce search
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMetrics = useCallback(async (f: IFilters) => {
     setLoading((prev) => ({ ...prev, metrics: true }));
@@ -150,22 +145,9 @@ export default function Home() {
   const handleFilterChange = useCallback((partial: Partial<IFilters>) => {
     setFilters((prev) => {
       const next = { ...prev, ...partial };
-
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-
-      if ("search" in partial) {
-        // Debounce search 400ms
-        searchTimer.current = setTimeout(() => {
-          fetchMetrics(next);
-          fetchCashflow(next, cashflowMonths);
-          fetchTransactions(next);
-        }, 400);
-      } else {
-        fetchMetrics(next);
-        fetchCashflow(next, cashflowMonths);
-        fetchTransactions(next);
-      }
-
+      fetchMetrics(next);
+      fetchCashflow(next, cashflowMonths);
+      fetchTransactions(next);
       return next;
     });
   }, [fetchMetrics, fetchCashflow, fetchTransactions, cashflowMonths]);

@@ -10,27 +10,13 @@ const fmt = (val: number) =>
 interface Props {
   data?: RecentTransaction[];
   loading?: boolean;
-  onFilterChange?: (f: { type?: "CREDIT" | "DEBIT" | null; search?: string }) => void;
 }
 
-export default function RecentTransactions({ data = [], loading, onFilterChange }: Props) {
+export default function RecentTransactions({ data = [], loading }: Props) {
   const [localType, setLocalType] = useState<"" | "CREDIT" | "DEBIT">("");
-  const [localSearch, setLocalSearch] = useState("");
 
-  const handleTypeChange = (val: "" | "CREDIT" | "DEBIT") => {
-    setLocalType(val);
-    onFilterChange?.({ type: val || null, search: localSearch });
-  };
-
-  const handleSearch = (val: string) => {
-    setLocalSearch(val);
-    onFilterChange?.({ type: localType || null, search: val });
-  };
-
-  // Local filter on top of server data
   const filtered = data.filter((tx) => {
     if (localType && tx.type !== localType) return false;
-    if (localSearch && !tx.description.toLowerCase().includes(localSearch.toLowerCase())) return false;
     return true;
   });
 
@@ -52,36 +38,23 @@ export default function RecentTransactions({ data = [], loading, onFilterChange 
           </Link>
         </div>
 
-        {/* Filter row */}
-        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["", "CREDIT", "DEBIT"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => handleTypeChange(t)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  localType === t
-                    ? "bg-brand-500 text-white"
-                    : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-              >
-                {t === "" ? "Semua" : t === "CREDIT" ? "Masuk" : "Keluar"}
-              </button>
-            ))}
+              {(["", "CREDIT", "DEBIT"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setLocalType(t)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    localType === t
+                      ? "bg-brand-500 text-white"
+                      : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {t === "" ? "Semua" : t === "CREDIT" ? "Masuk" : "Keluar"}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="relative flex-1 min-w-[160px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Cari keterangan..."
-              value={localSearch}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="h-8 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-            />
-          </div>
-        </div>
       </div>
 
       {loading ? (

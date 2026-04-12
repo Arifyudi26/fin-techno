@@ -75,11 +75,10 @@ export interface DashboardData {
 }
 
 export interface DashboardFilters {
-  month: number | null;   // 1-12, null = auto (latest)
+  month: number | null;
   year: number | null;
   accountId: string | null;
   accountType: "BANK" | "WALLET" | null;
   categoryId: string | null;
   txType: "CREDIT" | "DEBIT" | null;
-  search: string;
 }
