@@ -30,7 +30,7 @@ export default function PeriodCashFlowChart({ data }: Props) {
       shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" },
       marker: { show: false },
       custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
-        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#22c55e", "#ef4444"], 220),
+        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#22c55e", "#ef4444"], true, 220),
     },
   };
 
