@@ -9,20 +9,11 @@ export type NavItemConfig = {
 export const navItems: NavItemConfig[] = [
   {
     name: "Dashboard",
-    subItems: [
-      { name: "Overview Keuangan", path: "/" },
-      { name: "Laporan Pemasukan", path: "/income" },
-      { name: "Laporan Pengeluaran", path: "/expense" },
-      { name: "Analisis Periode", path: "/period" },
-    ],
+    path: "/",
   },
   {
     name: "Transaksi",
-    subItems: [
-      { name: "Semua Transaksi", path: "/transactions" },
-      { name: "Pemasukan", path: "/transactions/income" },
-      { name: "Pengeluaran", path: "/transactions/expense" },
-    ],
+    path: "/transactions",
   },
   {
     name: "Upload e-Statement",
@@ -30,10 +21,6 @@ export const navItems: NavItemConfig[] = [
       { name: "Upload Baru", path: "/upload" },
       { name: "Riwayat Upload", path: "/upload/riwayat" },
     ],
-  },
-  {
-    name: "Rekonsiliasi",
-    path: "/reconciliation",
   },
   {
     name: "Rekening",
