@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Halaman publik (tidak perlu login)
-const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/signin", "/signup", "/auth/oauth-callback"];
+const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/auth/change-password", "/signin", "/signup", "/auth/oauth-callback"];
 
 // API yang boleh diakses tanpa token
 const PUBLIC_API_PATHS = [
   "/api/auth/login",
   "/api/auth/register",
+  "/api/auth/send-otp",
+  "/api/auth/verify-otp",
   "/api/auth/callback",    
   "/api/auth/signin",     
   "/api/auth/signout",    

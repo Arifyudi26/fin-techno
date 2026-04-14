@@ -1574,6 +1574,13 @@
   dependencies:
     undici-types "~6.21.0"
 
+"@types/nodemailer@^8.0.0":
+  version "8.0.0"
+  resolved "https://registry.npmjs.org/@types/nodemailer/-/nodemailer-8.0.0.tgz"
+  integrity sha512-fyf8jWULsCo0d0BuoQ75i6IeoHs47qcqxWc7yUdUcV0pOZGjUTTOvwdG1PRXUDqN/8A64yQdQdnA2pZgcdi+cA==
+  dependencies:
+    "@types/node" "*"
+
 "@types/pdf-parse@^1.1.4":
   version "1.1.4"
   resolved "https://registry.npmjs.org/@types/pdf-parse/-/pdf-parse-1.1.4.tgz"
@@ -4063,6 +4070,11 @@ node-releases@^2.0.36:
   version "2.0.37"
   resolved "https://registry.npmjs.org/node-releases/-/node-releases-2.0.37.tgz"
   integrity sha512-1h5gKZCF+pO/o3Iqt5Jp7wc9rH3eJJ0+nh/CIoiRwjRxde/hAHyLPXYN4V3CqKAbiZPSeJFSWHmJsbkicta0Eg==
+
+nodemailer@^7.0.13:
+  version "7.0.13"
+  resolved "https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.13.tgz"
+  integrity sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==
 
 nopt@^5.0.0:
   version "5.0.0"
