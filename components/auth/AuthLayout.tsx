@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <AuthLogo alt="Logo" width={231} height={48} />
               </Link>
               <p className="text-center text-gray-400 dark:text-white/60">
-                Free and Open-Source Tailwind CSS Admin Dashboard Template
+                Kelola keuangan pribadi Anda dengan mudah dan terorganisir
               </p>
             </div>
           </div>

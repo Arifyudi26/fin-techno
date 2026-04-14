@@ -3,6 +3,38 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 
+async function autoAssignCategory(userId: string, catId: string, catName: string) {
+  const db = prisma as any;
+  const keywords = catName.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+  if (keywords.length === 0) return;
+
+  const matchDesc = (desc: string) =>
+    keywords.some((k) => desc.toLowerCase().includes(k));
+
+  const bankTx = await prisma.bankTransaction.findMany({
+    where: { bankAccount: { ownerId: userId } },
+    select: { id: true, description: true },
+  });
+
+  const walletTx = await db.walletTransaction.findMany({
+    where: { wallet: { ownerId: userId } },
+    select: { id: true, description: true },
+  });
+
+  const bankRows = bankTx
+    .filter((tx: { id: string; description: string }) => matchDesc(tx.description))
+    .map((tx: { id: string; description: string }) => ({ transactionId: tx.id, categoryId: catId }));
+
+  const walletRows = walletTx
+    .filter((tx: { id: string; description: string }) => matchDesc(tx.description))
+    .map((tx: { id: string; description: string }) => ({ transactionId: tx.id, categoryId: catId }));
+
+  if (bankRows.length > 0)
+    await prisma.bankTransactionCategory.createMany({ data: bankRows, skipDuplicates: true });
+  if (walletRows.length > 0)
+    await db.walletTransactionCategory.createMany({ data: walletRows, skipDuplicates: true });
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -59,6 +91,8 @@ export default async function handler(
       const cat = await prisma.transactionCategory.create({
         data: { userId, name, code: codeUpper, description },
       });
+      // Auto re-assign semua transaksi yang cocok dengan kategori baru ini
+      await autoAssignCategory(userId, cat.id, cat.name);
       return res.status(201).json({ category: cat });
     } catch (e) {
       console.error(e);
