@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageMeta from "@components/common/PageMeta";
 import FinanceMetrics from "@components/finance/FinanceMetrics";
-import CashFlowChart from "@components/finance/CashFlowChart";
+import FinanceTrendChart from "@/components/finance/FinanceTrendChart";
 import SpendingByCategory from "@components/finance/SpendingByCategory";
 import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
@@ -24,6 +24,7 @@ interface DashboardState {
   netFlowTrend: NetFlowPoint[];
   bankAccounts: BankAccountBalance[];
   spendingByCategory: SpendingCategory[];
+  incomeByCategory: SpendingCategory[];
   recentTransactions: RecentTransaction[];
 }
 
@@ -34,14 +35,22 @@ interface LoadingState {
   transactions: boolean;
 }
 
-const DEFAULT_FILTERS: IFilters = {
-  dateFrom: null,
-  dateTo: null,
-  accountId: null,
-  accountType: null,
-  categoryId: null,
-  txType: null,
-};
+function getDefaultFilters(): IFilters {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateFrom = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+  const dateTo = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return {
+    dateFrom,
+    dateTo,
+    accountId: null,
+    accountType: null,
+    categoryId: null,
+    txType: null,
+  };
+}
+
+const DEFAULT_FILTERS: IFilters = getDefaultFilters();
 
 function buildParams(
   filters: IFilters,
@@ -68,6 +77,7 @@ export default function Home() {
     netFlowTrend: [],
     bankAccounts: [],
     spendingByCategory: [],
+    incomeByCategory: [],
     recentTransactions: [],
   });
 
@@ -158,6 +168,7 @@ export default function Home() {
         ...prev,
         recentTransactions: res.data.recentTransactions,
         spendingByCategory: res.data.spendingByCategory,
+        incomeByCategory: res.data.incomeByCategory ?? [],
       }));
       setErrors((prev) => ({ ...prev, transactions: undefined }));
     } catch {
@@ -255,9 +266,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Cash Flow + Accounts */}
-        <div className="col-span-12 xl:col-span-8">
-          <CashFlowChart
+        <div className="col-span-12">
+          <FinanceTrendChart
             data={data.cashFlow}
             netFlowTrend={data.netFlowTrend}
             loading={loading.cashflow}
@@ -273,10 +283,10 @@ export default function Home() {
           />
         </div>
 
-        {/* Spending */}
-        <div className="col-span-12 xl:col-span-5">
+        <div className="col-span-12 xl:col-span-8">
           <SpendingByCategory
             data={data.spendingByCategory}
+            incomeData={data.incomeByCategory}
             loading={loading.transactions}
           />
         </div>

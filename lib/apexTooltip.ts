@@ -34,14 +34,15 @@ export function multiSeriestooltip(
   dataPointIndex: number,
   names: string[],
   colors: string[],
-  isCurrency = true,
+  isCurrency: boolean | boolean[] = true,
   minWidth = 160,
 ): string {
   const lc = labelColor();
   const rows = series
     .map((s, i) => {
       const val = s[dataPointIndex] ?? 0;
-      const display = isCurrency ? fmt(val) : `${Math.round(val)}`;
+      const currencyFlag = Array.isArray(isCurrency) ? isCurrency[i] : isCurrency;
+      const display = currencyFlag ? fmt(val) : `${Math.round(val)}`;
       return `<div style="${ROW}${i > 0 ? "margin-top:5px;" : ""}">
         <div style="display:flex;align-items:center;gap:6px;">
           ${DOT(colors[i])}
