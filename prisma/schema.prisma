@@ -353,6 +353,18 @@ model WalletTransactionCategory {
   @@index([categoryId])
 }
 
+model OtpCode {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  purpose   String   // "login" | "register" | "change-password" | "oauth"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, purpose])
+}
+
 model Notification {
   id        String     @id @default(uuid())
   userId    String

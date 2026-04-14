@@ -20,11 +20,16 @@ export default async function handler(
     const user = await db.user.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "User tidak ditemukan" });
     }
 
     if (!bcrypt.compareSync(password, user.password)) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Email atau password salah" });
+    }
+
+    // checkOnly: hanya validasi credentials, tidak return token (untuk flow OTP)
+    if (req.body.checkOnly) {
+      return res.status(200).json({ message: "credentials valid" });
     }
 
     const token = jwt.sign(
