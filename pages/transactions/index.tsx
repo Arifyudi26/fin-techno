@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -38,9 +39,15 @@ export default function Transactions() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 500);
   const [filters, setFilters] = useState({
     type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1, limit: 10,
   });
+
+  useEffect(() => {
+    setFilters((p) => ({ ...p, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
 
   const fetchTx = useCallback(async () => {
     setLoading(true);
@@ -115,7 +122,7 @@ export default function Transactions() {
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
           {(filters.type !== "ALL" || filters.source !== "ALL" || filters.search || filters.dateFrom || filters.dateTo) && (
             <button
-              onClick={() => setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1 }))}
+              onClick={() => { setSearchInput(""); setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1 })); }}
               className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
             >
               Reset Filter
@@ -133,8 +140,8 @@ export default function Transactions() {
               <input
                 type="text"
                 placeholder="Cari keterangan..."
-                value={filters.search}
-                onChange={(e) => setFilter("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-9 w-full pl-8 pr-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
               />
             </div>
