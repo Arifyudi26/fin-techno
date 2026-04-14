@@ -81,11 +81,19 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
       intersect: false,
       style: { fontFamily: "Outfit, sans-serif" },
       custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number }) => {
-        const vals = [
-          [series[0][dataPointIndex] ?? 0],
-          [Math.abs(series[1][dataPointIndex] ?? 0)],
-        ];
-        return multiSeriestooltip(vals, 0, ["Pemasukan", "Pengeluaran"], ["#12B76A", "#F04438"], [true, true], 180);
+        const credit  = series[0][dataPointIndex] ?? 0;
+        const debit   = Math.abs(series[1][dataPointIndex] ?? 0);
+        const netFlow = netFlowData[dataPointIndex] ?? 0;
+        const balance = balanceData[dataPointIndex] ?? 0;
+        const txCount = txCountData[dataPointIndex] ?? 0;
+        const vals = [[credit], [debit], [netFlow], [balance], [txCount]];
+        return multiSeriestooltip(
+          vals, 0,
+          ["Pemasukan", "Pengeluaran", "Net Flow", "Saldo", "Transaksi"],
+          ["#12B76A", "#F04438", "#465FFF", "#F79009", "#7C3AED"],
+          [true, true, true, true, false],
+          200
+        );
       },
     },
   };
