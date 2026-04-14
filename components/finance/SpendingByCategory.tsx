@@ -66,7 +66,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
   const barOptions: ApexOptions = {
     chart: { fontFamily: "Outfit, sans-serif", type: "bar", height: 240, toolbar: { show: false } },
     colors: COLORS,
-    plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
+    plotOptions: { bar: { horizontal: true, borderRadius: 8, borderRadiusApplication: "around", distributed: true } },
     dataLabels: { enabled: false },
     legend: { show: false },
     xaxis: {
