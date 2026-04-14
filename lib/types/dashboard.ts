@@ -27,6 +27,7 @@ export interface CashFlowMonth {
   month: string;
   credit: number;
   debit: number;
+  txCount?: number;
 }
 
 export interface BankAccountBalance {
@@ -63,6 +64,8 @@ export interface RecentTransaction {
 export interface NetFlowPoint {
   month: string;
   netFlow: number;
+  balance?: number;
+  txCount?: number;
 }
 
 export interface DashboardData {

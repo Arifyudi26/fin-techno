@@ -3,7 +3,6 @@ import AppLayout from "@components/layout/AppLayout";
 import PageMeta from "@components/common/PageMeta";
 import FinanceMetrics from "@components/finance/FinanceMetrics";
 import CashFlowChart from "@components/finance/CashFlowChart";
-import NetFlowChart from "@components/finance/NetFlowChart";
 import SpendingByCategory from "@components/finance/SpendingByCategory";
 import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
@@ -260,6 +259,7 @@ export default function Home() {
         <div className="col-span-12 xl:col-span-8">
           <CashFlowChart
             data={data.cashFlow}
+            netFlowTrend={data.netFlowTrend}
             loading={loading.cashflow}
             periodLabel={data.metrics?.activePeriod?.label}
           />
@@ -273,10 +273,7 @@ export default function Home() {
           />
         </div>
 
-        {/* Net Flow + Spending */}
-        <div className="col-span-12 xl:col-span-7">
-          <NetFlowChart data={data.netFlowTrend} loading={loading.cashflow} />
-        </div>
+        {/* Spending */}
         <div className="col-span-12 xl:col-span-5">
           <SpendingByCategory
             data={data.spendingByCategory}

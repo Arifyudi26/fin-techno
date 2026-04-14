@@ -63,8 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Tentukan granularitas: ≤31 hari → per hari, ≤92 hari → per minggu, >92 hari → per bulan
     const diffDays = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
 
-    const cashFlow: { month: string; credit: number; debit: number }[] = [];
-    const netFlowTrend: { month: string; netFlow: number }[] = [];
+    const cashFlow: { month: string; credit: number; debit: number; txCount: number }[] = [];
+    const netFlowTrend: { month: string; netFlow: number; balance: number; txCount: number }[] = [];
+    let runningBalance = 0;
 
     if (diffDays <= 31) {
       // Per hari
@@ -77,9 +78,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
         const credit = dayTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
         const debit  = dayTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const txCount = dayTx.length;
+        runningBalance += credit - debit;
         const label  = cur.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-        cashFlow.push({ month: label, credit, debit });
-        netFlowTrend.push({ month: label, netFlow: credit - debit });
+        cashFlow.push({ month: label, credit, debit, txCount });
+        netFlowTrend.push({ month: label, netFlow: credit - debit, balance: runningBalance, txCount });
         cur.setDate(cur.getDate() + 1);
       }
     } else if (diffDays <= 92) {
@@ -95,9 +98,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
         const credit = weekTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
         const debit  = weekTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const txCount = weekTx.length;
+        runningBalance += credit - debit;
         const label  = `Mg ${weekNum}`;
-        cashFlow.push({ month: label, credit, debit });
-        netFlowTrend.push({ month: label, netFlow: credit - debit });
+        cashFlow.push({ month: label, credit, debit, txCount });
+        netFlowTrend.push({ month: label, netFlow: credit - debit, balance: runningBalance, txCount });
         cur.setDate(cur.getDate() + 7);
         weekNum++;
       }
@@ -112,9 +117,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
         const credit = monthTx.filter((t: any) => t.type === "CREDIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
         const debit  = monthTx.filter((t: any) => t.type === "DEBIT").reduce((s: number, t: any) => s + Number(t.amount), 0);
+        const txCount = monthTx.length;
+        runningBalance += credit - debit;
         const label  = cur.toLocaleDateString("id-ID", { year: "numeric", month: "short" });
-        cashFlow.push({ month: label, credit, debit });
-        netFlowTrend.push({ month: label, netFlow: credit - debit });
+        cashFlow.push({ month: label, credit, debit, txCount });
+        netFlowTrend.push({ month: label, netFlow: credit - debit, balance: runningBalance, txCount });
         cur.setMonth(cur.getMonth() + 1);
       }
     }
