@@ -530,7 +530,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                   {progress < 70
                     ? "Mengupload file..."
                     : progress < 100
-                      ? "Memproses transaksi di background..."
+                      ? "Memproses transaksi..."
                       : "Selesai"}
                 </span>
                 <span>{progress}%</span>
@@ -543,7 +543,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               </div>
               {progress >= 70 && progress < 100 && (
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  File besar diproses di background. Mohon tunggu...
+                  File besar diproses. Mohon tunggu...
                 </p>
               )}
             </div>
