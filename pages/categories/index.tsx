@@ -32,7 +32,6 @@ export default function Categories() {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [saving, setSaving] = useState(false);
-  const [reassigning, setReassigning] = useState(false);
   const { toastState, fire, confirm, close } = useToast();
 
   const fetchCategories = useCallback(async () => {
@@ -70,19 +69,6 @@ export default function Categories() {
     }
   };
 
-  const handleReassign = async () => {
-    setReassigning(true);
-    try {
-      const res = await axiosGlobal.post("/categories/reassign");
-      fire("success", "Re-assign selesai", { message: res.data.message, duration: 4000 });
-      fetchCategories();
-    } catch {
-      fire("error", "Gagal re-assign kategori");
-    } finally {
-      setReassigning(false);
-    }
-  };
-
   const handleDelete = async (cat: Category) => {
     const msg = cat.transactionCount > 0
       ? `"${cat.name}" digunakan oleh ${cat.transactionCount} transaksi. Transaksi tersebut akan menjadi "Lainnya".`
@@ -106,18 +92,6 @@ export default function Categories() {
       <div className="mb-5 flex items-center justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400">{loading ? "..." : `${categories.length} kategori`}</p>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleReassign}
-            disabled={reassigning || categories.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-          >
-            {reassigning ? (
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0115-3.87M20 15a9 9 0 01-15 3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            )}
-            Re-assign ke Transaksi
-          </button>
           <Link
             href="/categories/add"
             className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
