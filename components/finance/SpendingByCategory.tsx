@@ -11,24 +11,25 @@ const COLORS = ["#465FFF", "#12B76A", "#F79009", "#F04438", "#7A5AF8", "#0BA5EC"
 
 interface Props {
   data?: SpendingCategory[];
+  incomeData?: SpendingCategory[];
   loading?: boolean;
 }
 
-export default function SpendingByCategory({ data = [], loading }: Props) {
+export default function SpendingByCategory({ data = [], incomeData = [], loading }: Props) {
   const [view, setView] = useState<"donut" | "bar">("donut");
+  const [tab, setTab] = useState<"expense" | "income">("expense");
 
-  const sorted = [...data].sort((a, b) => b.amount - a.amount);
-  const displayed = sorted;
-  const total = data.reduce((a, b) => a + b.amount, 0);
-
-  const labels = displayed.map((d) => d.category);
-  const series = displayed.map((d) => d.amount);
+  const activeData = tab === "expense" ? data : incomeData;
+  const sorted = [...activeData].sort((a, b) => b.amount - a.amount);
+  const total = sorted.reduce((a, b) => a + b.amount, 0);
+  const labels = sorted.map((d) => d.category);
+  const series = sorted.map((d) => d.amount);
 
   const donutOptions: ApexOptions = {
     chart: { fontFamily: "Outfit, sans-serif", type: "donut", height: 240 },
     colors: COLORS,
     labels,
-    legend: { show: true, position: "bottom", fontFamily: "Outfit", fontSize: "12px" },
+    legend: { show: false },
     dataLabels: { enabled: false },
     plotOptions: {
       pie: {
@@ -36,6 +37,13 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
           size: "65%",
           labels: {
             show: true,
+            value: {
+              show: true,
+              fontSize: "13px",
+              fontFamily: "Outfit",
+              color: "#374151",
+              formatter: (val: string) => fmt(Number(val)),
+            },
             total: {
               show: true,
               label: "Total",
@@ -80,12 +88,40 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Pengeluaran per Kategori</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            {tab === "expense" ? "Pengeluaran" : "Pemasukan"} per Kategori
+          </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {data.length} kategori · Total {fmt(total)}
+            {sorted.length} kategori · Total {fmt(total)}
           </p>
         </div>
         <div className="flex items-end gap-3">
+          {/* Tab: Pengeluaran / Pemasukan */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <button
+                onClick={() => setTab("expense")}
+                className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                  tab === "expense"
+                    ? "bg-error-500 text-white"
+                    : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                Pengeluaran
+              </button>
+              <button
+                onClick={() => setTab("income")}
+                className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                  tab === "income"
+                    ? "bg-success-500 text-white"
+                    : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                Pemasukan
+              </button>
+            </div>
+          </div>
           {/* View toggle */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilan</label>
@@ -112,20 +148,19 @@ export default function SpendingByCategory({ data = [], loading }: Props) {
         <div className="h-[240px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
       ) : series.length === 0 ? (
         <div className="h-[240px] flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-          Belum ada data pengeluaran
+          Belum ada data {tab === "expense" ? "pengeluaran" : "pemasukan"}
         </div>
       ) : (
         <>
           <Chart
-            key={view}
+            key={`${view}-${tab}`}
             options={view === "donut" ? donutOptions : barOptions}
-            series={view === "donut" ? series : [{ name: "Pengeluaran", data: series }]}
+            series={view === "donut" ? series : [{ name: tab === "expense" ? "Pengeluaran" : "Pemasukan", data: series }]}
             type={view === "donut" ? "donut" : "bar"}
-            height={240}
+            height={280}
           />
-          {/* Detail list */}
           <div className="mt-3 space-y-1.5">
-            {displayed.map((d, i) => (
+            {sorted.map((d, i) => (
               <div key={d.category} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />

@@ -115,107 +115,100 @@ export default async function handler(
       )
       .slice(0, limit);
 
-    // Spending by category — aggregate DEBIT transactions
+    // Helper: aggregate category rows by type
     const catDateWhere = { gte: dateStart, lte: dateEnd };
-    const [bankCatRows, walletCatRows] = await Promise.all([
-      skipBank
-        ? Promise.resolve([])
-        : prisma.bankTransactionCategory.findMany({
-            where: {
-              transaction: {
+
+    const buildCatRows = async (type: "DEBIT" | "CREDIT") => {
+      const [bankRows, walletRows] = await Promise.all([
+        skipBank
+          ? Promise.resolve([])
+          : prisma.bankTransactionCategory.findMany({
+              where: {
+                transaction: {
+                  bankAccount: { ownerId: userId },
+                  type,
+                  transactionDate: catDateWhere,
+                  ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
+                },
+                ...(categoryId ? { categoryId } : {}),
+              },
+              include: {
+                transaction: { select: { amount: true } },
+                category: { select: { id: true, name: true } },
+              },
+            }),
+        skipWallet
+          ? Promise.resolve([])
+          : db.walletTransactionCategory.findMany({
+              where: {
+                transaction: {
+                  wallet: { ownerId: userId },
+                  type,
+                  transactionDate: catDateWhere,
+                  ...(accountId && !skipWallet ? { walletId: accountId } : {}),
+                },
+                ...(categoryId ? { categoryId } : {}),
+              },
+              include: {
+                transaction: { select: { amount: true } },
+                category: { select: { id: true, name: true } },
+              },
+            }),
+      ]);
+
+      const merge: Record<string, { name: string; amount: number; count: number }> = {};
+      for (const row of [...bankRows, ...walletRows]) {
+        const key = row.category.id;
+        if (!merge[key]) merge[key] = { name: row.category.name, amount: 0, count: 0 };
+        merge[key].amount += Number(row.transaction.amount);
+        merge[key].count += 1;
+      }
+
+      // Transaksi tanpa kategori → "Lainnya"
+      const [uncatBank, uncatWallet] = await Promise.all([
+        skipBank
+          ? Promise.resolve([])
+          : prisma.bankTransaction.findMany({
+              where: {
                 bankAccount: { ownerId: userId },
-                type: "DEBIT",
+                type,
                 transactionDate: catDateWhere,
                 ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
+                categories: { none: {} },
               },
-              ...(categoryId ? { categoryId } : {}),
-            },
-            include: {
-              transaction: { select: { amount: true } },
-              category: { select: { id: true, name: true } },
-            },
-          }),
-      skipWallet
-        ? Promise.resolve([])
-        : db.walletTransactionCategory.findMany({
-            where: {
-              transaction: {
+              select: { amount: true },
+            }),
+        skipWallet
+          ? Promise.resolve([])
+          : db.walletTransaction.findMany({
+              where: {
                 wallet: { ownerId: userId },
-                type: "DEBIT",
+                type,
                 transactionDate: catDateWhere,
                 ...(accountId && !skipWallet ? { walletId: accountId } : {}),
+                categories: { none: {} },
               },
-              ...(categoryId ? { categoryId } : {}),
-            },
-            include: {
-              transaction: { select: { amount: true } },
-              category: { select: { id: true, name: true } },
-            },
-          }),
+              select: { amount: true },
+            }),
+      ]);
+
+      const uncatTotal = [...uncatBank, ...uncatWallet].reduce(
+        (s: number, t: { amount: unknown }) => s + Number(t.amount), 0,
+      );
+      const uncatCount = uncatBank.length + uncatWallet.length;
+      if (uncatTotal > 0 && !categoryId) {
+        merge["__lainnya__"] = { name: "Lainnya", amount: uncatTotal, count: uncatCount };
+      }
+
+      return Object.entries(merge)
+        .map(([id, v]) => ({ id, category: v.name, amount: v.amount, count: v.count }))
+        .sort((a, b) => b.amount - a.amount);
+    };
+
+    const [spendingByCategory, incomeByCategory] = await Promise.all([
+      buildCatRows("DEBIT"),
+      buildCatRows("CREDIT"),
     ]);
-
-    const catMerge: Record<
-      string,
-      { name: string; amount: number; count: number }
-    > = {};
-    for (const row of [...bankCatRows, ...walletCatRows]) {
-      const key = row.category.id;
-      if (!catMerge[key])
-        catMerge[key] = { name: row.category.name, amount: 0, count: 0 };
-      catMerge[key].amount += Number(row.transaction.amount);
-      catMerge[key].count += 1;
-    }
-
-    // Hitung transaksi DEBIT yang tidak punya kategori → masuk "Lainnya"
-    const [uncatBankRows, uncatWalletRows] = await Promise.all([
-      skipBank
-        ? Promise.resolve([])
-        : prisma.bankTransaction.findMany({
-            where: {
-              bankAccount: { ownerId: userId },
-              type: "DEBIT",
-              transactionDate: catDateWhere,
-              ...(accountId && !skipBank ? { bankAccountId: accountId } : {}),
-              categories: { none: {} },
-            },
-            select: { amount: true },
-          }),
-      skipWallet
-        ? Promise.resolve([])
-        : db.walletTransaction.findMany({
-            where: {
-              wallet: { ownerId: userId },
-              type: "DEBIT",
-              transactionDate: catDateWhere,
-              ...(accountId && !skipWallet ? { walletId: accountId } : {}),
-              categories: { none: {} },
-            },
-            select: { amount: true },
-          }),
-    ]);
-
-    const uncatTotal = [...uncatBankRows, ...uncatWalletRows].reduce(
-      (s: number, t: { amount: unknown }) => s + Number(t.amount),
-      0,
-    );
-    const uncatCount = uncatBankRows.length + uncatWalletRows.length;
-
-    if (uncatTotal > 0 && !categoryId) {
-      catMerge["__lainnya__"] = {
-        name: "Lainnya",
-        amount: uncatTotal,
-        count: uncatCount,
-      };
-    }
-
-    const spendingByCategory = Object.entries(catMerge)
-      .map(([id, v]) => ({
-        id,
-        category: v.name,
-        amount: v.amount,
-        count: v.count,
-      }))
-      .sort((a, b) => b.amount - a.amount);
 
     const recentTransactions = recentTx.map((t: any) => ({
       id: t.id,
@@ -234,7 +227,7 @@ export default async function handler(
       reference: t.reference,
     }));
 
-    return res.status(200).json({ recentTransactions, spendingByCategory });
+    return res.status(200).json({ recentTransactions, spendingByCategory, incomeByCategory });
   } catch (error) {
     console.error("transactions error:", error);
     return res.status(500).json({ message: "Internal server error" });

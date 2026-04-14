@@ -24,6 +24,7 @@ interface DashboardState {
   netFlowTrend: NetFlowPoint[];
   bankAccounts: BankAccountBalance[];
   spendingByCategory: SpendingCategory[];
+  incomeByCategory: SpendingCategory[];
   recentTransactions: RecentTransaction[];
 }
 
@@ -68,6 +69,7 @@ export default function Home() {
     netFlowTrend: [],
     bankAccounts: [],
     spendingByCategory: [],
+    incomeByCategory: [],
     recentTransactions: [],
   });
 
@@ -158,6 +160,7 @@ export default function Home() {
         ...prev,
         recentTransactions: res.data.recentTransactions,
         spendingByCategory: res.data.spendingByCategory,
+        incomeByCategory: res.data.incomeByCategory ?? [],
       }));
       setErrors((prev) => ({ ...prev, transactions: undefined }));
     } catch {
@@ -272,10 +275,10 @@ export default function Home() {
           />
         </div>
 
-        {/* Spending */}
         <div className="col-span-12 xl:col-span-8">
           <SpendingByCategory
             data={data.spendingByCategory}
+            incomeData={data.incomeByCategory}
             loading={loading.transactions}
           />
         </div>
