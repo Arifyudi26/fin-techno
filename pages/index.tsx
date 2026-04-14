@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageMeta from "@components/common/PageMeta";
 import FinanceMetrics from "@components/finance/FinanceMetrics";
-import CashFlowChart from "@components/finance/CashFlowChart";
+import FinanceTrendChart from "@/components/finance/FinanceTrendChart";
 import SpendingByCategory from "@components/finance/SpendingByCategory";
 import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
@@ -255,9 +255,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Cash Flow + Accounts */}
-        <div className="col-span-12 xl:col-span-8">
-          <CashFlowChart
+        <div className="col-span-12">
+          <FinanceTrendChart
             data={data.cashFlow}
             netFlowTrend={data.netFlowTrend}
             loading={loading.cashflow}
@@ -274,7 +273,7 @@ export default function Home() {
         </div>
 
         {/* Spending */}
-        <div className="col-span-12 xl:col-span-5">
+        <div className="col-span-12 xl:col-span-8">
           <SpendingByCategory
             data={data.spendingByCategory}
             loading={loading.transactions}

@@ -1,6 +1,7 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { CashFlowMonth, NetFlowPoint } from "@/lib/types/dashboard";
+import { multiSeriestooltip } from "@/lib/apexTooltip";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -12,7 +13,7 @@ interface Props {
   periodLabel?: string;
 }
 
-export default function CashFlowChart({ data = [], netFlowTrend = [], loading, periodLabel }: Props) {
+export default function FinanceTrendChart({ data = [], netFlowTrend = [], loading, periodLabel }: Props) {
   const categories = netFlowTrend.length > 0
     ? netFlowTrend.map((d) => d.month)
     : data.map((d) => d.month);
@@ -51,13 +52,7 @@ export default function CashFlowChart({ data = [], netFlowTrend = [], loading, p
       },
     },
     fill: { opacity: [1, 1, 1, 1, 1] },
-    legend: {
-      show: true,
-      position: "top",
-      horizontalAlign: "left",
-      fontFamily: "Outfit",
-      fontSize: "12px",
-    },
+    legend: { show: false },
     xaxis: {
       categories,
       axisBorder: { show: false },
@@ -97,6 +92,13 @@ export default function CashFlowChart({ data = [], netFlowTrend = [], loading, p
       shared: true,
       intersect: false,
       style: { fontFamily: "Outfit, sans-serif" },
+      custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number }) => {
+        const colors  = ["#12B76A", "#F04438", "#465FFF", "#F79009", "#7C3AED"];
+        const names   = ["Pemasukan", "Pengeluaran", "Net Flow", "Saldo", "Transaksi"];
+        // Transaksi (index 4) bukan currency
+        const isCurrency = [true, true, true, true, false];
+        return multiSeriestooltip(series, dataPointIndex, names, colors, isCurrency, 200);
+      },
     },
   };
 
@@ -113,7 +115,7 @@ export default function CashFlowChart({ data = [], netFlowTrend = [], loading, p
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Cash Flow</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Tren Keuangan</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">{periodLabel ?? "Ringkasan keuangan"}</p>
         </div>
       </div>
