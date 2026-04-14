@@ -78,8 +78,8 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
     yaxis: { labels: { style: { fontSize: "11px" } } },
     grid: { xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
     tooltip: {
-      custom: ({ series, seriesIndex, w }: { series: number[][]; seriesIndex: number; w: { globals: { colors: string[] } } }) =>
-        singleSeriesTooltip(series[0][seriesIndex] ?? 0, labels[seriesIndex] ?? "", w.globals.colors[seriesIndex] ?? COLORS[0]),
+      custom: ({ series, dataPointIndex, w }: { series: number[][]; dataPointIndex: number; w: { globals: { colors: string[] } } }) =>
+        singleSeriesTooltip(series[0][dataPointIndex] ?? 0, labels[dataPointIndex] ?? "", w.globals.colors[dataPointIndex] ?? COLORS[0]),
       marker: { show: false },
     },
   };
