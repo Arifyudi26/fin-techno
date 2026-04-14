@@ -35,14 +35,22 @@ interface LoadingState {
   transactions: boolean;
 }
 
-const DEFAULT_FILTERS: IFilters = {
-  dateFrom: null,
-  dateTo: null,
-  accountId: null,
-  accountType: null,
-  categoryId: null,
-  txType: null,
-};
+function getDefaultFilters(): IFilters {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dateFrom = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+  const dateTo = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return {
+    dateFrom,
+    dateTo,
+    accountId: null,
+    accountType: null,
+    categoryId: null,
+    txType: null,
+  };
+}
+
+const DEFAULT_FILTERS: IFilters = getDefaultFilters();
 
 function buildParams(
   filters: IFilters,
