@@ -110,7 +110,7 @@ export default function WalletsPage() {
 
   return (
     <AppLayout>
-      <PageMeta title="Dompet Digital | MyFinance" description="Kelola dompet digital yang terhubung" />
+      <PageMeta title="Dompet Digital | Fin-Techno" description="Kelola dompet digital yang terhubung" />
       <PageBreadcrumb pageTitle="Dompet Digital" />
 
       <div className="mb-5 flex items-center justify-between">

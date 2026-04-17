@@ -4,13 +4,11 @@ import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
+import { Modal } from "@components/ui/modal";
+import { useModal } from "@lib/hooks/useModal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
-import { fmtDate } from "@/lib/utils";
-import dynamic from "next/dynamic";
-
-const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -24,6 +22,16 @@ function getDefaultDateRange() {
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
 
+const fmtDateIndo = (dateStr: string) => {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+};
+
+
+// Month names in Indonesian
+const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
 interface Tx {
   id: string;
   source: "BANK" | "WALLET";
@@ -33,6 +41,7 @@ interface Tx {
   type: "CREDIT" | "DEBIT";
   amount: number;
   balance: number | null;
+  categories: { name: string; code: string }[];
   category: string;
   accountName: string;
   provider: string;
@@ -40,6 +49,15 @@ interface Tx {
 }
 
 interface Summary { totalCredit: number; totalDebit: number; netFlow: number; }
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">{label}</span>
+      <span className={`text-sm text-gray-800 dark:text-white/90 text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
+  );
+}
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
@@ -53,9 +71,27 @@ export default function Transactions() {
   const DEFAULT_FILTERS = { type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1, limit: 10 };
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
+  // Month picker state
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  // Transaction detail modal
+  const { isOpen: isTxOpen, openModal: openTxDetail, closeModal: closeTxDetail } = useModal();
+  const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
+
   useEffect(() => {
     setFilters((p) => ({ ...p, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
+
+  // Sync month picker → date filters
+  useEffect(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const dateFrom = `${selectedYear}-${pad(selectedMonth + 1)}-01`;
+    const dateTo = `${selectedYear}-${pad(selectedMonth + 1)}-${pad(lastDay)}`;
+    setFilters((p) => ({ ...p, dateFrom, dateTo, page: 1 }));
+  }, [selectedMonth, selectedYear]);
 
   const fetchTx = useCallback(async () => {
     setLoading(true);
@@ -86,9 +122,30 @@ export default function Transactions() {
   const setFilter = (key: string, value: string | number) =>
     setFilters((p) => ({ ...p, [key]: value, page: key !== "page" ? 1 : (value as number) }));
 
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear((y) => y - 1); }
+    else setSelectedMonth((m) => m - 1);
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear((y) => y + 1); }
+    else setSelectedMonth((m) => m + 1);
+  };
+
+  const handleReset = () => {
+    const n = new Date();
+    setSelectedMonth(n.getMonth());
+    setSelectedYear(n.getFullYear());
+    setSearchInput("");
+    setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", page: 1 }));
+  };
+
+  const isDefaultMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+  const hasActiveFilter = filters.type !== "ALL" || filters.source !== "ALL" || filters.search || !isDefaultMonth;
+
   return (
     <AppLayout>
-      <PageMeta title="Semua Transaksi | MyFinance" description="Daftar semua transaksi dari seluruh rekening" />
+      <PageMeta title="Semua Transaksi | Fin-Techno" description="Daftar semua transaksi dari seluruh rekening" />
       <PageBreadcrumb pageTitle="Semua Transaksi" />
 
       {/* Summary */}
@@ -128,9 +185,9 @@ export default function Transactions() {
       <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
-          {(filters.type !== "ALL" || filters.source !== "ALL" || filters.search || filters.dateFrom !== getDefaultDateRange().dateFrom || filters.dateTo !== getDefaultDateRange().dateTo) && (
+          {hasActiveFilter && (
             <button
-              onClick={() => { setSearchInput(""); setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1 })); }}
+              onClick={handleReset}
               className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
             >
               Reset Filter
@@ -154,6 +211,23 @@ export default function Transactions() {
               />
             </div>
           </div>
+
+          {/* Bulan */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Bulan</label>
+            <div className="flex items-center h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+              <button onClick={handlePrevMonth} className="h-full px-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <span className="flex-1 text-center text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                {MONTHS[selectedMonth].slice(0, 3)} {selectedYear}
+              </span>
+              <button onClick={handleNextMonth} className="h-full px-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
+          </div>
+
           {/* Tipe */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
@@ -163,6 +237,7 @@ export default function Transactions() {
               <option value="DEBIT">Pengeluaran</option>
             </select>
           </div>
+
           {/* Sumber */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sumber</label>
@@ -172,22 +247,6 @@ export default function Transactions() {
               <option value="WALLET">Dompet Digital</option>
             </select>
           </div>
-          {/* Dari Tanggal */}
-          <DatePicker
-            id="tx-filter-from"
-            label="Dari Tanggal"
-            placeholder="dd/mm/yyyy"
-            value={filters.dateFrom}
-            onChange={(v) => setFilter("dateFrom", v)}
-          />
-          {/* Sampai Tanggal */}
-          <DatePicker
-            id="tx-filter-to"
-            label="Sampai Tanggal"
-            placeholder="dd/mm/yyyy"
-            value={filters.dateTo}
-            onChange={(v) => setFilter("dateTo", v)}
-          />
         </div>
       </div>
 
@@ -195,6 +254,7 @@ export default function Transactions() {
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">{total} transaksi ditemukan</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{MONTHS[selectedMonth]} {selectedYear}</p>
         </div>
         {loading ? (
           <div className="p-5 space-y-3">
@@ -216,8 +276,14 @@ export default function Transactions() {
                     <TableCell className="py-12 text-center text-sm text-gray-400" colSpan={7}>Tidak ada transaksi</TableCell>
                   </TableRow>
                 ) : transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</TableCell>
+                  <TableRow
+                    key={tx.id}
+                    className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
+                    onClick={() => { setSelectedTx(tx); openTxDetail(); }}
+                  >
+                    <TableCell className="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {new Date(tx.date + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                    </TableCell>
                     <TableCell className="py-3 px-4">
                       <p className="text-sm font-medium text-gray-800 dark:text-white/90 max-w-[200px] truncate">{tx.description}</p>
                       {tx.reference && <p className="text-xs text-gray-400">{tx.reference}</p>}
@@ -247,7 +313,6 @@ export default function Transactions() {
           </div>
         )}
 
-        {/* Pagination */}
         <Pagination
           page={filters.page}
           totalPages={totalPages}
@@ -257,6 +322,56 @@ export default function Transactions() {
           onLimitChange={(l) => setFilter("limit", l)}
         />
       </div>
+
+      {/* Transaction Detail Modal */}
+      <Modal isOpen={isTxOpen} onClose={closeTxDetail} className="max-w-[480px] p-6">
+        {selectedTx && (
+          <div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${selectedTx.type === "CREDIT" ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={selectedTx.type === "CREDIT" ? "text-success-600" : "text-error-600"}>
+                  {selectedTx.type === "CREDIT"
+                    ? <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    : <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  }
+                </svg>
+              </div>
+              <div>
+                <p className={`text-xl font-bold ${selectedTx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>
+                  {selectedTx.type === "CREDIT" ? "+" : "-"}{formatIDR(selectedTx.amount)}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{selectedTx.type === "CREDIT" ? "Pemasukan" : "Pengeluaran"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <DetailRow label="Keterangan" value={selectedTx.description} />
+              <DetailRow label="Tanggal" value={fmtDateIndo(selectedTx.date)} />
+              {selectedTx.categories.length > 0 && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">Kategori</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {selectedTx.categories.map((c, i) => (
+                      <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">{c.name}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <DetailRow label="Rekening" value={`${selectedTx.accountName}`} />
+              <DetailRow label="Provider" value={selectedTx.provider} />
+              <DetailRow label="Sumber" value={selectedTx.source === "WALLET" ? "Dompet Digital" : "Bank"} />
+              {selectedTx.reference && <DetailRow label="Referensi" value={selectedTx.reference} mono />}
+              {selectedTx.balance != null && <DetailRow label="Saldo Akhir" value={formatIDR(selectedTx.balance)} />}
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
+                <Badge size="sm" color={selectedTx.status === "VERIFIED" ? "success" : "warning"}>
+                  {selectedTx.status === "VERIFIED" ? "Verified" : "Pending"}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </AppLayout>
   );
 }

@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <>
       <PageMeta
-        title="404 Not Found | MyFinance"
+        title="404 Not Found | Fin-Techno"
         description="Halaman tidak ditemukan"
       />
       <div className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden bg-white dark:bg-gray-900">
@@ -41,7 +41,7 @@ export default function NotFound() {
           </Link>
         </div>
         <p className="absolute text-sm text-center text-gray-500 -translate-x-1/2 bottom-6 left-1/2 dark:text-gray-400">
-          &copy; {new Date().getFullYear()} - MyFinance
+          &copy; {new Date().getFullYear()} - Fin-Techno
         </p>
       </div>
     </>

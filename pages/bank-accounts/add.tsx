@@ -45,7 +45,7 @@ export default function AddBankAccount() {
 
   return (
     <AppLayout>
-      <PageMeta title="Tambah Rekening | MyFinance" description="Daftarkan rekening bank baru" />
+      <PageMeta title="Tambah Rekening | Fin-Techno" description="Daftarkan rekening bank baru" />
       <PageBreadcrumb pageTitle="Tambah Rekening" />
       <div className="max-w-lg">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">

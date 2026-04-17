@@ -1,22 +1,29 @@
 import { useState, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput, EventClickArg, DatesSetArg } from "@fullcalendar/core";
+import { DatesSetArg } from "@fullcalendar/core";
 import idLocale from "@fullcalendar/core/locales/id";
 import AppLayout from "@components/layout/AppLayout";
 import { Modal } from "@components/ui/modal";
 import { useModal } from "@lib/hooks/useModal";
 import PageMeta from "@components/common/PageMeta";
+import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
 
-interface CalendarEvent extends EventInput {
-  extendedProps: { calendar: string };
-}
-
-interface TxEvent extends EventInput {
-  extendedProps: { isTx: true; type: "CREDIT" | "DEBIT"; amount: number; description: string; category: string; provider: string };
+interface TxDetail {
+  id: string;
+  datetime: string;
+  type: "CREDIT" | "DEBIT";
+  amount: number;
+  description: string;
+  reference: string | null;
+  balance: number | null;
+  status: string;
+  provider: string;
+  accountName: string;
+  source: "BANK" | "WALLET";
+  categories: { name: string }[];
 }
 
 interface DaySummary {
@@ -24,58 +31,39 @@ interface DaySummary {
   totalCredit: number;
   totalDebit: number;
   count: number;
-  transactions: { id: string; datetime: string; type: string; amount: number; description: string }[];
+  transactions: TxDetail[];
 }
-
-interface Tx {
-  id: string;
-  date: string;
-  description: string;
-  type: "CREDIT" | "DEBIT";
-  amount: number;
-  category: string;
-  provider: string;
-}
-
-const calendarsEvents = { Danger: "danger", Success: "success", Primary: "primary", Warning: "warning" };
-
-const fmtDateIndo = (dateStr: string) => {
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-};
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
 
+const fmtDateIndo = (dateStr: string) => {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+};
+
+const fmtTime = (isoStr: string) => {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+};
+
 const toLocalDateStr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-
 export default function Calendar() {
-  const [manualEvents, setManualEvents] = useState<CalendarEvent[]>([]);
-  const [txEvents, setTxEvents] = useState<TxEvent[]>([]);
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const calendarRef = useRef<FullCalendar>(null);
+  const summaryMapRef = useRef<Record<string, DaySummary>>({});
 
-  // Add event modal
-  const { isOpen: isAddOpen, openModal: openAdd, closeModal: closeAdd } = useModal();
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventStartDate, setEventStartDate] = useState("");
-  const [eventEndDate, setEventEndDate] = useState("");
-  const [eventLevel, setEventLevel] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  // Day list modal
+  const { isOpen: isDayOpen, openModal: openDay, closeModal: closeDay } = useModal();
+  const [selectedDate, setSelectedDate] = useState("");
+  const [dayTxs, setDayTxs] = useState<TxDetail[]>([]);
 
   // Transaction detail modal
-  const { isOpen: isTxOpen, openModal: openTx, closeModal: closeTx } = useModal();
-  const [selectedDate, setSelectedDate] = useState("");
-  const [dayTxs, setDayTxs] = useState<Tx[]>([]);
-  const [txLoading, setTxLoading] = useState(false);
-
-  const summaryMap = Object.fromEntries(daySummaries.map((s) => [s.date, s]));
-  const summaryMapRef = useRef(summaryMap);
-  summaryMapRef.current = summaryMap;
+  const { isOpen: isTxOpen, openModal: openTxDetail, closeModal: closeTxDetail } = useModal();
+  const [selectedTx, setSelectedTx] = useState<TxDetail | null>(null);
 
   const fetchSummaries = async (from: string, to: string) => {
     setSummaryLoading(true);
@@ -83,36 +71,10 @@ export default function Calendar() {
       const res = await axiosGlobal.get(`/calendar?dateFrom=${from}&dateTo=${to}`);
       const data: DaySummary[] = res.data;
       setDaySummaries(data);
-
-      // Build tx events untuk timeGrid (week/day) — posisi di slot waktu
-      const newTxEvents: TxEvent[] = [];
-      data.forEach((day) => {
-        day.transactions.forEach((t) => {
-          newTxEvents.push({
-            id: `tx-${t.id}`,
-            title: `${t.type === "CREDIT" ? "+" : "-"}${fmt(t.amount)}`,
-            start: t.datetime,
-            end: new Date(new Date(t.datetime).getTime() + 30 * 60 * 1000).toISOString(),
-            allDay: false,
-            display: "block",
-            backgroundColor: t.type === "CREDIT" ? "#dcfce7" : "#fee2e2",
-            borderColor: t.type === "CREDIT" ? "#16a34a" : "#dc2626",
-            textColor: t.type === "CREDIT" ? "#15803d" : "#b91c1c",
-            extendedProps: {
-              isTx: true,
-              type: t.type as "CREDIT" | "DEBIT",
-              amount: t.amount,
-              description: t.description,
-              category: "",
-              provider: "",
-            },
-          });
-        });
-      });
-      setTxEvents(newTxEvents);
+      summaryMapRef.current = Object.fromEntries(data.map((s) => [s.date, s]));
     } catch {
       setDaySummaries([]);
-      setTxEvents([]);
+      summaryMapRef.current = {};
     } finally {
       setSummaryLoading(false);
     }
@@ -124,72 +86,24 @@ export default function Calendar() {
     fetchSummaries(from, to);
   };
 
-  const openDayTxModal = async (dateStr: string) => {
+  const openDayModal = (dateStr: string) => {
+    const summary = summaryMapRef.current[dateStr];
+    if (!summary) return;
     setSelectedDate(dateStr);
-    setTxLoading(true);
-    openTx();
-    try {
-      const res = await axiosGlobal.get(`/transactions?dateFrom=${dateStr}&dateTo=${dateStr}&limit=100`);
-      setDayTxs(res.data.transactions);
-    } catch {
-      setDayTxs([]);
-    } finally {
-      setTxLoading(false);
-    }
+    setDayTxs(summary.transactions.sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()));
+    openDay();
   };
 
-  // dateClick hanya untuk month view — hanya jika ada data
-  const handleDateClick = (info: { dateStr: string }) => {
-    const dateStr = info.dateStr.split("T")[0];
-    if (!summaryMapRef.current[dateStr]) return;
-    openDayTxModal(dateStr);
+  const handleTxClick = (tx: TxDetail) => {
+    setSelectedTx(tx);
+    openTxDetail();
   };
 
-  // klik tx event di week/day view
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = clickInfo.event;
-    if (event.extendedProps.isTx) {
-      const dateStr = toLocalDateStr(event.start!);
-      openDayTxModal(dateStr);
-      return;
-    }
-    // manual event
-    setSelectedEvent(event as unknown as CalendarEvent);
-    setEventTitle(event.title);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
-    setEventLevel(event.extendedProps.calendar);
-    openAdd();
-  };
-
-  const resetAddFields = () => {
-    setEventTitle(""); setEventStartDate(""); setEventEndDate("");
-    setEventLevel(""); setSelectedEvent(null);
-  };
-
-  const handleAddOrUpdate = () => {
-    if (selectedEvent) {
-      setManualEvents((prev) =>
-        prev.map((e) =>
-          e.id === selectedEvent.id
-            ? { ...e, title: eventTitle, start: eventStartDate, end: eventEndDate, extendedProps: { calendar: eventLevel } }
-            : e
-        )
-      );
-    } else {
-      setManualEvents((prev) => [
-        ...prev,
-        { id: Date.now().toString(), title: eventTitle, start: eventStartDate, end: eventEndDate, allDay: true, extendedProps: { calendar: eventLevel } },
-      ]);
-    }
-    closeAdd();
-    resetAddFields();
-  };
-
+  const summaryMap = Object.fromEntries(daySummaries.map((s) => [s.date, s]));
 
   return (
     <AppLayout>
-      <PageMeta title="Calendar" description="Calendar with transaction overview" />
+      <PageMeta title="Kalender Transaksi" description="Kalender ringkasan transaksi harian" />
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="custom-calendar relative">
           {summaryLoading && (
@@ -198,40 +112,13 @@ export default function Calendar() {
             </div>
           )}
           <FullCalendar
-            ref={calendarRef}
             locale={idLocale}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            plugins={[dayGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next addEventButton",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
-            events={[...manualEvents, ...txEvents]}
+            headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
             selectable={false}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
+            dateClick={(info) => openDayModal(info.dateStr.split("T")[0])}
             datesSet={handleDatesSet}
-            eventContent={(eventInfo) => {
-              if (eventInfo.event.extendedProps.isTx) {
-                return (
-                  <div className="px-1 py-0.5 text-[11px] font-medium truncate cursor-pointer" style={{ color: eventInfo.event.textColor ?? undefined }}>
-                    {eventInfo.event.title}
-                    {eventInfo.event.extendedProps.description && (
-                      <span className="ml-1 opacity-70 truncate">{eventInfo.event.extendedProps.description}</span>
-                    )}
-                  </div>
-                );
-              }
-              const colorClass = `fc-bg-${(eventInfo.event.extendedProps.calendar ?? "primary").toLowerCase()}`;
-              return (
-                <div className={`event-fc-color flex fc-event-main ${colorClass} p-1 rounded`}>
-                  <div className="fc-daygrid-event-dot"></div>
-                  <div className="fc-event-time">{eventInfo.timeText}</div>
-                  <div className="fc-event-title">{eventInfo.event.title}</div>
-                </div>
-              );
-            }}
             dayCellContent={(arg) => {
               const dateStr = toLocalDateStr(arg.date);
               const s = summaryMap[dateStr];
@@ -255,149 +142,127 @@ export default function Calendar() {
                 </div>
               );
             }}
-            dayHeaderContent={(arg) => {
-              const d = arg.date;
-              const dateStr = toLocalDateStr(d);
-              const s = summaryMapRef.current[dateStr];
-              const isTimeGrid = arg.view.type === "timeGridWeek" || arg.view.type === "timeGridDay";
-              if (!isTimeGrid) return <>{arg.text}</>;
-              return (
-                <div
-                  className={`flex flex-col items-center py-1 w-full ${s ? "cursor-pointer" : "cursor-default"}`}
-                  onClick={() => s && openDayTxModal(dateStr)}
-                >
-                  <span className="text-sm font-medium">{arg.text}</span>
-                  {s && (
-                    <div className="flex gap-2 mt-0.5">
-                      {s.totalCredit > 0 && (
-                        <span className="text-[10px] font-medium text-success-600 dark:text-success-400">
-                          +{fmt(s.totalCredit)}
-                        </span>
-                      )}
-                      {s.totalDebit > 0 && (
-                        <span className="text-[10px] font-medium text-error-500 dark:text-error-400">
-                          -{fmt(s.totalDebit)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            }}
-            customButtons={{
-              addEventButton: {
-                text: "Add Event +",
-                click: () => { resetAddFields(); openAdd(); },
-              },
-            }}
           />
         </div>
 
-        {/* Add / Edit Event Modal */}
-        <Modal isOpen={isAddOpen} onClose={() => { closeAdd(); resetAddFields(); }} className="max-w-[700px] p-6 lg:p-10">
-          <div className="flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <h5 className="mb-2 font-semibold text-gray-800 dark:text-white/90 text-theme-xl lg:text-2xl">
-              {selectedEvent ? "Edit Event" : "Add Event"}
-            </h5>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Jadwalkan atau edit event untuk tetap on track</p>
-            <div className="space-y-6">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Event Title</label>
-                <input type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
-              </div>
-              <div>
-                <label className="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-400">Event Color</label>
-                <div className="flex flex-wrap gap-4">
-                  {Object.entries(calendarsEvents).map(([key]) => (
-                    <label key={key} className="flex items-center text-sm text-gray-700 dark:text-gray-400 cursor-pointer" htmlFor={`modal${key}`}>
-                      <span className="relative mr-2">
-                        <input className="sr-only" type="radio" name="event-level" value={key} id={`modal${key}`} checked={eventLevel === key} onChange={() => setEventLevel(key)} />
-                        <span className="flex items-center justify-center w-5 h-5 border border-gray-300 rounded-full dark:border-gray-700">
-                          <span className="w-2 h-2 bg-white rounded-full dark:bg-transparent"></span>
-                        </span>
-                      </span>
-                      {key}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Start Date</label>
-                <input type="date" value={eventStartDate} onChange={(e) => setEventStartDate(e.target.value)}
-                  className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">End Date</label>
-                <input type="date" value={eventEndDate} onChange={(e) => setEventEndDate(e.target.value)}
-                  className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-              </div>
-            </div>
-            <div className="flex items-center gap-3 mt-6 sm:justify-end">
-              <button onClick={() => { closeAdd(); resetAddFields(); }} className="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] sm:w-auto">
-                Batal
-              </button>
-              <button onClick={handleAddOrUpdate} className="flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto">
-                {selectedEvent ? "Update" : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Transaction Detail Modal */}
-        <Modal isOpen={isTxOpen} onClose={closeTx} className="max-w-[600px] p-6">
+        {/* Day Transactions Modal */}
+        <Modal isOpen={isDayOpen} onClose={closeDay} className="max-w-[560px] p-6">
           <div className="flex flex-col max-h-[80vh]">
-            <h5 className="font-semibold text-gray-800 dark:text-white/90 text-lg mb-4">
-              Transaksi — {fmtDateIndo(selectedDate)}
+            <h5 className="font-semibold text-gray-800 dark:text-white/90 text-lg mb-1">
+              {fmtDateIndo(selectedDate)}
             </h5>
-            {txLoading ? (
-              <div className="flex justify-center py-10 text-sm text-gray-400">Memuat...</div>
-            ) : dayTxs.length === 0 ? (
+            {dayTxs.length > 0 && (() => {
+              const credit = dayTxs.filter(t => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0);
+              const debit = dayTxs.filter(t => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
+              return (
+                <div className="flex gap-3 mb-4 mt-3">
+                  <div className="flex-1 rounded-lg bg-success-50 dark:bg-success-500/10 px-3 py-2">
+                    <p className="text-xs text-success-600 dark:text-success-400 font-medium">Pemasukan</p>
+                    <p className="text-sm font-semibold text-success-700 dark:text-success-300">+{fmt(credit)}</p>
+                  </div>
+                  <div className="flex-1 rounded-lg bg-error-50 dark:bg-error-500/10 px-3 py-2">
+                    <p className="text-xs text-error-600 dark:text-error-400 font-medium">Pengeluaran</p>
+                    <p className="text-sm font-semibold text-error-700 dark:text-error-300">-{fmt(debit)}</p>
+                  </div>
+                </div>
+              );
+            })()}
+            {dayTxs.length === 0 ? (
               <div className="flex flex-col items-center py-10 text-sm text-gray-400 dark:text-gray-500">
                 <span className="text-3xl mb-2">📭</span>
                 Tidak ada transaksi di tanggal ini
               </div>
             ) : (
-              <>
-                {(() => {
-                  const credit = dayTxs.filter(t => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0);
-                  const debit = dayTxs.filter(t => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
-                  return (
-                    <div className="flex gap-3 mb-4">
-                      <div className="flex-1 rounded-lg bg-success-50 dark:bg-success-500/10 px-3 py-2">
-                        <p className="text-xs text-success-600 dark:text-success-400 font-medium">Pemasukan</p>
-                        <p className="text-sm font-semibold text-success-700 dark:text-success-300">{fmt(credit)}</p>
+              <div className="overflow-y-auto flex-1 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {dayTxs.map((tx) => (
+                  <button
+                    key={tx.id}
+                    onClick={() => handleTxClick(tx)}
+                    className="w-full flex items-center justify-between rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${tx.type === "CREDIT" ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={tx.type === "CREDIT" ? "text-success-600" : "text-error-600"}>
+                          {tx.type === "CREDIT"
+                            ? <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            : <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          }
+                        </svg>
                       </div>
-                      <div className="flex-1 rounded-lg bg-error-50 dark:bg-error-500/10 px-3 py-2">
-                        <p className="text-xs text-error-600 dark:text-error-400 font-medium">Pengeluaran</p>
-                        <p className="text-sm font-semibold text-error-700 dark:text-error-300">{fmt(debit)}</p>
-                      </div>
-                    </div>
-                  );
-                })()}
-                <div className="overflow-y-auto flex-1 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {dayTxs.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2.5">
-                      <div className="flex-1 min-w-0 mr-3">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{tx.description}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">{tx.category} · {tx.provider}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{fmtTime(tx.datetime)} · {tx.provider}</p>
                       </div>
-                      <span className={`text-sm font-semibold whitespace-nowrap ${tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-500 dark:text-error-400"}`}>
-                        {tx.type === "CREDIT" ? "+" : "-"}{fmt(tx.amount)}
-                      </span>
                     </div>
-                  ))}
-                </div>
-              </>
+                    <span className={`text-sm font-semibold whitespace-nowrap ml-3 ${tx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-500 dark:text-error-400"}`}>
+                      {tx.type === "CREDIT" ? "+" : "-"}{fmt(tx.amount)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
-            <div className="mt-4 flex justify-end">
-              <button onClick={closeTx} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
-                Tutup
-              </button>
-            </div>
           </div>
+        </Modal>
+
+        {/* Transaction Detail Modal */}
+        <Modal isOpen={isTxOpen} onClose={closeTxDetail} className="max-w-[480px] p-6">
+          {selectedTx && (
+            <div>
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${selectedTx.type === "CREDIT" ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={selectedTx.type === "CREDIT" ? "text-success-600" : "text-error-600"}>
+                    {selectedTx.type === "CREDIT"
+                      ? <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      : <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    }
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-xl font-bold ${selectedTx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>
+                    {selectedTx.type === "CREDIT" ? "+" : "-"}{fmt(selectedTx.amount)}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{selectedTx.type === "CREDIT" ? "Pemasukan" : "Pengeluaran"}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <DetailRow label="Keterangan" value={selectedTx.description} />
+                <DetailRow label="Tanggal" value={fmtDateIndo(selectedTx.datetime.split("T")[0])} />
+                <DetailRow label="Jam" value={fmtTime(selectedTx.datetime)} />
+                <DetailRow label="Rekening" value={`${selectedTx.accountName} (${selectedTx.provider})`} />
+                <DetailRow label="Sumber" value={selectedTx.source === "WALLET" ? "Dompet Digital" : "Bank"} />
+                {selectedTx.categories.length > 0 && (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">Kategori</span>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {selectedTx.categories.map((c, i) => (
+                        <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">{c.name}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedTx.reference && <DetailRow label="Referensi" value={selectedTx.reference} mono />}
+                {selectedTx.balance != null && <DetailRow label="Saldo Akhir" value={fmt(selectedTx.balance)} />}
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
+                  <Badge size="sm" color={selectedTx.status === "VERIFIED" ? "success" : "warning"}>
+                    {selectedTx.status === "VERIFIED" ? "Verified" : "Pending"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
         </Modal>
       </div>
     </AppLayout>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">{label}</span>
+      <span className={`text-sm text-gray-800 dark:text-white/90 text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
   );
 }

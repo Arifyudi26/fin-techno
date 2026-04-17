@@ -6,8 +6,8 @@ export default function Register() {
   return (
     <>
       <PageMeta
-        title="Sign Up | MyFinance"
-        description="Create your MyFinance account"
+        title="Sign Up | Fin-Techno"
+        description="Create your Fin-Techno account"
       />
       <AuthLayout>
         <SignUpForm />

@@ -228,7 +228,7 @@ export default function Home() {
   return (
     <AppLayout>
       <PageMeta
-        title="Dashboard Keuangan | MyFinance"
+        title="Dashboard Keuangan | Fin-Techno"
         description="Overview keuangan — pemasukan, pengeluaran, dan net flow dari semua rekening"
       />
 

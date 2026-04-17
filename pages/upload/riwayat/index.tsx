@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -12,7 +12,7 @@ const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
 
 const formatBytes = (bytes: number | null) => {
-  if (!bytes) return "â€”";
+  if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -96,26 +96,26 @@ export default function UploadRiwayat() {
 
   return (
     <AppLayout>
-      <PageMeta title="Riwayat Upload | MyFinance" description="Riwayat Upload e-Statement rekening bank dan dompet digital" />
+      <PageMeta title="Riwayat Upload | Fin-Techno" description="Riwayat Upload e-Statement rekening bank dan dompet digital" />
       <PageBreadcrumb pageTitle="Riwayat Upload" />
 
       {/* Summary */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Upload</p>
-          <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{loading ? "â€”" : uploads.length}</p>
+          <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{loading ? "—" : uploads.length}</p>
         </div>
         <div className="rounded-2xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4">
           <p className="text-xs text-success-600 dark:text-success-400 mb-1">Berhasil</p>
-          <p className="text-2xl font-bold text-success-700 dark:text-success-300">{loading ? "â€”" : successCount}</p>
+          <p className="text-2xl font-bold text-success-700 dark:text-success-300">{loading ? "—" : successCount}</p>
         </div>
         <div className="rounded-2xl border border-warning-200 dark:border-warning-500/20 bg-warning-50 dark:bg-warning-500/10 p-4">
           <p className="text-xs text-warning-600 dark:text-warning-400 mb-1">Sebagian</p>
-          <p className="text-2xl font-bold text-warning-700 dark:text-warning-300">{loading ? "â€”" : partialCount}</p>
+          <p className="text-2xl font-bold text-warning-700 dark:text-warning-300">{loading ? "—" : partialCount}</p>
         </div>
         <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
           <p className="text-xs text-error-600 dark:text-error-400 mb-1">Gagal</p>
-          <p className="text-2xl font-bold text-error-700 dark:text-error-300">{loading ? "â€”" : failedCount}</p>
+          <p className="text-2xl font-bold text-error-700 dark:text-error-300">{loading ? "—" : failedCount}</p>
         </div>
       </div>
 
@@ -177,7 +177,7 @@ export default function UploadRiwayat() {
           <div className="py-16 text-center">
             <p className="text-sm text-gray-400 dark:text-gray-500">Belum ada upload</p>
             <Link href="/upload" className="mt-3 inline-block text-sm text-brand-500 hover:text-brand-600">
-              Upload sekarang â†’
+              Upload sekarang ?
             </Link>
           </div>
         ) : (
@@ -201,7 +201,7 @@ export default function UploadRiwayat() {
                       </div>
                       <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{u.fileName}</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
-                        {u.provider} Â· {u.accountIdentifier} Â· {formatBytes(u.fileSizeBytes)}
+                        {u.provider} · {u.accountIdentifier} · {formatBytes(u.fileSizeBytes)}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">{u.uploadedAt.slice(0, 16).replace("T", " ")}</p>
                     </div>
@@ -221,14 +221,14 @@ export default function UploadRiwayat() {
                   <div className="sm:col-span-2 sm:text-right sm:flex sm:flex-col sm:justify-center">
                     {u.status !== "FAILED" ? (
                       <p className="text-sm font-medium text-success-600 dark:text-success-400">+{formatIDR(u.totalCredit)}</p>
-                    ) : <p className="text-sm text-gray-400">â€”</p>}
+                    ) : <p className="text-sm text-gray-400">—</p>}
                   </div>
 
                   {/* Debit */}
                   <div className="sm:col-span-2 sm:text-right sm:flex sm:flex-col sm:justify-center">
                     {u.status !== "FAILED" ? (
                       <p className="text-sm font-medium text-error-600 dark:text-error-400">-{formatIDR(u.totalDebit)}</p>
-                    ) : <p className="text-sm text-gray-400">â€”</p>}
+                    ) : <p className="text-sm text-gray-400">—</p>}
                   </div>
 
                   {/* Status */}
@@ -289,7 +289,7 @@ export default function UploadRiwayat() {
             <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
               <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {deleteTarget.provider} Â· {fmtDate(deleteTarget.periodStart)} s/d {fmtDate(deleteTarget.periodEnd)}
+                {deleteTarget.provider} · {fmtDate(deleteTarget.periodStart)} s/d {fmtDate(deleteTarget.periodEnd)}
               </p>
               <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
             </div>
