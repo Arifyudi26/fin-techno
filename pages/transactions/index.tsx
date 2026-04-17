@@ -145,7 +145,7 @@ export default function Transactions() {
 
   return (
     <AppLayout>
-      <PageMeta title="Semua Transaksi | MyFinance" description="Daftar semua transaksi dari seluruh rekening" />
+      <PageMeta title="Semua Transaksi | Fin-Techno" description="Daftar semua transaksi dari seluruh rekening" />
       <PageBreadcrumb pageTitle="Semua Transaksi" />
 
       {/* Summary */}

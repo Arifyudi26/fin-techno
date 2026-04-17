@@ -7,6 +7,6 @@
   <path d="M13 25L24 16L35 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.5"/>
 
   <!-- Wordmark -->
-  <text x="60" y="32" font-family="Outfit, sans-serif" font-size="22" font-weight="700" fill="white" letter-spacing="-0.5">My</text>
-  <text x="90" y="32" font-family="Outfit, sans-serif" font-size="22" font-weight="400" fill="white" fill-opacity="0.8" letter-spacing="-0.5">Finance</text>
+  <text x="60" y="32" font-family="Outfit, sans-serif" font-size="22" font-weight="700" fill="white" letter-spacing="-0.5">Fin-</text>
+  <text x="98" y="32" font-family="Outfit, sans-serif" font-size="22" font-weight="400" fill="white" fill-opacity="0.8" letter-spacing="-0.5">Techno</text>
 </svg>

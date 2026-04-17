@@ -88,7 +88,7 @@ export default function BankAccounts() {
 
   return (
     <AppLayout>
-      <PageMeta title="Rekening Bank | MyFinance" description="Kelola rekening bank yang terhubung" />
+      <PageMeta title="Rekening Bank | Fin-Techno" description="Kelola rekening bank yang terhubung" />
       <PageBreadcrumb pageTitle="Rekening Bank" />
 
       {/* Summary */}

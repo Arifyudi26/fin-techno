@@ -85,7 +85,7 @@ export default function UploadDetail() {
   if (loading) {
     return (
       <AppLayout>
-        <PageMeta title="Detail Upload | MyFinance" description="" />
+        <PageMeta title="Detail Upload | Fin-Techno" description="" />
         <PageBreadcrumb pageTitle="Detail Upload" />
         <div className="space-y-4 animate-pulse">
           <div className="h-32 rounded-2xl bg-gray-100 dark:bg-gray-800" />
@@ -101,7 +101,7 @@ export default function UploadDetail() {
   if (error || !upload) {
     return (
       <AppLayout>
-        <PageMeta title="Detail Upload | MyFinance" description="" />
+        <PageMeta title="Detail Upload | Fin-Techno" description="" />
         <PageBreadcrumb pageTitle="Detail Upload" />
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-12 text-center">
           <p className="text-gray-500 dark:text-gray-400">{error ?? "Data tidak ditemukan"}</p>
@@ -121,7 +121,7 @@ export default function UploadDetail() {
 
   return (
     <AppLayout>
-      <PageMeta title={`Detail Upload — ${upload.fileName} | MyFinance`} description="Detail informasi upload e-statement" />
+      <PageMeta title={`Detail Upload — ${upload.fileName} | Fin-Techno`} description="Detail informasi upload e-statement" />
       <PageBreadcrumb pageTitle="Detail Upload" />
 
       {/* Back */}

@@ -86,7 +86,7 @@ export default function Categories() {
 
   return (
     <AppLayout>
-      <PageMeta title="Kategori Transaksi | MyFinance" description="Kelola kategori transaksi keuangan" />
+      <PageMeta title="Kategori Transaksi | Fin-Techno" description="Kelola kategori transaksi keuangan" />
       <PageBreadcrumb pageTitle="Kategori Transaksi" />
 
       <div className="mb-5 flex items-center justify-between">

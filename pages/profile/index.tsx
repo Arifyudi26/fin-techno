@@ -59,7 +59,7 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <PageMeta title="Profil | MyFinance" description="Kelola informasi akun Anda" />
+      <PageMeta title="Profil | Fin-Techno" description="Kelola informasi akun Anda" />
       <PageBreadcrumb pageTitle="Profil" />
 
       <div className="max-w-2xl space-y-6">

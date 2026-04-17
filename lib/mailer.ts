@@ -19,9 +19,9 @@ export async function sendOtpEmail(email: string, otp: string, purpose: string) 
   };
 
   await transporter.sendMail({
-    from: `"MyFinance" <${process.env.SMTP_USER}>`,
+    from: `"Fin-Techno" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: `Kode OTP ${purposeLabel[purpose] ?? "Verifikasi"} - MyFinance`,
+    subject: `Kode OTP ${purposeLabel[purpose] ?? "Verifikasi"} - Fin-Techno`,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px">
         <h2 style="color:#1d4ed8;margin-bottom:8px">Kode Verifikasi OTP</h2>

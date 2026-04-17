@@ -6,8 +6,8 @@ export default function Login() {
   return (
     <>
       <PageMeta
-        title="Sign In | MyFinance"
-        description="Sign in to your MyFinance account"
+        title="Sign In | Fin-Techno"
+        description="Sign in to your Fin-Techno account"
       />
       <AuthLayout>
         <SignInForm />

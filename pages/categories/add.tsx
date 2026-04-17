@@ -43,7 +43,7 @@ export default function AddCategory() {
 
   return (
     <AppLayout>
-      <PageMeta title="Tambah Kategori | MyFinance" description="Tambah kategori transaksi baru" />
+      <PageMeta title="Tambah Kategori | Fin-Techno" description="Tambah kategori transaksi baru" />
       <PageBreadcrumb pageTitle="Tambah Kategori" />
       <div className="max-w-md">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
