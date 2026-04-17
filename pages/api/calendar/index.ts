@@ -22,11 +22,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [bankTx, walletTx] = await Promise.all([
       prisma.bankTransaction.findMany({
         where: { bankAccount: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: { id: true, transactionDate: true, type: true, amount: true, description: true },
+        select: {
+          id: true, transactionDate: true, type: true, amount: true, description: true,
+          reference: true, balance: true, status: true,
+          bankAccount: { select: { bankProvider: true, accountName: true, accountNumber: true } },
+          categories: { include: { category: { select: { name: true } } } },
+        },
       }),
       db.walletTransaction.findMany({
         where: { wallet: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: { id: true, transactionDate: true, type: true, amount: true, description: true },
+        select: {
+          id: true, transactionDate: true, type: true, amount: true, description: true,
+          reference: true, balance: true, status: true,
+          wallet: { select: { walletProvider: true, accountName: true, phoneNumber: true } },
+          categories: { include: { category: { select: { name: true } } } },
+        },
       }),
     ]);
 
@@ -36,10 +46,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalCredit: number;
       totalDebit: number;
       count: number;
-      transactions: { id: string; datetime: string; type: string; amount: number; description: string }[];
+      transactions: {
+        id: string; datetime: string; type: string; amount: number; description: string;
+        reference: string | null; balance: number | null; status: string;
+        provider: string; accountName: string; source: string;
+        categories: { name: string }[];
+      }[];
     }> = {};
 
-    const add = (t: any) => {
+    const add = (t: any, source: "BANK" | "WALLET") => {
       const dt: Date = t.transactionDate;
       const date = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
       if (!map[date]) map[date] = { date, totalCredit: 0, totalDebit: 0, count: 0, transactions: [] };
@@ -52,11 +67,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         type: t.type,
         amount: Number(t.amount),
         description: t.description,
+        reference: t.reference ?? null,
+        balance: t.balance != null ? Number(t.balance) : null,
+        status: t.status ?? "PENDING",
+        provider: source === "BANK" ? t.bankAccount.bankProvider : t.wallet.walletProvider,
+        accountName: source === "BANK" ? t.bankAccount.accountName : t.wallet.accountName,
+        source,
+        categories: (t.categories ?? []).map((c: any) => ({ name: c.category.name })),
       });
     };
 
-    bankTx.forEach(add);
-    walletTx.forEach(add);
+    bankTx.forEach((t: any) => add(t, "BANK"));
+    walletTx.forEach((t: any) => add(t, "WALLET"));
 
     return res.status(200).json(Object.values(map));
   } catch (e) {
