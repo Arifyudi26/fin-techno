@@ -397,3 +397,62 @@ span.flatpickr-weekday,
   background-color: transparent;
   color: #6b7280;
 }
+
+/* FullCalendar Event Colors */
+.fc-bg-danger {
+  background-color: #fee4e2;
+  border-color: #f04438;
+  color: #7a271a;
+}
+.dark .fc-bg-danger {
+  background-color: rgba(240, 68, 56, 0.15);
+  border-color: #f04438;
+  color: #fda29b;
+}
+.fc-bg-success {
+  background-color: #d1fadf;
+  border-color: #12b76a;
+  color: #054f31;
+}
+.dark .fc-bg-success {
+  background-color: rgba(18, 183, 106, 0.15);
+  border-color: #12b76a;
+  color: #6ce9a6;
+}
+.fc-bg-primary {
+  background-color: #ecf3ff;
+  border-color: #465fff;
+  color: #262e89;
+}
+.dark .fc-bg-primary {
+  background-color: rgba(70, 95, 255, 0.15);
+  border-color: #465fff;
+  color: #9cb9ff;
+}
+.fc-bg-warning {
+  background-color: #fef0c7;
+  border-color: #f79009;
+  color: #7a2e0e;
+}
+.dark .fc-bg-warning {
+  background-color: rgba(247, 144, 9, 0.15);
+  border-color: #f79009;
+  color: #fec84b;
+}
+
+/* Calendar cell cursor */
+.custom-calendar .fc-daygrid-day {
+  cursor: default;
+}
+.custom-calendar .fc-daygrid-day:has(.cursor-pointer) {
+  cursor: pointer;
+}
+
+/* Hide FullCalendar scrollbars */
+.custom-calendar .fc-scroller::-webkit-scrollbar {
+  display: none;
+}
+.custom-calendar .fc-scroller {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
