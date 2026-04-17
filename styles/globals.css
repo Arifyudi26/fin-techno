@@ -298,3 +298,102 @@ span.flatpickr-weekday,
 .flatpickr-months .flatpickr-next-month:hover svg {
   fill: none !important;
 }
+
+/* FullCalendar Dark Mode */
+
+/* borders */
+.dark .custom-calendar .fc-theme-standard td,
+.dark .custom-calendar .fc-theme-standard th,
+.dark .custom-calendar .fc-theme-standard .fc-scrollgrid {
+  border-color: #1f2937;
+}
+
+/* backgrounds */
+.dark .custom-calendar .fc-theme-standard .fc-scrollgrid,
+.dark .custom-calendar .fc .fc-timegrid-slot,
+.dark .custom-calendar .fc .fc-timegrid-col,
+.dark .custom-calendar .fc .fc-daygrid-body,
+.dark .custom-calendar .fc .fc-timegrid-body {
+  background-color: transparent;
+}
+
+/* text colors */
+.dark .custom-calendar .fc .fc-daygrid-day-number,
+.dark .custom-calendar .fc .fc-col-header-cell-cushion,
+.dark .custom-calendar .fc .fc-timegrid-slot-label-cushion,
+.dark .custom-calendar .fc .fc-timegrid-axis-cushion,
+.dark .custom-calendar .fc .fc-list-event-title a,
+.dark .custom-calendar .fc .fc-list-event-time {
+  color: #d1d5db;
+}
+
+.dark .custom-calendar .fc .fc-toolbar-title {
+  color: #f3f4f6;
+}
+
+/* day other month */
+.dark .custom-calendar .fc-day-other .fc-daygrid-day-number {
+  color: #4b5563;
+}
+
+/* all-day row */
+.dark .custom-calendar .fc .fc-timegrid-allday-cushion,
+.dark .custom-calendar .fc .fc-daygrid-day-frame {
+  background-color: transparent;
+}
+
+/* today highlight */
+.dark .custom-calendar .fc .fc-day-today {
+  background-color: rgba(70, 95, 255, 0.08) !important;
+}
+
+/* timegrid now indicator */
+.dark .custom-calendar .fc .fc-timegrid-now-indicator-line {
+  border-color: #465fff;
+}
+.dark .custom-calendar .fc .fc-timegrid-now-indicator-arrow {
+  border-top-color: #465fff;
+  border-bottom-color: #465fff;
+}
+
+/* toolbar buttons */
+.dark .custom-calendar .fc .fc-button {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
+.dark .custom-calendar .fc .fc-button:hover {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+.dark .custom-calendar .fc .fc-button-primary:not(:disabled).fc-button-active,
+.dark .custom-calendar .fc .fc-button-primary:not(:disabled):active {
+  background-color: #465fff;
+  border-color: #465fff;
+  color: #fff;
+}
+.dark .custom-calendar .fc .fc-button:disabled {
+  background-color: #111827;
+  border-color: #1f2937;
+  color: #4b5563;
+}
+
+/* list view */
+.dark .custom-calendar .fc .fc-list {
+  border-color: #1f2937;
+}
+.dark .custom-calendar .fc .fc-list-day-cushion {
+  background-color: #111827;
+}
+.dark .custom-calendar .fc .fc-list-day-text,
+.dark .custom-calendar .fc .fc-list-day-side-text {
+  color: #d1d5db;
+}
+.dark .custom-calendar .fc .fc-list-event:hover td {
+  background-color: #1f2937;
+}
+.dark .custom-calendar .fc .fc-list-empty {
+  background-color: transparent;
+  color: #6b7280;
+}
