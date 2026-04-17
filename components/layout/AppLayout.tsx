@@ -22,7 +22,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
-        <div className="p-4 mx-auto max-w-screen-2xl md:p-6">{children}</div>
+        <div className="p-3 mx-auto max-w-screen-2xl sm:p-4 md:p-6">{children}</div>
       </div>
     </div>
   );

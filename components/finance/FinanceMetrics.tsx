@@ -87,13 +87,13 @@ export default function FinanceMetrics({ data, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5 md:gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 md:gap-4">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 animate-pulse">
-            <div className="w-11 h-11 rounded-xl bg-gray-200 dark:bg-gray-700" />
-            <div className="mt-4 space-y-2">
-              <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700" />
-              <div className="h-5 w-28 rounded bg-gray-200 dark:bg-gray-700" />
+          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] md:p-5 animate-pulse">
+            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-3 space-y-2">
+              <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
             </div>
           </div>
         ))}
@@ -108,20 +108,20 @@ export default function FinanceMetrics({ data, loading }: Props) {
           Periode aktif: <span className="font-medium text-gray-600 dark:text-gray-300">{data.activePeriod.label}</span>
         </p>
       )}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5 md:gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 md:gap-4">
         {metrics.map((m) => (
-          <div key={m.label} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-            <div className={`flex items-center justify-center w-11 h-11 rounded-xl ${m.bg}`}>
+          <div key={m.label} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] md:p-5">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${m.bg}`}>
               <span className={m.color}>{m.icon}</span>
             </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500 dark:text-gray-400">{m.label}</span>
-              <h4 className="mt-1.5 font-bold text-gray-800 text-title-sm dark:text-white/90 leading-tight">
+            <div className="mt-3">
+              <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{m.label}</span>
+              <h4 className="mt-1 font-bold text-gray-800 text-sm sm:text-base md:text-lg dark:text-white/90 leading-tight break-all">
                 {m.isCount ? m.value.toLocaleString("id-ID") : fmt(m.value)}
               </h4>
               {m.change && (
-                <div className="flex items-center gap-1 mt-2">
-                  <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                  <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                     m.up
                       ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500"
                       : "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500"
@@ -129,7 +129,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
                     {m.up ? <ArrowUpIcon /> : <ArrowDownIcon />}
                     {m.change}
                   </span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">vs lalu</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:inline">vs lalu</span>
                 </div>
               )}
             </div>
