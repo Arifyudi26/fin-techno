@@ -51,6 +51,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
     const total = bankTotal + walletTotal;
 
+    // Hitung summary (aggregate) dari semua transaksi yang match filter
+    const [bankSummary, walletSummary] = await Promise.all([
+      includeBank ? prisma.bankTransaction.groupBy({
+        by: ["type"],
+        where: bankWhere,
+        _sum: { amount: true },
+      }) : Promise.resolve([]),
+      includeWallet ? db.walletTransaction.groupBy({
+        by: ["type"],
+        where: walletWhere,
+        _sum: { amount: true },
+      }) : Promise.resolve([]),
+    ]);
+    const allSummary = [...bankSummary, ...walletSummary] as { type: string; _sum: { amount: any } }[];
+    const totalCredit = allSummary.filter(s => s.type === "CREDIT").reduce((acc, s) => acc + Number(s._sum.amount ?? 0), 0);
+    const totalDebit = allSummary.filter(s => s.type === "DEBIT").reduce((acc, s) => acc + Number(s._sum.amount ?? 0), 0);
+    const summary = { totalCredit, totalDebit, netFlow: totalCredit - totalDebit };
+
     // Kalau hanya satu source, pakai DB-level pagination langsung
     if (!includeBank) {
       const walletTx = await db.walletTransaction.findMany({
@@ -64,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         take: limitNum,
       });
       const mapped = walletTx.map((t: any) => mapWallet(t));
-      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum));
+      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum, summary));
     }
 
     if (!includeWallet) {
@@ -79,13 +97,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         take: limitNum,
       });
       const mapped = bankTx.map((t: any) => mapBank(t));
-      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum));
+      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum, summary));
     }
 
     // Kedua source: fetch semua lalu merge-sort-slice
-    // Fetch hanya sebanyak yang dibutuhkan: skip + limitNum dari masing-masing
-    // Ini cukup karena setelah merge-sort, kita ambil [skip, skip+limit]
-    // Worst case: semua data dari satu source → fetch skip+limit dari masing-masing sudah cukup
     const fetchCount = skip + limitNum;
 
     const [bankTx, walletTx] = await Promise.all([
@@ -116,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(skip, skip + limitNum);
 
-    return res.status(200).json(buildResponse(combined, total, pageNum, limitNum));
+    return res.status(200).json(buildResponse(combined, total, pageNum, limitNum, summary));
 
   } catch (e) {
     console.error(e);
@@ -162,14 +177,12 @@ function mapWallet(t: any) {
   };
 }
 
-function buildResponse(transactions: any[], total: number, page: number, limit: number) {
-  const totalCredit = transactions.filter(t => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0);
-  const totalDebit = transactions.filter(t => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0);
+function buildResponse(transactions: any[], total: number, page: number, limit: number, summary: { totalCredit: number; totalDebit: number; netFlow: number }) {
   return {
     transactions,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    summary: { totalCredit, totalDebit, netFlow: totalCredit - totalDebit },
+    summary,
   };
 }

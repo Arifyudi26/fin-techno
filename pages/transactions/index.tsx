@@ -12,6 +12,15 @@ import dynamic from "next/dynamic";
 
 const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
+function getDefaultDateRange() {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    dateFrom: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`,
+    dateTo: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+  };
+}
+
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
 
@@ -41,9 +50,8 @@ export default function Transactions() {
 
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [filters, setFilters] = useState({
-    type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1, limit: 10,
-  });
+  const DEFAULT_FILTERS = { type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1, limit: 10 };
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   useEffect(() => {
     setFilters((p) => ({ ...p, search: debouncedSearch, page: 1 }));
@@ -120,9 +128,9 @@ export default function Transactions() {
       <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
-          {(filters.type !== "ALL" || filters.source !== "ALL" || filters.search || filters.dateFrom || filters.dateTo) && (
+          {(filters.type !== "ALL" || filters.source !== "ALL" || filters.search || filters.dateFrom !== getDefaultDateRange().dateFrom || filters.dateTo !== getDefaultDateRange().dateTo) && (
             <button
-              onClick={() => { setSearchInput(""); setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1 })); }}
+              onClick={() => { setSearchInput(""); setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1 })); }}
               className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
             >
               Reset Filter
