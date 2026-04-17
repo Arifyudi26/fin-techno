@@ -200,7 +200,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       });
       setProgress(100);
 
-      // Debug logs — tampil di browser console untuk tracking masalah
+      // Debug logs ï¿½ tampil di browser console untuk tracking masalah
       if (res.data._debug?.length) {
         console.group(`%c[Upload Debug] ${res.data.uploadId}`, "color: #6366f1; font-weight: bold");
         for (const entry of res.data._debug) {
@@ -363,7 +363,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                         {acc.accountName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {acc.provider} · {acc.identifier}
+                        {acc.provider} ï¿½ {acc.identifier}
                       </p>
                     </div>
                     {accountId === acc.id && (
@@ -477,7 +477,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     atau drag & drop
                   </p>
                   <p className="text-xs text-gray-400">
-                    CSV, XLSX, XLS, PDF · Maks. 10 MB
+                    CSV, XLSX, XLS, PDF ï¿½ Maks. 10 MB
                   </p>
                 </>
               )}
@@ -765,19 +765,19 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 {[
                   [
                     "Akun",
-                    `${detail.provider} · ${detail.accountIdentifier} (${detail.accountName})`,
+                    `${detail.provider} ï¿½ ${detail.accountIdentifier} (${detail.accountName})`,
                   ],
                   [
                     "File",
-                    `${detail.fileName} · ${formatBytes(detail.fileSizeBytes)} · ${detail.fileFormat}`,
+                    `${detail.fileName} ï¿½ ${formatBytes(detail.fileSizeBytes)} ï¿½ ${detail.fileFormat}`,
                   ],
                   [
                     "Periode",
-                    `${formatDate(detail.periodStart)} – ${formatDate(detail.periodEnd)}`,
+                    `${formatDate(detail.periodStart)} ï¿½ ${formatDate(detail.periodEnd)}`,
                   ],
                   [
                     "Diupload oleh",
-                    `${detail.uploadedBy} · ${formatDate(detail.uploadedAt)}`,
+                    `${detail.uploadedBy} ï¿½ ${formatDate(detail.uploadedAt)}`,
                   ],
                 ].map(([label, value]) => (
                   <div
@@ -1075,7 +1075,7 @@ function UploadCard({
               {item.accountName}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {item.provider} · {item.accountIdentifier}
+              {item.provider} ï¿½ {item.accountIdentifier}
             </p>
           </div>
         </div>
@@ -1138,7 +1138,7 @@ function UploadCard({
             strokeLinecap="round"
           />
         </svg>
-        {formatDate(item.periodStart)} – {formatDate(item.periodEnd)}
+        {formatDate(item.periodStart)} ï¿½ {formatDate(item.periodEnd)}
       </div>
 
       {/* Banner duplikat penuh atau overlap sebagian */}
@@ -1171,7 +1171,7 @@ function UploadCard({
               <div>
                 <p className="text-xs font-medium text-brand-600 dark:text-brand-400">File mencakup periode yang overlap</p>
                 <p className="text-xs text-brand-500/80 dark:text-brand-400/70 mt-0.5">
-                  <span className="font-semibold">{n!.new} transaksi baru</span> ditambahkan ·{" "}
+                  <span className="font-semibold">{n!.new} transaksi baru</span> ditambahkan ï¿½{" "}
                   <span>{n!.duplicate} sudah ada</span> dari upload sebelumnya
                 </p>
               </div>
@@ -1346,7 +1346,7 @@ export default function UploadPage() {
     fetchUploads();
 
     if (result.status === "PROCESSING" && result.uploadId) {
-      // Polling di background — refresh list setiap 5 detik sampai selesai
+      // Polling di background ï¿½ refresh list setiap 5 detik sampai selesai
       const uploadId = result.uploadId;
       const maxAttempts = 60;
       let attempt = 0;
@@ -1805,7 +1805,7 @@ export default function UploadPage() {
             <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
               <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {deleteTarget.provider} · {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
+                {deleteTarget.provider} ï¿½ {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
               </p>
               <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
             </div>
