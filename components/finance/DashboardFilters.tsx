@@ -24,6 +24,7 @@ export default function DashboardFilters({
   onChange,
   onReset,
 }: Props) {
+  const [isOpen, setIsOpen] = useState(false);
   const [local, setLocal] = useState({
     dateFrom: filters.dateFrom ?? "",
     dateTo: filters.dateTo ?? "",
@@ -32,7 +33,6 @@ export default function DashboardFilters({
     txType: filters.txType ?? "",
   });
 
-  // Sync saat parent reset
   useEffect(() => {
     setLocal({
       dateFrom: filters.dateFrom ?? "",
@@ -56,6 +56,7 @@ export default function DashboardFilters({
       categoryId: local.categoryId || null,
       txType: (local.txType as "CREDIT" | "DEBIT") || null,
     });
+    setIsOpen(false);
   };
 
   const handleReset = () => {
@@ -77,100 +78,140 @@ export default function DashboardFilters({
     (local.categoryId || null) !== filters.categoryId ||
     (local.txType || null) !== filters.txType;
 
+  const activeCount = [
+    filters.dateFrom,
+    filters.dateTo,
+    filters.accountId,
+    filters.categoryId,
+    filters.txType,
+  ].filter(Boolean).length;
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03]">
-      {/* Header */}
-      <div className="mb-3 flex items-center justify-between">
+    <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-white/[0.03]">
+      {/* Header — always visible */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+          {/* Toggle button (mobile) */}
+          <button
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex items-center gap-2 lg:hidden"
+            aria-expanded={isOpen}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
+              <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+            {activeCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-[10px] font-bold text-white">
+                {activeCount}
+              </span>
+            )}
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              className={`text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            >
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {/* Desktop label */}
+          <div className="hidden lg:flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
+              <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+            {activePeriodLabel && (
+              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                {activePeriodLabel}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
           {activePeriodLabel && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+            <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 lg:hidden">
               {activePeriodLabel}
             </span>
           )}
+          {hasActiveFilter && (
+            <button
+              onClick={handleReset}
+              className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
+            >
+              Reset
+            </button>
+          )}
         </div>
-        {hasActiveFilter && (
-          <button
-            onClick={handleReset}
-            className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-          >
-            Reset Filter
-          </button>
-        )}
       </div>
 
-      {/* Filter grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {/* Dari Tanggal */}
-        <DatePicker
-          id="dash-filter-from"
-          label="Dari Tanggal"
-          placeholder="dd/mm/yyyy"
-          value={local.dateFrom}
-          onChange={(v) => set("dateFrom", v)}
-        />
+      {/* Filter grid — collapsible on mobile, always open on lg+ */}
+      <div className={`mt-3 ${isOpen ? "block" : "hidden"} lg:block`}>
+        <div className="grid grid-cols-1 gap-3 xsm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <DatePicker
+            id="dash-filter-from"
+            label="Dari Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={local.dateFrom}
+            onChange={(v) => set("dateFrom", v)}
+          />
+          <DatePicker
+            id="dash-filter-to"
+            label="Sampai Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={local.dateTo}
+            onChange={(v) => set("dateTo", v)}
+          />
 
-        {/* Sampai Tanggal */}
-        <DatePicker
-          id="dash-filter-to"
-          label="Sampai Tanggal"
-          placeholder="dd/mm/yyyy"
-          value={local.dateTo}
-          onChange={(v) => set("dateTo", v)}
-        />
+          {accounts.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
+              <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectClass}>
+                <option value="">Semua Rekening</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bankProvider} {a.source === "WALLET" ? "(Wallet)" : ""} ***{a.accountNumber.slice(-4)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        {/* Rekening */}
-        {accounts.length > 0 && (
+          {categories.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Kategori</label>
+              <select value={local.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={selectClass}>
+                <option value="">Semua Kategori</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
-            <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectClass}>
-              <option value="">Semua Rekening</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.bankProvider} {a.source === "WALLET" ? "(Wallet)" : ""} ***{a.accountNumber.slice(-4)}
-                </option>
-              ))}
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe Transaksi</label>
+            <select value={local.txType} onChange={(e) => set("txType", e.target.value)} className={selectClass}>
+              <option value="">Semua Tipe</option>
+              <option value="CREDIT">Pemasukan</option>
+              <option value="DEBIT">Pengeluaran</option>
             </select>
           </div>
-        )}
 
-        {/* Kategori */}
-        {categories.length > 0 && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Kategori</label>
-            <select value={local.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={selectClass}>
-              <option value="">Semua Kategori</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <label className="text-xs font-medium text-transparent select-none">Cari</label>
+            <button
+              onClick={handleApply}
+              disabled={!isDirty}
+              className="h-9 w-full rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed px-4 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Terapkan
+            </button>
           </div>
-        )}
-
-        {/* Tipe transaksi */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe Transaksi</label>
-          <select value={local.txType} onChange={(e) => set("txType", e.target.value)} className={selectClass}>
-            <option value="">Semua Tipe</option>
-            <option value="CREDIT">Pemasukan</option>
-            <option value="DEBIT">Pengeluaran</option>
-          </select>
-        </div>
-
-        {/* Tombol Apply */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-transparent select-none">Cari</label>
-          <button
-            onClick={handleApply}
-            disabled={!isDirty}
-            className="h-9 w-full rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed px-4 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            Terapkan
-          </button>
         </div>
       </div>
     </div>

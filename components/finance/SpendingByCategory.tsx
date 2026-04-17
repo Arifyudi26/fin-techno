@@ -86,7 +86,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             {tab === "expense" ? "Pengeluaran" : "Pemasukan"} per Kategori
@@ -95,7 +95,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
             {sorted.length} kategori · Total {fmt(total)}
           </p>
         </div>
-        <div className="flex items-end gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Tab: Pengeluaran / Pemasukan */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>

@@ -41,13 +41,13 @@ export default function BankAccountSummary({ data = [], loading, selectedAccount
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Rekening & Dompet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">Klik untuk filter dashboard</p>
         </div>
         {/* Filter tabs */}
-        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden w-fit">
           {(["ALL", "BANK", "WALLET"] as const).map((f) => (
             <button
               key={f}
