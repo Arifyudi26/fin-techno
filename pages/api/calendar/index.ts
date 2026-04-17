@@ -22,30 +22,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [bankTx, walletTx] = await Promise.all([
       prisma.bankTransaction.findMany({
         where: { bankAccount: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: { transactionDate: true, type: true, amount: true, description: true, id: true },
+        select: { id: true, transactionDate: true, type: true, amount: true, description: true },
       }),
       db.walletTransaction.findMany({
         where: { wallet: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: { transactionDate: true, type: true, amount: true, description: true, id: true },
+        select: { id: true, transactionDate: true, type: true, amount: true, description: true },
       }),
     ]);
 
-    // Group by date
-    const map: Record<string, { totalCredit: number; totalDebit: number; count: number }> = {};
+    // Group by date — summary + list transaksi per tanggal
+    const map: Record<string, {
+      date: string;
+      totalCredit: number;
+      totalDebit: number;
+      count: number;
+      transactions: { id: string; datetime: string; type: string; amount: number; description: string }[];
+    }> = {};
 
     const add = (t: any) => {
-      const date = t.transactionDate.toISOString().split("T")[0];
-      if (!map[date]) map[date] = { totalCredit: 0, totalDebit: 0, count: 0 };
+      const dt: Date = t.transactionDate;
+      const date = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+      if (!map[date]) map[date] = { date, totalCredit: 0, totalDebit: 0, count: 0, transactions: [] };
       map[date].count++;
       if (t.type === "CREDIT") map[date].totalCredit += Number(t.amount);
       else map[date].totalDebit += Number(t.amount);
+      map[date].transactions.push({
+        id: t.id,
+        datetime: dt.toISOString(),
+        type: t.type,
+        amount: Number(t.amount),
+        description: t.description,
+      });
     };
 
     bankTx.forEach(add);
     walletTx.forEach(add);
 
-    const result = Object.entries(map).map(([date, v]) => ({ date, ...v }));
-    return res.status(200).json(result);
+    return res.status(200).json(Object.values(map));
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Internal server error" });
