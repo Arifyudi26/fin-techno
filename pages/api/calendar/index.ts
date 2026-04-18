@@ -1,7 +1,25 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+
+// GET /api/calendar?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+// Returns ONLY daily summaries (no transaction detail) — keeps payload small.
+// Detail per day is fetched lazily via GET /api/calendar/[date]
+
+const WIB_OFFSET_HOURS = 7;
+
+// Convert a YYYY-MM-DD local (WIB) date to UTC Date
+function wibToUtc(dateStr: string, endOfDay = false): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (endOfDay) return new Date(Date.UTC(y, m - 1, d, 24 - WIB_OFFSET_HOURS, 0, 0, -1));
+  return new Date(Date.UTC(y, m - 1, d, 0 - WIB_OFFSET_HOURS, 0, 0, 0));
+}
+
+// Convert a UTC Date back to WIB YYYY-MM-DD string for grouping
+function utcToWibDateStr(dt: Date): string {
+  const wib = new Date(dt.getTime() + WIB_OFFSET_HOURS * 60 * 60 * 1000);
+  return `${wib.getUTCFullYear()}-${String(wib.getUTCMonth() + 1).padStart(2, "0")}-${String(wib.getUTCDate()).padStart(2, "0")}`;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
@@ -13,74 +31,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { dateFrom, dateTo } = req.query;
   if (!dateFrom || !dateTo) return res.status(400).json({ message: "dateFrom and dateTo required" });
 
-  const gte = new Date(dateFrom as string);
-  const lte = new Date(new Date(dateTo as string).setHours(23, 59, 59, 999));
+  const gte = wibToUtc(dateFrom as string);
+  const lte = wibToUtc(dateTo as string, true);
 
   try {
-    const db = prisma as any;
-
-    const [bankTx, walletTx] = await Promise.all([
-      prisma.bankTransaction.findMany({
-        where: { bankAccount: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: {
-          id: true, transactionDate: true, type: true, amount: true, description: true,
-          reference: true, balance: true, status: true,
-          bankAccount: { select: { bankProvider: true, accountName: true, accountNumber: true } },
-          categories: { include: { category: { select: { name: true } } } },
+    const [bankRows, walletRows] = await Promise.all([
+      prisma.bankTransaction.groupBy({
+        by: ["transactionDate", "type"],
+        where: {
+          bankAccount: { ownerId: userId },
+          transactionDate: { gte, lte },
         },
+        _sum: { amount: true },
+        _count: { id: true },
+        orderBy: { transactionDate: "asc" },
       }),
-      db.walletTransaction.findMany({
-        where: { wallet: { ownerId: userId }, transactionDate: { gte, lte } },
-        select: {
-          id: true, transactionDate: true, type: true, amount: true, description: true,
-          reference: true, balance: true, status: true,
-          wallet: { select: { walletProvider: true, accountName: true, phoneNumber: true } },
-          categories: { include: { category: { select: { name: true } } } },
+      prisma.walletTransaction.groupBy({
+        by: ["transactionDate", "type"],
+        where: {
+          wallet: { ownerId: userId },
+          transactionDate: { gte, lte },
         },
+        _sum: { amount: true },
+        _count: { id: true },
+        orderBy: { transactionDate: "asc" },
       }),
     ]);
 
-    // Group by date — summary + list transaksi per tanggal
-    const map: Record<string, {
-      date: string;
-      totalCredit: number;
-      totalDebit: number;
-      count: number;
-      transactions: {
-        id: string; datetime: string; type: string; amount: number; description: string;
-        reference: string | null; balance: number | null; status: string;
-        provider: string; accountName: string; source: string;
-        categories: { name: string }[];
-      }[];
-    }> = {};
+    const map: Record<string, { date: string; totalCredit: number; totalDebit: number; count: number }> = {};
 
-    const add = (t: any, source: "BANK" | "WALLET") => {
-      const dt: Date = t.transactionDate;
-      const date = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-      if (!map[date]) map[date] = { date, totalCredit: 0, totalDebit: 0, count: 0, transactions: [] };
-      map[date].count++;
-      if (t.type === "CREDIT") map[date].totalCredit += Number(t.amount);
-      else map[date].totalDebit += Number(t.amount);
-      map[date].transactions.push({
-        id: t.id,
-        datetime: dt.toISOString(),
-        type: t.type,
-        amount: Number(t.amount),
-        description: t.description,
-        reference: t.reference ?? null,
-        balance: t.balance != null ? Number(t.balance) : null,
-        status: t.status ?? "PENDING",
-        provider: source === "BANK" ? t.bankAccount.bankProvider : t.wallet.walletProvider,
-        accountName: source === "BANK" ? t.bankAccount.accountName : t.wallet.accountName,
-        source,
-        categories: (t.categories ?? []).map((c: any) => ({ name: c.category.name })),
-      });
+    const addRow = (row: { transactionDate: Date; type: string; _sum: { amount: unknown }; _count: { id: number } }) => {
+      const date = utcToWibDateStr(row.transactionDate);
+      if (!map[date]) map[date] = { date, totalCredit: 0, totalDebit: 0, count: 0 };
+      const amount = Number(row._sum.amount ?? 0);
+      map[date].count += row._count.id;
+      if (row.type === "CREDIT") map[date].totalCredit += amount;
+      else map[date].totalDebit += amount;
     };
 
-    bankTx.forEach((t: any) => add(t, "BANK"));
-    walletTx.forEach((t: any) => add(t, "WALLET"));
+    bankRows.forEach(addRow);
+    walletRows.forEach(addRow);
 
-    return res.status(200).json(Object.values(map));
+    res.setHeader("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+    return res.status(200).json(Object.values(map).sort((a, b) => a.date.localeCompare(b.date)));
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Internal server error" });
