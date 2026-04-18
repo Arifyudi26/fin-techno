@@ -159,6 +159,16 @@
       "name": "User",
       "item": [
         {
+          "name": "List Users (Admin)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/user", "host": ["{{baseUrl}}"], "path": ["user"] },
+            "description": "Admin endpoint. Mengembalikan daftar semua user. Tidak memerlukan autentikasi berdasarkan implementasi saat ini."
+          },
+          "response": []
+        },
+        {
           "name": "Get Profile",
           "request": {
             "method": "GET",
@@ -286,9 +296,24 @@
                 { "key": "type", "value": "DEBIT", "disabled": true },
                 { "key": "source", "value": "BANK", "disabled": true },
                 { "key": "search", "value": "transfer", "disabled": true },
-                { "key": "category", "value": "", "disabled": true }
+                { "key": "category", "value": "", "disabled": true },
+                { "key": "accountId", "value": "", "disabled": true }
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"CATEGORY_ID\",\n  \"description\": \"Updated description\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] }
           },
           "response": []
         }
@@ -310,7 +335,20 @@
                 { "key": "dateTo", "value": "2026-04-30" }
               ]
             },
-            "description": "Mengembalikan ringkasan transaksi per hari beserta detail tiap transaksi (datetime, amount, provider, kategori, dll)"
+            "description": "Mengembalikan ringkasan harian per hari (totalCredit, totalDebit, transactionCount). Tidak lagi menyertakan array detail transaksi."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Calendar Day Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/calendar/2026-04-18",
+              "host": ["{{baseUrl}}"],
+              "path": ["calendar", "2026-04-18"]
+            },
+            "description": "Lazy-load endpoint. Mengembalikan detail transaksi untuk satu hari tertentu. Format tanggal: YYYY-MM-DD."
           },
           "response": []
         }
@@ -552,6 +590,25 @@
             "description": "Hapus upload beserta semua transaksi terkait"
           },
           "response": []
+        },
+        {
+          "name": "Process Upload (QStash Webhook)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "upstash-signature", "value": "QSTASH_SIGNATURE", "description": "Signature dari QStash untuk verifikasi" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uploadId\": \"UPLOAD_ID\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/upload/process", "host": ["{{baseUrl}}"], "path": ["upload", "process"] },
+            "description": "⚠️ INTERNAL — dipanggil oleh QStash, bukan client. Memproses file upload secara async setelah submit. Memerlukan header `upstash-signature` yang valid."
+          },
+          "response": []
         }
       ]
     },
@@ -626,17 +683,33 @@
           "response": []
         },
         {
+          "name": "SSE Notifications Stream",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications/stream?token={{token}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "stream"],
+              "query": [
+                { "key": "token", "value": "{{token}}" }
+              ]
+            },
+            "description": "Server-Sent Events (SSE) endpoint untuk real-time notifikasi. Autentikasi menggunakan query param `token` (bukan header). Buka di browser atau gunakan EventSource API."
+          },
+          "response": []
+        },
+        {
           "name": "Create Notification",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"UPLOAD_SUCCESS\",\n  \"title\": \"Upload Berhasil\",\n  \"message\": \"File statement berhasil diproses, 50 transaksi ditambahkan.\",\n  \"fileName\": \"statement_april.csv\"\n}",
+              "raw": "{\n  \"type\": \"success\",\n  \"title\": \"Upload Berhasil\",\n  \"message\": \"File statement berhasil diproses, 50 transaksi ditambahkan.\",\n  \"fileName\": \"statement_april.csv\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] },
-            "description": "type: UPLOAD_SUCCESS | UPLOAD_FAILED | UPLOAD_PARTIAL | INFO"
+            "description": "type: success | error | warning | info"
           },
           "response": []
         },
