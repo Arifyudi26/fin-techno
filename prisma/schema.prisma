@@ -190,6 +190,8 @@ model BankTransaction {
   @@index([type])
   @@index([status])
   @@index([reference])
+  // Composite index for calendar/dashboard queries: filter by account owner + date range
+  @@index([bankAccountId, transactionDate])
 }
 
 model TransactionCategory {
@@ -327,6 +329,8 @@ model WalletTransaction {
   @@index([transactionDate])
   @@index([type])
   @@index([status])
+  // Composite index for calendar/dashboard queries: filter by wallet owner + date range
+  @@index([walletId, transactionDate])
 }
 
 model BankTransactionCategory {
