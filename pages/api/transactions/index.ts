@@ -1,7 +1,36 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+
+// GET /api/transactions
+// Uses $queryRawUnsafe with dynamic SQL + parameterized user values.
+// Single UNION ALL query with CTE window aggregation — 1 round-trip.
+
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function toUtcDate(dateStr: string, endOfDay = false): Date {
+  const base = new Date(dateStr).getTime() - WIB_OFFSET_MS;
+  return new Date(endOfDay ? base + 86399999 : base);
+}
+
+type TxRow = {
+  id: string;
+  source: "BANK" | "WALLET";
+  transaction_date: Date;
+  description: string;
+  reference: string | null;
+  type: string;
+  amount: string;
+  balance: string | null;
+  status: string;
+  account_name: string;
+  provider: string;
+  category_names: string | null;
+  category_codes: string | null;
+  total_count: bigint;
+  total_credit: string;
+  total_debit: string;
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
@@ -10,179 +39,170 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try { userId = verifyToken(req).id; }
   catch { return res.status(401).json({ message: "Unauthorized" }); }
 
-  const { type, category, search, page = "1", limit = "10", dateFrom, dateTo, source = "ALL" } = req.query;
-  const pageNum = Math.max(1, parseInt(page as string));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit as string)));
-  const skip = (pageNum - 1) * limitNum;
+  const {
+    type, category, search,
+    page = "1", limit = "10",
+    dateFrom, dateTo,
+    source = "ALL",
+    accountId,
+  } = req.query as Record<string, string>;
+
+  const pageNum  = Math.max(1, parseInt(page));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const offset   = (pageNum - 1) * limitNum;
+
+  const includeBank   = source === "ALL" || source === "BANK";
+  const includeWallet = source === "ALL" || source === "WALLET";
+
+  // Build parameterized query — params array, $1 $2 ... placeholders
+  const params: unknown[] = [];
+  const p = (val: unknown) => { params.push(val); return `$${params.length}`; };
+
+  const userParam = p(userId);
+
+  // Date range
+  const gteParam = dateFrom ? p(toUtcDate(dateFrom))        : null;
+  const lteParam = dateTo   ? p(toUtcDate(dateTo, true))    : null;
+  const dateClause = (col: string) => {
+    if (gteParam && lteParam) return `AND ${col} BETWEEN ${gteParam} AND ${lteParam}`;
+    if (gteParam) return `AND ${col} >= ${gteParam}`;
+    if (lteParam) return `AND ${col} <= ${lteParam}`;
+    return "";
+  };
+
+  // Optional filters
+  const typeClause   = (col: string) => type && type !== "ALL" ? `AND ${col}::text = ${p(type)}` : "";
+  const searchClause = (col: string) => search ? `AND ${col} ILIKE ${p(`%${search}%`)}` : "";
+
+  // accountId filter — only apply to matching source
+  const bankAcctClause   = accountId && includeBank   ? `AND bt."bankAccountId" = ${p(accountId)}` : "";
+  const walletAcctClause = accountId && includeWallet ? `AND wt."walletId" = ${p(accountId)}` : "";
+
+  // category filter via EXISTS
+  const bankCatClause = category
+    ? `AND EXISTS (SELECT 1 FROM "BankTransactionCategory" x WHERE x."transactionId" = bt.id AND x."categoryId" = ${p(category)})`
+    : "";
+  // reuse same category param if already added
+  const walletCatClause = category
+    ? `AND EXISTS (SELECT 1 FROM "WalletTransactionCategory" x WHERE x."transactionId" = wt.id AND x."categoryId" = $${params.length})`
+    : "";
+
+  const limitParam  = p(limitNum);
+  const offsetParam = p(offset);
+
+  const bankBlock = includeBank ? `
+    SELECT
+      bt.id,
+      'BANK'                                    AS source,
+      bt."transactionDate"                      AS transaction_date,
+      bt.description,
+      bt.reference,
+      bt.type::text,
+      bt.amount::text,
+      bt.balance::text,
+      bt.status::text,
+      ba."accountName"                          AS account_name,
+      ba."bankProvider"::text                   AS provider,
+      STRING_AGG(DISTINCT tc.name, ',')         AS category_names,
+      STRING_AGG(DISTINCT tc.code, ',')         AS category_codes
+    FROM "BankTransaction" bt
+    JOIN "BankAccount" ba ON ba.id = bt."bankAccountId"
+    LEFT JOIN "BankTransactionCategory" btc ON btc."transactionId" = bt.id
+    LEFT JOIN "TransactionCategory" tc ON tc.id = btc."categoryId"
+    WHERE ba."ownerId" = ${userParam}
+      ${dateClause('bt."transactionDate"')}
+      ${typeClause('bt.type')}
+      ${searchClause('bt.description')}
+      ${bankAcctClause}
+      ${bankCatClause}
+    GROUP BY bt.id, ba."accountName", ba."bankProvider"
+  ` : "";
+
+  const walletBlock = includeWallet ? `
+    SELECT
+      wt.id,
+      'WALLET'                                  AS source,
+      wt."transactionDate"                      AS transaction_date,
+      wt.description,
+      wt.reference,
+      wt.type::text,
+      wt.amount::text,
+      wt.balance::text,
+      wt.status::text,
+      dw."accountName"                          AS account_name,
+      dw."walletProvider"::text                 AS provider,
+      STRING_AGG(DISTINCT tc.name, ',')         AS category_names,
+      STRING_AGG(DISTINCT tc.code, ',')         AS category_codes
+    FROM "WalletTransaction" wt
+    JOIN "DigitalWallet" dw ON dw.id = wt."walletId"
+    LEFT JOIN "WalletTransactionCategory" wtc ON wtc."transactionId" = wt.id
+    LEFT JOIN "TransactionCategory" tc ON tc.id = wtc."categoryId"
+    WHERE dw."ownerId" = ${userParam}
+      ${dateClause('wt."transactionDate"')}
+      ${typeClause('wt.type')}
+      ${searchClause('wt.description')}
+      ${walletAcctClause}
+      ${walletCatClause}
+    GROUP BY wt.id, dw."accountName", dw."walletProvider"
+  ` : "";
+
+  const unionParts = [bankBlock, walletBlock].filter(Boolean).join("\n    UNION ALL\n");
+
+  const sql = `
+    WITH base AS (
+      ${unionParts}
+    ),
+    agg AS (
+      SELECT
+        COUNT(*)                                                              AS total_count,
+        COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'CREDIT'), 0)::text AS total_credit,
+        COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'DEBIT'),  0)::text AS total_debit
+      FROM base
+    )
+    SELECT b.*, a.total_count, a.total_credit, a.total_debit
+    FROM base b, agg a
+    ORDER BY b.transaction_date DESC
+    LIMIT ${limitParam} OFFSET ${offsetParam}
+  `;
 
   try {
-    const db = prisma as any;
+    const rows = await prisma.$queryRawUnsafe<TxRow[]>(sql, ...params);
 
-    const includeBank = source === "ALL" || source === "BANK";
-    const includeWallet = source === "ALL" || source === "WALLET";
+    const total       = rows.length > 0 ? Number(rows[0].total_count) : 0;
+    const totalCredit = rows.length > 0 ? Number(rows[0].total_credit) : 0;
+    const totalDebit  = rows.length > 0 ? Number(rows[0].total_debit)  : 0;
 
-    const dateFilter = (dateFrom || dateTo) ? {
-      transactionDate: {
-        ...(dateFrom ? { gte: new Date(dateFrom as string) } : {}),
-        ...(dateTo ? { lte: new Date(new Date(dateTo as string).setHours(23, 59, 59, 999)) } : {}),
-      }
-    } : {};
+    const transactions = rows.map((r) => {
+      const catNames = r.category_names ? r.category_names.split(",") : [];
+      const catCodes = r.category_codes ? r.category_codes.split(",") : [];
+      return {
+        id:           r.id,
+        source:       r.source,
+        date:         r.transaction_date.toISOString().split("T")[0],
+        description:  r.description,
+        reference:    r.reference ?? null,
+        type:         r.type,
+        amount:       Number(r.amount),
+        balance:      r.balance != null ? Number(r.balance) : null,
+        status:       r.status,
+        accountName:  r.account_name,
+        provider:     r.provider,
+        categories:   catNames.map((name, i) => ({ name, code: catCodes[i] ?? "" })),
+        category:     catNames[0] ?? "Lainnya",
+        categoryCode: catCodes[0] ?? "LNY",
+      };
+    });
 
-    const bankWhere: any = {
-      bankAccount: { ownerId: userId },
-      ...(type && type !== "ALL" ? { type } : {}),
-      ...(category ? { categories: { some: { categoryId: category } } } : {}),
-      ...(search ? { description: { contains: search, mode: "insensitive" } } : {}),
-      ...dateFilter,
-    };
-
-    const walletWhere: any = {
-      wallet: { ownerId: userId },
-      ...(type && type !== "ALL" ? { type } : {}),
-      ...(category ? { categories: { some: { categoryId: category } } } : {}),
-      ...(search ? { description: { contains: search, mode: "insensitive" } } : {}),
-      ...dateFilter,
-    };
-
-    // Hitung total dulu (untuk pagination)
-    const [bankTotal, walletTotal] = await Promise.all([
-      includeBank ? prisma.bankTransaction.count({ where: bankWhere }) : Promise.resolve(0),
-      includeWallet ? db.walletTransaction.count({ where: walletWhere }) : Promise.resolve(0),
-    ]);
-    const total = bankTotal + walletTotal;
-
-    // Hitung summary (aggregate) dari semua transaksi yang match filter
-    const [bankSummary, walletSummary] = await Promise.all([
-      includeBank ? prisma.bankTransaction.groupBy({
-        by: ["type"],
-        where: bankWhere,
-        _sum: { amount: true },
-      }) : Promise.resolve([]),
-      includeWallet ? db.walletTransaction.groupBy({
-        by: ["type"],
-        where: walletWhere,
-        _sum: { amount: true },
-      }) : Promise.resolve([]),
-    ]);
-    const allSummary = [...bankSummary, ...walletSummary] as { type: string; _sum: { amount: any } }[];
-    const totalCredit = allSummary.filter(s => s.type === "CREDIT").reduce((acc, s) => acc + Number(s._sum.amount ?? 0), 0);
-    const totalDebit = allSummary.filter(s => s.type === "DEBIT").reduce((acc, s) => acc + Number(s._sum.amount ?? 0), 0);
-    const summary = { totalCredit, totalDebit, netFlow: totalCredit - totalDebit };
-
-    // Kalau hanya satu source, pakai DB-level pagination langsung
-    if (!includeBank) {
-      const walletTx = await db.walletTransaction.findMany({
-        where: walletWhere,
-        include: {
-          categories: { include: { category: { select: { name: true, code: true } } } },
-          wallet: { select: { walletProvider: true, phoneNumber: true, accountName: true } },
-        },
-        orderBy: { transactionDate: "desc" },
-        skip,
-        take: limitNum,
-      });
-      const mapped = walletTx.map((t: any) => mapWallet(t));
-      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum, summary));
-    }
-
-    if (!includeWallet) {
-      const bankTx = await prisma.bankTransaction.findMany({
-        where: bankWhere,
-        include: {
-          categories: { include: { category: { select: { name: true, code: true } } } },
-          bankAccount: { select: { bankProvider: true, accountNumber: true, accountName: true } },
-        },
-        orderBy: { transactionDate: "desc" },
-        skip,
-        take: limitNum,
-      });
-      const mapped = bankTx.map((t: any) => mapBank(t));
-      return res.status(200).json(buildResponse(mapped, total, pageNum, limitNum, summary));
-    }
-
-    // Kedua source: fetch semua lalu merge-sort-slice
-    const fetchCount = skip + limitNum;
-
-    const [bankTx, walletTx] = await Promise.all([
-      prisma.bankTransaction.findMany({
-        where: bankWhere,
-        include: {
-          categories: { include: { category: { select: { name: true, code: true } } } },
-          bankAccount: { select: { bankProvider: true, accountNumber: true, accountName: true } },
-        },
-        orderBy: { transactionDate: "desc" },
-        take: fetchCount,
-      }),
-      db.walletTransaction.findMany({
-        where: walletWhere,
-        include: {
-          categories: { include: { category: { select: { name: true, code: true } } } },
-          wallet: { select: { walletProvider: true, phoneNumber: true, accountName: true } },
-        },
-        orderBy: { transactionDate: "desc" },
-        take: fetchCount,
-      }),
-    ]);
-
-    const combined = [
-      ...bankTx.map((t: any) => mapBank(t)),
-      ...walletTx.map((t: any) => mapWallet(t)),
-    ]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(skip, skip + limitNum);
-
-    return res.status(200).json(buildResponse(combined, total, pageNum, limitNum, summary));
-
+    res.setHeader("Cache-Control", "private, max-age=15, stale-while-revalidate=60");
+    return res.status(200).json({
+      transactions,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      summary: { totalCredit, totalDebit, netFlow: totalCredit - totalDebit },
+    });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
-
-function mapBank(t: any) {
-  return {
-    id: t.id,
-    source: "BANK",
-    date: t.transactionDate.toISOString().split("T")[0],
-    description: t.description,
-    reference: t.reference,
-    type: t.type,
-    amount: Number(t.amount),
-    balance: t.balance != null ? Number(t.balance) : null,
-    categories: t.categories.map((c: any) => ({ name: c.category.name, code: c.category.code })),
-    category: t.categories[0]?.category?.name ?? "Lainnya",
-    categoryCode: t.categories[0]?.category?.code ?? "LNY",
-    accountName: t.bankAccount.accountName,
-    provider: t.bankAccount.bankProvider,
-    status: t.status,
-  };
-}
-
-function mapWallet(t: any) {
-  return {
-    id: t.id,
-    source: "WALLET",
-    date: t.transactionDate.toISOString().split("T")[0],
-    description: t.description,
-    reference: t.reference,
-    type: t.type,
-    amount: Number(t.amount),
-    balance: t.balance != null ? Number(t.balance) : null,
-    categories: t.categories.map((c: any) => ({ name: c.category.name, code: c.category.code })),
-    category: t.categories[0]?.category?.name ?? "Lainnya",
-    categoryCode: t.categories[0]?.category?.code ?? "LNY",
-    accountName: t.wallet.accountName,
-    provider: t.wallet.walletProvider,
-    status: t.status,
-  };
-}
-
-function buildResponse(transactions: any[], total: number, page: number, limit: number, summary: { totalCredit: number; totalDebit: number; netFlow: number }) {
-  return {
-    transactions,
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
-    summary,
-  };
 }
