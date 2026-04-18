@@ -47,7 +47,7 @@ Aplikasi ini **bukan** untuk bisnis atau akuntansi perusahaan — fokusnya pada 
 | Environment | URL |
 |---|---|
 | Local | http://localhost:3000 |
-| Production | https://Fin-Technono.vercel.app |
+| Production | https://fin-techno.vercel.app |
 
 ---
 
@@ -55,7 +55,7 @@ Aplikasi ini **bukan** untuk bisnis atau akuntansi perusahaan — fokusnya pada 
 
 Base URL:
 - **Local:** `http://localhost:3000/api`
-- **Vercel:** `https://Fin-Technono.vercel.app/api`
+- **Vercel:** `https://fin-techno.vercel.app/api`
 
 Semua endpoint (kecuali auth) memerlukan header:
 ```
