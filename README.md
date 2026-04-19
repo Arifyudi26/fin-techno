@@ -10,10 +10,10 @@ Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital
 |---|---|
 | **Demo (Production)** | [https://fin-techno.vercel.app](https://fin-techno.vercel.app) |
 | **Dokumentasi** | [https://fin-techno.vercel.app/docs](https://fin-techno.vercel.app/docs) |
-| **Local (setelah setup)** | [http://localhost:3000](http://localhost:3000) |
-| **Docs Local** | [http://localhost:3000/docs](http://localhost:3000/docs) |
 
 > Halaman `/docs` bisa dibuka **tanpa login** — berisi flow aplikasi (FRD), penjelasan fitur, dan API reference lengkap dengan payload & response.
+>
+> Untuk akses docs di local, jalankan dev server lalu buka `http://localhost:3000/docs`.
 
 ---
 
