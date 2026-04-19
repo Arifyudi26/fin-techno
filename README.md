@@ -4,7 +4,7 @@ Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital
 
 ---
 
-## 🌐 Demo & Dokumentasi
+## Demo & Dokumentasi
 
 | | URL |
 |---|---|
@@ -17,7 +17,7 @@ Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital
 
 ---
 
-## 🚀 Jalankan di Local
+## Jalankan di Local
 
 ```bash
 # 1. Clone & install
@@ -40,7 +40,7 @@ Buka [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 ```env
 # Database (Neon PostgreSQL)
@@ -81,13 +81,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 Next.js 15 · TypeScript · PostgreSQL (Neon) · Prisma · JWT + NextAuth v4 · Zustand · ApexCharts · FullCalendar · Tailwind CSS · Vercel Blob · QStash
 
 ---
 
-## 📦 Scripts
+## Scripts
 
 ```bash
 yarn dev      # development server
@@ -98,7 +98,7 @@ yarn lint     # ESLint
 
 ---
 
-## 🚢 Deploy ke Vercel
+## Deploy ke Vercel
 
 1. Push ke GitHub
 2. Import project di [vercel.com](https://vercel.com)
