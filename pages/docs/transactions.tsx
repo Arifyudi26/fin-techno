@@ -1,56 +1,23 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { Endpoint, SectionTitle } from "@/components/docs/shared";
+import { useDocsLang } from "@lib/docs/LangContext";
+import { t } from "@lib/docs/translations";
 
 export default function DocsTransactions() {
+  const { lang } = useDocsLang();
+  const tr = t[lang];
+
   return (
     <DocLayout title="Transactions API">
       <SectionTitle>Transactions API</SectionTitle>
       <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">
-        Semua endpoint memerlukan{" "}
+        {tr.api.authRequired}{" "}
         <code className="bg-gray-100 px-1 rounded text-xs dark:bg-gray-800 dark:text-gray-300">Authorization: Bearer &lt;token&gt;</code>
       </p>
 
-      <Endpoint
-        method="GET"
-        path="/api/transactions"
-        desc="List semua transaksi (bank + wallet) dengan pagination, filter, dan summary. Menggunakan single UNION ALL query untuk performa optimal."
-        params={`page=1              // default 1
-limit=10            // default 10, maks 100
-dateFrom=2026-01-01 // opsional, YYYY-MM-DD
-dateTo=2026-03-31   // opsional, YYYY-MM-DD
-type=DEBIT          // opsional: CREDIT | DEBIT | ALL
-source=ALL          // opsional: ALL | BANK | WALLET
-search=transfer     // opsional, pencarian di deskripsi (case-insensitive)
-category=clxyz...   // opsional, filter by category ID
-accountId=clxyz...  // opsional, filter by rekening/wallet ID`}
-        response={`{
-  "transactions": [
-    {
-      "id": "clxyz...",
-      "source": "BANK",
-      "date": "2026-03-15",
-      "description": "TRANSFER KE BUDI",
-      "reference": "REF123456",
-      "type": "DEBIT",
-      "amount": 500000,
-      "balance": 12000000,
-      "status": "SUCCESS",
-      "accountName": "Budi Santoso",
-      "provider": "BRI",
-      "categories": [{ "name": "Transfer", "code": "TRF" }],
-      "category": "Transfer",
-      "categoryCode": "TRF"
-    }
-  ],
-  "total": 142,
-  "page": 1,
-  "totalPages": 15,
-  "summary": {
-    "totalCredit": 15000000,
-    "totalDebit": 8500000,
-    "netFlow": 6500000
-  }
-}`}
+      <Endpoint method="GET" path="/api/transactions" desc={tr.api.txListDesc}
+        params={`page=1              // default 1\nlimit=10            // default 10, max 100\ndateFrom=2026-01-01\ndateTo=2026-03-31\ntype=DEBIT          // CREDIT | DEBIT | ALL\nsource=ALL          // ALL | BANK | WALLET\nsearch=transfer\ncategory=clxyz...\naccountId=clxyz...`}
+        response={`{\n  "transactions": [\n    {\n      "id": "clxyz...",\n      "source": "BANK",\n      "date": "2026-03-15",\n      "description": "TRANSFER KE BUDI",\n      "type": "DEBIT",\n      "amount": 500000,\n      "balance": 12000000,\n      "status": "SUCCESS",\n      "provider": "BRI",\n      "categories": [{ "name": "Transfer", "code": "TRF" }]\n    }\n  ],\n  "total": 142,\n  "page": 1,\n  "totalPages": 15,\n  "summary": { "totalCredit": 15000000, "totalDebit": 8500000, "netFlow": 6500000 }\n}`}
       />
     </DocLayout>
   );

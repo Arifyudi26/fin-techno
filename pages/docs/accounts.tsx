@@ -1,139 +1,57 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { Endpoint, SectionTitle, SubTitle } from "@/components/docs/shared";
+import { useDocsLang } from "@lib/docs/LangContext";
+import { t } from "@lib/docs/translations";
 
 export default function DocsAccounts() {
+  const { lang } = useDocsLang();
+  const tr = t[lang];
+
   return (
     <DocLayout title="Bank & Wallet API">
       <SectionTitle>Bank Accounts & Wallets API</SectionTitle>
       <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">
-        Semua endpoint memerlukan{" "}
+        {tr.api.authRequired}{" "}
         <code className="bg-gray-100 px-1 rounded text-xs dark:bg-gray-800 dark:text-gray-300">Authorization: Bearer &lt;token&gt;</code>
       </p>
 
-      <SubTitle>Bank Accounts</SubTitle>
+      <SubTitle>{tr.api.bankAccountsSubtitle}</SubTitle>
 
-      <Endpoint
-        method="GET"
-        path="/api/bank-accounts"
-        desc="List semua rekening bank milik user beserta statistik: total upload, total transaksi, total credit/debit, dan info upload terakhir."
-        response={`{
-  "accounts": [
-    {
-      "id": "clxyz...",
-      "bankProvider": "BRI",
-      "accountNumber": "039301026989508",
-      "accountName": "Budi Santoso",
-      "currency": "IDR",
-      "description": null,
-      "isActive": true,
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "totalUploads": 3,
-      "totalTransactions": 450,
-      "totalCredit": 45000000,
-      "totalDebit": 32000000,
-      "lastUploadDate": "2026-03-31T10:00:00.000Z",
-      "lastPeriodEnd": "2026-03-31",
-      "lastBalance": 13000000
-    }
-  ]
-}`}
+      <Endpoint method="GET" path="/api/bank-accounts" desc={tr.api.bankListDesc}
+        response={`{\n  "accounts": [{\n    "id": "clxyz...",\n    "bankProvider": "BRI",\n    "accountNumber": "039301026989508",\n    "accountName": "Budi Santoso",\n    "currency": "IDR",\n    "isActive": true,\n    "totalUploads": 3,\n    "totalTransactions": 450,\n    "totalCredit": 45000000,\n    "totalDebit": 32000000,\n    "lastPeriodEnd": "2026-03-31",\n    "lastBalance": 13000000\n  }]\n}`}
       />
 
-      <Endpoint
-        method="POST"
-        path="/api/bank-accounts"
-        desc="Tambah rekening bank baru. Nomor rekening harus unik."
-        body={`{
-  "bankProvider": "BRI",  // BRI | BCA | MANDIRI | BNI | CIMB | dll
-  "accountNumber": "039301026989508",
-  "accountName": "Budi Santoso",
-  "description": "Rekening utama"  // opsional
-}`}
-        response={`{
-  "account": {
-    "id": "clxyz...",
-    "bankProvider": "BRI",
-    "accountNumber": "039301026989508",
-    "accountName": "Budi Santoso",
-    "currency": "IDR",
-    "ownerId": "clxyz...",
-    "isActive": true,
-    "createdAt": "2026-04-19T00:00:00.000Z"
-  }
-}`}
+      <Endpoint method="POST" path="/api/bank-accounts" desc={tr.api.bankAddDesc}
+        body={`{\n  "bankProvider": "BRI",  // BRI | BCA | MANDIRI | BNI | CIMB | etc\n  "accountNumber": "039301026989508",\n  "accountName": "Budi Santoso",\n  "description": "..."  // optional\n}`}
+        response={`{ "account": { "id": "clxyz...", "bankProvider": "BRI", ... } }`}
       />
 
-      <Endpoint
-        method="PUT"
-        path="/api/bank-accounts/:id"
-        desc="Update data rekening bank (nama, deskripsi, status aktif)."
-        body={`{
-  "accountName": "Budi Santoso Updated",
-  "description": "Rekening tabungan",
-  "isActive": true
-}`}
+      <Endpoint method="PUT" path="/api/bank-accounts/:id" desc={tr.api.bankUpdateDesc}
+        body={`{ "accountName": "...", "description": "...", "isActive": true }`}
         response={`{ "account": { ...updated fields } }`}
       />
 
-      <Endpoint
-        method="DELETE"
-        path="/api/bank-accounts/:id"
-        desc="Hapus rekening bank beserta semua transaksi dan upload terkait."
+      <Endpoint method="DELETE" path="/api/bank-accounts/:id" desc={tr.api.bankDeleteDesc}
         response={`{ "ok": true }`}
       />
 
-      <SubTitle>Digital Wallets</SubTitle>
+      <SubTitle>{tr.api.walletsSubtitle}</SubTitle>
 
-      <Endpoint
-        method="GET"
-        path="/api/wallets"
-        desc="List semua dompet digital milik user beserta statistik transaksi."
-        response={`{
-  "wallets": [
-    {
-      "id": "clxyz...",
-      "walletProvider": "GOPAY",
-      "phoneNumber": "08123456789",
-      "accountName": "Budi Santoso",
-      "isActive": true,
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "totalUploads": 2,
-      "totalTransactions": 85,
-      "totalCredit": 5000000,
-      "totalDebit": 4200000,
-      "lastUploadDate": "2026-03-20T10:00:00.000Z"
-    }
-  ]
-}`}
+      <Endpoint method="GET" path="/api/wallets" desc={tr.api.walletListDesc}
+        response={`{\n  "wallets": [{\n    "id": "clxyz...",\n    "walletProvider": "GOPAY",\n    "phoneNumber": "08123456789",\n    "accountName": "Budi Santoso",\n    "isActive": true,\n    "totalUploads": 2,\n    "totalTransactions": 85,\n    "totalCredit": 5000000,\n    "totalDebit": 4200000\n  }]\n}`}
       />
 
-      <Endpoint
-        method="POST"
-        path="/api/wallets"
-        desc="Tambah dompet digital baru."
-        body={`{
-  "walletProvider": "GOPAY",  // GOPAY | OVO | DANA | SHOPEEPAY | dll
-  "phoneNumber": "08123456789",
-  "accountName": "Budi Santoso"
-}`}
-        response={`{ "wallet": { "id": "clxyz...", ...fields } }`}
+      <Endpoint method="POST" path="/api/wallets" desc={tr.api.walletAddDesc}
+        body={`{\n  "walletProvider": "GOPAY",  // GOPAY | OVO | DANA | SHOPEEPAY | etc\n  "phoneNumber": "08123456789",\n  "accountName": "Budi Santoso"\n}`}
+        response={`{ "wallet": { "id": "clxyz...", ... } }`}
       />
 
-      <Endpoint
-        method="PUT"
-        path="/api/wallets/:id"
-        desc="Update data dompet digital."
-        body={`{
-  "accountName": "Budi Updated",
-  "isActive": true
-}`}
+      <Endpoint method="PUT" path="/api/wallets/:id" desc={tr.api.walletUpdateDesc}
+        body={`{ "accountName": "...", "isActive": true }`}
         response={`{ "wallet": { ...updated fields } }`}
       />
 
-      <Endpoint
-        method="DELETE"
-        path="/api/wallets/:id"
-        desc="Hapus dompet digital. Soft delete jika ada transaksi terkait (isActive = false), hard delete jika tidak ada transaksi."
+      <Endpoint method="DELETE" path="/api/wallets/:id" desc={tr.api.walletDeleteDesc}
         response={`{ "ok": true }`}
       />
     </DocLayout>

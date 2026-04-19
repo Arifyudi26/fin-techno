@@ -1,24 +1,12 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@lib/context/ThemeContext";
+import { useDocsLang } from "@lib/docs/LangContext";
+import { t } from "@lib/docs/translations";
 
-const NAV = [
-  { href: "/docs", label: "Overview" },
-  { href: "/docs/flow", label: "App Flow (FRD)" },
-  { href: "/docs/auth", label: "Auth API" },
-  { href: "/docs/dashboard", label: "Dashboard API" },
-  { href: "/docs/transactions", label: "Transactions API" },
-  { href: "/docs/accounts", label: "Bank & Wallet API" },
-  { href: "/docs/upload", label: "Upload API" },
-  { href: "/docs/categories", label: "Categories API" },
-  { href: "/docs/reports", label: "Reports API" },
-  { href: "/docs/calendar", label: "Calendar API" },
-  { href: "/docs/notifications", label: "Notifications API" },
-  { href: "/docs/user", label: "User API" },
-];
-
+// ─── Icons ────────────────────────────────────────────────────────────────────
 function SunIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -39,28 +27,99 @@ function HamburgerIcon({ open }: { open: boolean }) {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       {open ? (
-        // X icon
         <>
           <path d="M4 4L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M16 4L4 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </>
       ) : (
-        // Hamburger
-        <>
-          <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </>
+        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       )}
     </svg>
   );
 }
 
-function NavLinks({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-}) {
+function ChevronDown() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ─── Language Dropdown ────────────────────────────────────────────────────────
+const LANGS = [
+  { code: "id", flag: "🇮🇩", label: "Indonesia" },
+  { code: "en", flag: "🇬🇧", label: "English" },
+] as const;
+
+function LangDropdown() {
+  const { lang, setLang } = useDocsLang();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = LANGS.find((l) => l.code === lang)!;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+      >
+        <span>{current.flag}</span>
+        <span className="hidden sm:inline">{current.label}</span>
+        <ChevronDown />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-36 rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 z-50">
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => { setLang(l.code); setOpen(false); }}
+              className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                lang === l.code
+                  ? "bg-blue-50 text-blue-700 font-semibold dark:bg-blue-900/30 dark:text-blue-300"
+                  : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+              }`}
+            >
+              <span>{l.flag}</span>
+              <span>{l.label}</span>
+              {lang === l.code && <span className="ml-auto text-blue-500 dark:text-blue-400">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Nav Links ────────────────────────────────────────────────────────────────
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const { lang } = useDocsLang();
+  const tr = t[lang];
+
+  const NAV = [
+    { href: "/docs", label: tr.navOverview },
+    { href: "/docs/flow", label: tr.navFlow },
+    { href: "/docs/auth", label: tr.navAuth },
+    { href: "/docs/dashboard", label: tr.navDashboard },
+    { href: "/docs/transactions", label: tr.navTransactions },
+    { href: "/docs/accounts", label: tr.navAccounts },
+    { href: "/docs/upload", label: tr.navUpload },
+    { href: "/docs/categories", label: tr.navCategories },
+    { href: "/docs/reports", label: tr.navReports },
+    { href: "/docs/calendar", label: tr.navCalendar },
+    { href: "/docs/notifications", label: tr.navNotifications },
+    { href: "/docs/user", label: tr.navUser },
+  ];
+
   return (
     <nav className="space-y-0.5">
       {NAV.map((item) => {
@@ -84,23 +143,15 @@ function NavLinks({
   );
 }
 
-export default function DocLayout({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+// ─── Inner layout (needs context) ─────────────────────────────────────────────
+function DocLayoutInner({ title, children }: { title: string; children: React.ReactNode }) {
   const { pathname } = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { lang } = useDocsLang();
+  const tr = t[lang];
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Close drawer on route change
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname]);
-
-  // Lock body scroll when drawer is open
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -110,17 +161,16 @@ export default function DocLayout({
     <>
       <Head>
         <title>{title} — Fin-Techno Docs</title>
-        <meta name="description" content="Dokumentasi lengkap aplikasi Fin-Techno: flow aplikasi, FRD, dan API reference." />
+        <meta name="description" content="Fin-Techno documentation: app flow, FRD, and API reference." />
       </Head>
       <div className="min-h-screen bg-gray-50 font-sans dark:bg-gray-950">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* Header */}
         <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
 
-            {/* Left: hamburger (mobile) + logo */}
+            {/* Left */}
             <div className="flex items-center gap-2">
-              {/* Hamburger — only on mobile */}
               <button
                 onClick={() => setDrawerOpen((v) => !v)}
                 aria-label="Toggle navigation"
@@ -128,7 +178,6 @@ export default function DocLayout({
               >
                 <HamburgerIcon open={drawerOpen} />
               </button>
-
               <Link href="/docs" className="text-lg font-bold text-blue-600 hover:opacity-80 dark:text-blue-400">
                 Fin-Techno
               </Link>
@@ -137,14 +186,19 @@ export default function DocLayout({
               </span>
             </div>
 
-            {/* Right: base url (hidden on mobile) + theme toggle */}
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>Base URL:</span>
+            {/* Right */}
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-1">
+                <span>{tr.baseUrl}:</span>
                 <code className="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                   /api
                 </code>
               </div>
+
+              {/* Language dropdown */}
+              <LangDropdown />
+
+              {/* Theme toggle */}
               <button
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
@@ -156,45 +210,29 @@ export default function DocLayout({
           </div>
         </header>
 
-        {/* ── Mobile drawer overlay ───────────────────────────────────────── */}
+        {/* Mobile overlay */}
         {drawerOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-            onClick={() => setDrawerOpen(false)}
-          />
+          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setDrawerOpen(false)} />
         )}
 
-        {/* ── Mobile drawer panel ─────────────────────────────────────────── */}
-        <div
-          className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transition-transform duration-300 dark:bg-gray-900 lg:hidden ${
-            drawerOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
-          {/* Drawer header */}
+        {/* Mobile drawer */}
+        <div className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transition-transform duration-300 dark:bg-gray-900 lg:hidden ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-            <span className="font-bold text-blue-600 dark:text-blue-400">Navigation</span>
-            <button
-              onClick={() => setDrawerOpen(false)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-            >
+            <span className="font-bold text-blue-600 dark:text-blue-400">{tr.nav}</span>
+            <button onClick={() => setDrawerOpen(false)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">
               <HamburgerIcon open={true} />
             </button>
           </div>
-          {/* Drawer nav */}
           <div className="overflow-y-auto h-[calc(100%-3.5rem)] py-4 px-3">
             <NavLinks pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
           </div>
         </div>
 
-        {/* ── Body: sidebar + content ─────────────────────────────────────── */}
+        {/* Body */}
         <div className="mx-auto flex max-w-7xl">
-
-          {/* Desktop sidebar — hidden on mobile */}
           <aside className="hidden lg:block sticky top-14 h-[calc(100vh-3.5rem)] w-56 flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white py-6 px-3 dark:border-gray-800 dark:bg-gray-900">
             <NavLinks pathname={pathname} />
           </aside>
-
-          {/* Main content */}
           <main className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </main>
@@ -202,4 +240,9 @@ export default function DocLayout({
       </div>
     </>
   );
+}
+
+// ─── Export langsung tanpa provider (sudah ada di _app.tsx) ──────────────────
+export default function DocLayout({ title, children }: { title: string; children: React.ReactNode }) {
+  return <DocLayoutInner title={title}>{children}</DocLayoutInner>;
 }

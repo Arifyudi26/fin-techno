@@ -1,81 +1,40 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { Endpoint, SectionTitle } from "@/components/docs/shared";
+import { useDocsLang } from "@lib/docs/LangContext";
+import { t } from "@lib/docs/translations";
 
 export default function DocsNotifications() {
+  const { lang } = useDocsLang();
+  const tr = t[lang];
+
   return (
     <DocLayout title="Notifications API">
       <SectionTitle>Notifications API</SectionTitle>
       <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">
-        Semua endpoint memerlukan{" "}
+        {tr.api.authRequired}{" "}
         <code className="bg-gray-100 px-1 rounded text-xs dark:bg-gray-800 dark:text-gray-300">Authorization: Bearer &lt;token&gt;</code>
       </p>
 
-      <Endpoint
-        method="GET"
-        path="/api/notifications"
-        desc="List 50 notifikasi terbaru milik user beserta jumlah yang belum dibaca."
-        response={`{
-  "notifications": [
-    {
-      "id": "clxyz...",
-      "userId": "clxyz...",
-      "type": "UPLOAD_SUCCESS",
-      "title": "Upload Berhasil",
-      "message": "118 transaksi berhasil diproses dari e-StatementBRImo_Mar2026.csv",
-      "fileName": "e-StatementBRImo_Mar2026.csv",
-      "read": false,
-      "createdAt": "2026-04-05T15:14:01.000Z"
-    }
-  ],
-  "unreadCount": 3
-}`}
+      <Endpoint method="GET" path="/api/notifications" desc={tr.api.notifListDesc}
+        response={`{\n  "notifications": [{\n    "id": "clxyz...",\n    "type": "UPLOAD_SUCCESS",\n    "title": "Upload Berhasil",\n    "message": "118 transaksi berhasil diproses",\n    "fileName": "e-StatementBRImo_Mar2026.csv",\n    "read": false,\n    "createdAt": "2026-04-05T15:14:01.000Z"\n  }],\n  "unreadCount": 3\n}`}
       />
 
-      <Endpoint
-        method="POST"
-        path="/api/notifications"
-        desc="Buat notifikasi baru (digunakan secara internal oleh sistem setelah proses upload)."
-        body={`{
-  "type": "UPLOAD_SUCCESS",
-  "title": "Upload Berhasil",
-  "message": "118 transaksi berhasil diproses",
-  "fileName": "e-StatementBRImo_Mar2026.csv"  // opsional
-}`}
-        response={`{
-  "id": "clxyz...",
-  "userId": "clxyz...",
-  "type": "UPLOAD_SUCCESS",
-  "title": "Upload Berhasil",
-  "message": "118 transaksi berhasil diproses",
-  "read": false,
-  "createdAt": "2026-04-19T00:00:00.000Z"
-}`}
+      <Endpoint method="POST" path="/api/notifications" desc={tr.api.notifAddDesc}
+        body={`{\n  "type": "UPLOAD_SUCCESS",\n  "title": "Upload Berhasil",\n  "message": "118 transaksi berhasil diproses",\n  "fileName": "..."  // optional\n}`}
+        response={`{ "id": "clxyz...", "type": "UPLOAD_SUCCESS", "read": false, "createdAt": "..." }`}
       />
 
-      <Endpoint
-        method="PATCH"
-        path="/api/notifications"
-        desc="Tandai semua notifikasi sebagai sudah dibaca."
+      <Endpoint method="PATCH" path="/api/notifications" desc={tr.api.notifPatchDesc}
         response={`{ "ok": true }`}
       />
 
-      <Endpoint
-        method="DELETE"
-        path="/api/notifications"
-        desc="Hapus semua notifikasi milik user."
+      <Endpoint method="DELETE" path="/api/notifications" desc={tr.api.notifDeleteDesc}
         response={`{ "ok": true }`}
       />
 
-      <Endpoint
-        method="GET"
-        path="/api/notifications/stream"
-        desc="Server-Sent Events (SSE) stream untuk notifikasi real-time. Karena EventSource tidak bisa mengirim header, token dikirim via query param."
-        auth={false}
-        params={`token=eyJhbGci...   // JWT token via query param (bukan header)`}
-        response={`// SSE event stream
-data: {"id":"clxyz...","type":"UPLOAD_SUCCESS","title":"Upload Berhasil","message":"...","read":false}
-
-data: {"id":"clxyz...","type":"UPLOAD_FAILED","title":"Upload Gagal","message":"...","read":false}`}
+      <Endpoint method="GET" path="/api/notifications/stream" desc={tr.api.notifStreamDesc} auth={false}
+        params={`token=eyJhbGci...   // JWT token via query param`}
+        response={`// SSE event stream\ndata: {"id":"clxyz...","type":"UPLOAD_SUCCESS","title":"Upload Berhasil","message":"...","read":false}\n\ndata: {"id":"clxyz...","type":"UPLOAD_FAILED","title":"Upload Gagal","message":"...","read":false}`}
       />
     </DocLayout>
   );
