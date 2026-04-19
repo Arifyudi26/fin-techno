@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Halaman publik (tidak perlu login)
-const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/auth/change-password", "/signin", "/signup", "/auth/oauth-callback"];
+const PUBLIC_PAGE_PATHS = ["/auth/login", "/auth/register", "/auth/change-password", "/signin", "/signup", "/auth/oauth-callback", "/docs"];
 
 // API yang boleh diakses tanpa token
 const PUBLIC_API_PATHS = [
@@ -54,12 +54,12 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
 
   if (!token) {
-    if (!PUBLIC_PAGE_PATHS.includes(pathname)) {
+    if (!PUBLIC_PAGE_PATHS.includes(pathname) && !pathname.startsWith("/docs")) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   } else {
-    // oauth-callback selalu boleh diakses meski ada token, untuk handle re-login OAuth
-    if (PUBLIC_PAGE_PATHS.includes(pathname) && pathname !== "/auth/oauth-callback") {
+    // oauth-callback dan docs selalu boleh diakses meski ada token
+    if (PUBLIC_PAGE_PATHS.includes(pathname) && pathname !== "/auth/oauth-callback" && !pathname.startsWith("/docs")) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
