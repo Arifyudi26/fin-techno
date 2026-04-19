@@ -17,6 +17,7 @@ export type LoginResponse = {
   token: string;
   role: UserRole;
   name: string;
+  avatar?: string | null;
 };
 
 export type User = {

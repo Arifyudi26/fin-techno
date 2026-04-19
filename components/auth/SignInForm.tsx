@@ -53,11 +53,12 @@ export default function SignInForm() {
     setLoading(true);
     try {
       const response = await axiosGlobal.post("/auth/verify-otp", { email, code, purpose: "login" });
-      const { token, role, id, name } = response.data.data;
+      const { token, role, id, name, avatar } = response.data.data;
       useAuthStore.getState().setId(id);
       useAuthStore.getState().setToken(token);
       useAuthStore.getState().setRole(role);
       useAuthStore.getState().setName(name);
+      useAuthStore.getState().setAvatar(avatar ?? null);
       fire("success", "Login Berhasil!", { duration: 1500 });
       setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (error: unknown) {

@@ -4,11 +4,13 @@ import { signOut } from "next-auth/react";
 import { DropdownItem } from "@components/ui/dropdown/DropdownItem";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
 import useAuthStore from "@/store/authStore";
+import { useAvatarUrl } from "@lib/hooks/useAvatarUrl";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const { logout, role, name } = useAuthStore();
+  const avatarObjectUrl = useAvatarUrl();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -35,8 +37,11 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-brand-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-          {initials}
+        <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-brand-500 flex items-center justify-center text-white font-semibold text-sm shrink-0 border border-gray-200 dark:border-gray-800">
+          {avatarObjectUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={avatarObjectUrl} alt={displayName} className="h-11 w-11 object-cover rounded-full" />
+            : initials}
         </span>
         <span className="block mr-1 font-medium text-theme-sm">
           {displayName}

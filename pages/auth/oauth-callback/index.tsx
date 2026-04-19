@@ -41,7 +41,7 @@ export default function OAuthCallback() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 
-  const finishLogin = () => {
+  const finishLogin = (avatar?: string | null) => {
     if (!session) return;
     const { appToken, appId, appRole, appName } = session;
     Cookies.set("token", appToken as string, { expires: 1 });
@@ -49,14 +49,15 @@ export default function OAuthCallback() {
     useAuthStore.getState().setToken(appToken as string);
     useAuthStore.getState().setRole(appRole as string);
     useAuthStore.getState().setName(appName as string);
+    useAuthStore.getState().setAvatar(avatar ?? null);
     window.location.href = "/";
   };
 
   const handleVerifyOtp = async (code: string) => {
     setOtpLoading(true);
     try {
-      await axiosGlobal.post("/auth/verify-otp", { email, code, purpose: "oauth" });
-      finishLogin();
+      const res = await axiosGlobal.post("/auth/verify-otp", { email, code, purpose: "oauth" });
+      finishLogin(res.data.data?.avatar);
     } catch (error: unknown) {
       fire("error", "Verifikasi Gagal!", {
         message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Kode OTP salah atau kadaluarsa.",

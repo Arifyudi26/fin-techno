@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable @next/next/no-img-element */
+import { useState, useEffect, useRef } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -6,8 +7,9 @@ import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
 import useAuthStore from "@/store/authStore";
+import { useAvatarUrl, invalidateAvatarCache } from "@lib/hooks/useAvatarUrl";
 
-interface UserProfile { id: string; name: string; email: string; role: string; createdAt: string; }
+interface UserProfile { id: string; name: string; email: string; role: string; avatar?: string | null; createdAt: string; }
 interface UserStats { bankAccountCount: number; walletCount: number; uploadCount: number; transactionCount: number; }
 
 export default function ProfilePage() {
@@ -20,6 +22,9 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const avatarObjectUrl = useAvatarUrl();
 
   useEffect(() => {
     axiosGlobal.get("/user/profile")
@@ -32,7 +37,40 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [fire]);
 
-  const { setName } = useAuthStore();
+  const { setName, setAvatar } = useAuthStore();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      fire("error", "Format tidak didukung. Gunakan JPG, PNG, atau WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      fire("error", "Ukuran file maksimal 5MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await axiosGlobal.post("/user/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setProfile((prev) => prev ? { ...prev, avatar: res.data.user.avatar } : prev);
+      setAvatar(res.data.user.avatar);
+      invalidateAvatarCache();
+      fire("success", "Foto profil berhasil diperbarui", { duration: 3000 });
+    } catch {
+      fire("error", "Gagal mengupload foto profil");
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,8 +134,40 @@ export default function ProfilePage() {
             </div>
           ) : profile ? (
             <div className="flex items-center gap-4 mb-6">
-              <div className="h-16 w-16 rounded-full bg-brand-500 flex items-center justify-center text-white text-2xl font-bold shrink-0">
-                {profile.name.charAt(0).toUpperCase()}
+              <div className="relative shrink-0">
+                <div className="h-16 w-16 rounded-full overflow-hidden bg-brand-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {avatarObjectUrl ? (
+                    <img src={avatarObjectUrl} alt={profile.name} className="object-cover w-full h-full" />
+                  ) : (
+                    profile.name.charAt(0).toUpperCase()
+                  )}
+                  
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-brand-500 hover:bg-brand-600 border-2 border-white dark:border-gray-900 flex items-center justify-center transition-colors disabled:opacity-50"
+                  title="Ganti foto profil"
+                >
+                  {uploadingAvatar ? (
+                    <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4" />
+                      <path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-3.414.586.586-3.414A4 4 0 019 13z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{profile.name}</h3>

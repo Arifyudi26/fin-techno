@@ -41,7 +41,7 @@ export default async function handler(
     );
 
 
-    const data: LoginResponse = { token, role: user.role, name: user.name, id:user.id};
+    const data: LoginResponse = { token, role: user.role, name: user.name, id: user.id, avatar: user.avatar ?? null };
     res.status(200).json({ message: "success", data: data });
   } catch (error) {
     console.error(error);

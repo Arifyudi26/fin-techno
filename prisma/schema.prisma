@@ -93,6 +93,7 @@ model User {
   password      String
   role          Role          @default(user)
   loginProvider LoginProvider @default(APP)
+  avatar        String?
   createdAt     DateTime      @default(now())
 
   bankAccounts         BankAccount[]

@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await db.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ message: "User tidak ditemukan" });
     const token = jwt.sign({ id: user.id, role: user.role, name: user.name }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
-    return res.status(200).json({ message: "success", data: { token, role: user.role, name: user.name, id: user.id } });
+    return res.status(200).json({ message: "success", data: { token, role: user.role, name: user.name, id: user.id, avatar: user.avatar ?? null } });
   }
 
   if (purpose === "change-password") {

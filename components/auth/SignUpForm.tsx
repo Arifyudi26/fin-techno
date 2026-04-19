@@ -61,6 +61,7 @@ export default function SignUpForm() {
       useAuthStore.getState().setToken(token);
       useAuthStore.getState().setRole(role);
       useAuthStore.getState().setName(userName);
+      useAuthStore.getState().setAvatar(null); // user baru belum punya avatar
       fire("success", "Registrasi Berhasil!", { message: `Selamat datang, ${userName}!`, duration: 1500 });
       setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (error: unknown) {

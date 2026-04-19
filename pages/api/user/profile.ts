@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "GET") {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, avatar: true, createdAt: true },
     });
     if (!user) return res.status(404).json({ message: "User tidak ditemukan" });
 
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const updated = await prisma.user.update({
         where: { id: userId },
         data: updateData,
-        select: { id: true, name: true, email: true, role: true },
+        select: { id: true, name: true, email: true, role: true, avatar: true },
       });
       return res.status(200).json({ user: updated });
     } catch (e) {
