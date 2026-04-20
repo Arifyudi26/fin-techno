@@ -8,6 +8,9 @@ import {
   EStatementStatus,
 } from "@prisma/client";
 import crypto from "crypto";
+import { parseDate } from "@lib/dateUtils";
+import { parseAmount } from "@lib/formatters";
+import { loadCategories, resolveCategoryIds } from "@lib/categoryMatcher";
 
 // Vercel: set maxDuration agar tidak timeout saat proses file besar
 export const config = {
@@ -71,30 +74,6 @@ function detectType(desc: string, debitVal: string, creditVal: string, signVal?:
   return TransactionType.DEBIT;
 }
 
-// CategoryEntry: id + keywords derived from category name
-type CategoryEntry = { id: string; keywords: string[] };
-
-// Load kategori milik user, extract keywords dari nama kategori
-// Contoh: name="Gaji Karyawan" → keywords=["gaji", "karyawan"]
-async function loadCategories(userId: string): Promise<CategoryEntry[]> {
-  const cats = await prisma.transactionCategory.findMany({
-    where: { userId },
-    select: { id: true, name: true },
-  });
-  return cats.map((c) => ({
-    id: c.id,
-    keywords: c.name.toLowerCase().split(/\s+/).filter((w) => w.length > 2),
-  }));
-}
-
-// Return semua category id yang match (many-to-many)
-function resolveCategoryIds(desc: string, categories: CategoryEntry[]): string[] {
-  const lower = desc.toLowerCase();
-  return categories
-    .filter((cat) => cat.keywords.some((k) => lower.includes(k)))
-    .map((cat) => cat.id);
-}
-
 type ParsedRow = {
   date: string; valueDate: string; description: string;
   debit: string; credit: string; openingBalance: string;
@@ -126,36 +105,6 @@ function parseRows(rows: string[][]): ParsedRow[] {
     reference: idx.ref >= 0 ? (row[idx.ref] ?? "") : "",
     sign: idx.sign >= 0 ? (row[idx.sign] ?? "") : "",
   }));
-}
-
-function parseAmount(val: string): number {
-  return Math.abs(Number(val.replace(/[^0-9.-]/g, "")) || 0);
-}
-
-function parseDate(val: string): Date | null {
-  if (!val) return null;
-  const clean = val.trim();
-  const isoMatch = clean.match(/^(\d{4}-\d{2}-\d{2})[T ][\d:]+/);
-  if (isoMatch) { const d = new Date(isoMatch[1]); return isNaN(d.getTime()) ? null : d; }
-  const briPdfMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{2})\s+\d{2}:\d{2}:\d{2}/);
-  if (briPdfMatch) {
-    const [, dd, mm, yy] = briPdfMatch;
-    const d = new Date(`20${yy}-${mm}-${dd}`);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
-    [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, m, d]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\/(\d{2})\/(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})-(\d{2})-(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\.(\d{2})\.(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\/(\d{2})\/(\d{2})$/, ([, d, m, y]) => `20${y}-${m}-${d}`],
-  ];
-  for (const [regex, builder] of patterns) {
-    const m = clean.match(regex);
-    if (m) { const d = new Date(builder(m)); if (!isNaN(d.getTime())) return d; }
-  }
-  const d = new Date(clean);
-  return isNaN(d.getTime()) ? null : d;
 }
 
 async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {

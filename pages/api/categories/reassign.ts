@@ -2,15 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
-
-type CategoryEntry = { id: string; keywords: string[] };
-
-function resolveCategoryIds(desc: string, categories: CategoryEntry[]): string[] {
-  const lower = desc.toLowerCase();
-  return categories
-    .filter((cat) => cat.keywords.some((k) => lower.includes(k)))
-    .map((cat) => cat.id);
-}
+import { loadCategories, resolveCategoryIds } from "@lib/categoryMatcher";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -26,19 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const db = prisma as any;
 
     // Load semua kategori milik user
-    const cats = await prisma.transactionCategory.findMany({
-      where: { userId },
-      select: { id: true, name: true },
-    });
+    const categories = await loadCategories(userId);
 
-    if (cats.length === 0) {
+    if (categories.length === 0) {
       return res.status(200).json({ message: "Tidak ada kategori", assigned: 0 });
     }
-
-    const categories: CategoryEntry[] = cats.map((c) => ({
-      id: c.id,
-      keywords: c.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2),
-    }));
 
     // Ambil semua transaksi bank milik user yang belum punya kategori
     const bankTx = await prisma.bankTransaction.findMany({

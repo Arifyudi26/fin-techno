@@ -2,12 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
-
-function pctChange(current: number, previous: number): string {
-  if (previous === 0) return current > 0 ? "+100%" : "0%";
-  const pct = ((current - previous) / previous) * 100;
-  return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
-}
+import { pctChange } from "@lib/formatters";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();

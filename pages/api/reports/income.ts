@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { buildDateRangeTrend } from "@lib/trendBuilder";
 
 export default async function handler(
   req: NextApiRequest,
@@ -207,87 +208,3 @@ export default async function handler(
   }
 }
 
-function buildDateRangeTrend(
-  allTx: { date: Date; amount: number }[],
-  dateStart: Date,
-  dateEnd: Date,
-) {
-  const diffDays = Math.ceil(
-    (dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays <= 31) {
-    // Per hari
-    const result: {
-      month: string;
-      monthNum: number;
-      total: number;
-      count: number;
-    }[] = [];
-    const cur = new Date(dateStart);
-    let i = 1;
-    while (cur <= dateEnd) {
-      const dayStr = cur.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-      });
-      const dayTx = allTx.filter(
-        (t) => t.date.toDateString() === cur.toDateString(),
-      );
-      result.push({
-        month: dayStr,
-        monthNum: i++,
-        total: dayTx.reduce((s, t) => s + t.amount, 0),
-        count: dayTx.length,
-      });
-      cur.setDate(cur.getDate() + 1);
-    }
-    return result;
-  } else if (diffDays <= 92) {
-    // Per minggu
-    const result: {
-      month: string;
-      monthNum: number;
-      total: number;
-      count: number;
-    }[] = [];
-    const cur = new Date(dateStart);
-    let weekNum = 1;
-    while (cur <= dateEnd) {
-      const weekEnd = new Date(cur);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      if (weekEnd > dateEnd) weekEnd.setTime(dateEnd.getTime());
-      const weekTx = allTx.filter((t) => t.date >= cur && t.date <= weekEnd);
-      result.push({
-        month: `Mg ${weekNum}`,
-        monthNum: weekNum,
-        total: weekTx.reduce((s, t) => s + t.amount, 0),
-        count: weekTx.length,
-      });
-      cur.setDate(cur.getDate() + 7);
-      weekNum++;
-    }
-    return result;
-  } else {
-    // Per bulan
-    const months = new Map<
-      string,
-      { month: string; monthNum: number; total: number; count: number }
-    >();
-    for (const t of allTx) {
-      const key = `${t.date.getFullYear()}-${t.date.getMonth()}`;
-      const label = t.date.toLocaleDateString("id-ID", {
-        month: "short",
-        year: "numeric",
-      });
-      const e = months.get(key) ?? {
-        month: label,
-        monthNum: t.date.getMonth() + 1,
-        total: 0,
-        count: 0,
-      };
-      months.set(key, { ...e, total: e.total + t.amount, count: e.count + 1 });
-    }
-    return Array.from(months.values());
-  }
-}

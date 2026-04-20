@@ -2,9 +2,7 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { CashFlowMonth, NetFlowPoint } from "@/lib/types/dashboard";
 import { multiSeriestooltip } from "@/lib/apexTooltip";
-
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 interface Props {
   data?: CashFlowMonth[];

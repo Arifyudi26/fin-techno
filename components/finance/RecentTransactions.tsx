@@ -4,9 +4,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/
 import Badge from "@components/ui/badge/Badge";
 import { RecentTransaction } from "@/lib/types/dashboard";
 import { fmtDate } from "@/lib/utils";
-
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 interface Props {
   data?: RecentTransaction[];

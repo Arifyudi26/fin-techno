@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-require-imports */
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
@@ -8,37 +7,12 @@ import crypto from "crypto";
 import { put } from "@vercel/blob";
 import path from "path";
 import { processUpload } from "./process";
+import { parseMultipart } from "@lib/multipartParser";
 
 export const config = {
   api: { bodyParser: false },
   maxDuration: 60,
 };
-
-function parseMultipart(req: NextApiRequest): Promise<{
-  fields: Record<string, string>;
-  file: { buffer: Buffer; filename: string; size: number } | null;
-}> {
-  return new Promise((resolve, reject) => {
-    const Busboy = require("busboy");
-    const bb = Busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
-    const fields: Record<string, string> = {};
-    let fileResult: { buffer: Buffer; filename: string; size: number } | null = null;
-
-    bb.on("field", (name: string, val: string) => { fields[name] = val; });
-    bb.on("file", (_field: string, stream: any, info: any) => {
-      const chunks: Buffer[] = [];
-      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      stream.on("end", () => {
-        const buffer = Buffer.concat(chunks);
-        fileResult = { buffer, filename: info.filename, size: buffer.length };
-      });
-      stream.on("error", reject);
-    });
-    bb.on("finish", () => resolve({ fields, file: fileResult }));
-    bb.on("error", reject);
-    req.pipe(bb);
-  });
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -147,7 +121,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
-    // Proses langsung — await sebelum respond agar tidak di-kill Vercel
     console.log("[submit] Starting processUpload for", uploadId);
     const { logs } = await processUpload(jobPayload);
     console.log("[submit] processUpload done for", uploadId);

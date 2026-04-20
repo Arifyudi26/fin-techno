@@ -1,10 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import db from "@/lib/db";
 import { sendOtpEmail } from "@/lib/mailer";
-
-function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { generateOtp } from "@/lib/auth";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();

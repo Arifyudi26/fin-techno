@@ -1,31 +1,15 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import { verifyToken } from "@lib/auth";
 
 export const config = { maxDuration: 25 };
-
-type DecodedToken = JwtPayload & { id: string };
-
-function extractUserId(req: NextApiRequest): string {
-  const authHeader = req.headers.authorization;
-  const raw = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : req.query.token;
-
-  const token = Array.isArray(raw) ? raw[0] : raw;
-  if (!token) throw new Error("No token");
-
-  const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
-  if (!decoded?.id) throw new Error("Invalid payload");
-  return decoded.id;
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
 
   let userId: string;
   try {
-    userId = extractUserId(req);
+    userId = verifyToken(req).id;
   } catch {
     return res.status(401).json({ message: "Unauthorized" });
   }
