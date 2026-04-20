@@ -5,8 +5,7 @@
  * Dark mode is detected at call-time via document.documentElement.classList.
  */
 
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 const isDark = () =>
   typeof document !== "undefined" &&

@@ -3,7 +3,6 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 
-// ─── Auto-assign helper ───────────────────────────────────────────────────────
 // Called after POST — matches new category keywords against existing transactions.
 // Uses raw SQL ILIKE to push matching to DB instead of loading all rows into JS.
 async function autoAssignCategory(userId: string, catId: string, catName: string) {
@@ -48,7 +47,6 @@ async function autoAssignCategory(userId: string, catId: string, catName: string
   );
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }

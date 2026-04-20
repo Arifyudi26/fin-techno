@@ -1,20 +1,11 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { dayRangeUTC } from "@lib/dateUtils";
 
 // GET /api/calendar/[date]  (date = YYYY-MM-DD)
 // Single-query approach using raw SQL with JOIN to avoid N+1 on categories.
 // Timezone: WIB = UTC+7, so "2026-04-18" local = "2026-04-17T17:00:00Z" to "2026-04-18T16:59:59.999Z"
-
-const WIB_OFFSET_HOURS = 7;
-
-function dayRangeUTC(dateStr: string): { gte: Date; lte: Date } {
-  // Parse as local WIB midnight, convert to UTC
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const gte = new Date(Date.UTC(y, m - 1, d, 0 - WIB_OFFSET_HOURS, 0, 0, 0));
-  const lte = new Date(Date.UTC(y, m - 1, d, 24 - WIB_OFFSET_HOURS, 0, 0, -1));
-  return { gte, lte };
-}
 
 interface RawTxRow {
   id: string;

@@ -1,16 +1,14 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { wibToUtc } from "@lib/dateUtils";
 
 // GET /api/transactions
 // Uses $queryRawUnsafe with dynamic SQL + parameterized user values.
 // Single UNION ALL query with CTE window aggregation — 1 round-trip.
 
-const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-
 function toUtcDate(dateStr: string, endOfDay = false): Date {
-  const base = new Date(dateStr).getTime() - WIB_OFFSET_MS;
-  return new Date(endOfDay ? base + 86399999 : base);
+  return wibToUtc(dateStr, endOfDay);
 }
 
 type TxRow = {

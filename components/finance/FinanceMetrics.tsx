@@ -1,8 +1,6 @@
 import { ArrowDownIcon, ArrowUpIcon } from "@components/icons";
 import { DashboardMetrics } from "@/lib/types/dashboard";
-
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 interface Props {
   data?: DashboardMetrics;

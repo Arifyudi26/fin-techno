@@ -11,3 +11,7 @@ export function fmtDate(date: string | Date | null | undefined): string {
   const year  = d.getFullYear();
   return `${day}/${month}/${year}`;
 }
+
+// Re-export dari lib/formatters dan lib/dateUtils agar import lama tetap jalan
+export { fmtIDR, parseAmount, pctChange } from "@lib/formatters";
+export { timeAgo, parseDate, wibToUtc, utcToWibDateStr, dayRangeUTC } from "@lib/dateUtils";

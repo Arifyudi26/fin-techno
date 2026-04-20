@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
 import { useNotifications, UploadNotification } from "@lib/context/NotificationContext";
+import { timeAgo } from "@lib/dateUtils";
 
 const typeIcon: Record<UploadNotification["type"], React.ReactNode> = {
   success: (
@@ -32,14 +33,6 @@ const typeIcon: Record<UploadNotification["type"], React.ReactNode> = {
     </span>
   ),
 };
-
-function timeAgo(date: Date | string): string {
-  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (diff < 60) return "Baru saja";
-  if (diff < 3600) return `${Math.floor(diff / 60)} mnt lalu`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
-  return `${Math.floor(diff / 86400)} hari lalu`;
-}
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
