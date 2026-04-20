@@ -3,7 +3,6 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { BankProvider } from "@prisma/client";
 
-// ─── GET /bank-accounts ───────────────────────────────────────────────────────
 // Single raw SQL query replaces N×3 aggregate queries.
 // Fetches accounts + credit/debit sums + tx count + last upload in one round-trip.
 

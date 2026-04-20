@@ -24,7 +24,6 @@ export function Code({ children }: { children: string }) {
   );
 }
 
-// ─── Tokenizer ────────────────────────────────────────────────────────────────
 function highlight(code: string): string {
   return code
     .split("\n")

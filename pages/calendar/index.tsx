@@ -11,7 +11,6 @@ import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface TxDetail {
   id: string;
@@ -36,7 +35,6 @@ interface DaySummary {
   // transactions no longer pre-loaded — fetched lazily via /api/calendar/[date]
 }
 
-// ─── Formatters (module-level singletons — Intl is expensive to construct) ───
 
 const idrFmt = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -72,7 +70,6 @@ const fmtTime = (isoStr: string) => timeFmt.format(new Date(isoStr));
 const toLocalDateStr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-// ─── Dot / amount cell styles (stable object references) ─────────────────────
 
 const DOT_WRAP: React.CSSProperties = { display: "flex", gap: 3, padding: "2px 4px 4px" };
 const DOT_GREEN: React.CSSProperties = {
@@ -95,7 +92,6 @@ const AMT_RED: React.CSSProperties = {
   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Calendar() {
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
@@ -309,7 +305,6 @@ export default function Calendar() {
   );
 }
 
-// ─── Sub-components (extracted to prevent inline re-creation) ─────────────────
 
 const TxArrow = ({ type }: { type: "CREDIT" | "DEBIT" }) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none"

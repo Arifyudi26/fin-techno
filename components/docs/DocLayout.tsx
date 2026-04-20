@@ -6,7 +6,6 @@ import { useTheme } from "@lib/context/ThemeContext";
 import { useDocsLang } from "@lib/docs/LangContext";
 import { t } from "@lib/docs/translations";
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
 function SunIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -46,7 +45,6 @@ function ChevronDown() {
   );
 }
 
-// ─── Language Dropdown ────────────────────────────────────────────────────────
 const LANGS = [
   { code: "id", flag: "🇮🇩", label: "Indonesia" },
   { code: "en", flag: "🇬🇧", label: "English" },
@@ -100,7 +98,6 @@ function LangDropdown() {
   );
 }
 
-// ─── Nav Links ────────────────────────────────────────────────────────────────
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const { lang } = useDocsLang();
   const tr = t[lang];
@@ -143,7 +140,6 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-// ─── Inner layout (needs context) ─────────────────────────────────────────────
 function DocLayoutInner({ title, children }: { title: string; children: React.ReactNode }) {
   const { pathname } = useRouter();
   const { theme, toggleTheme } = useTheme();
@@ -242,7 +238,6 @@ function DocLayoutInner({ title, children }: { title: string; children: React.Re
   );
 }
 
-// ─── Export langsung tanpa provider (sudah ada di _app.tsx) ──────────────────
 export default function DocLayout({ title, children }: { title: string; children: React.ReactNode }) {
   return <DocLayoutInner title={title}>{children}</DocLayoutInner>;
 }
