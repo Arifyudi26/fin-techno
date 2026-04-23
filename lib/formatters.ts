@@ -22,3 +22,11 @@ export function pctChange(current: number, previous: number): string {
   const pct = ((current - previous) / previous) * 100;
   return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
 }
+
+/** Format bytes ke satuan yang mudah dibaca (B, KB, MB) */
+export function formatBytes(bytes: number | null): string {
+  if (!bytes) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

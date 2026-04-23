@@ -10,16 +10,10 @@ import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { fmtDate } from "@/lib/utils";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
+import { formatBytes } from "@lib/formatters";
 
 const formatIDR = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
-
-const formatBytes = (bytes: number | null) => {
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 interface UploadDetail {
   id: string;
