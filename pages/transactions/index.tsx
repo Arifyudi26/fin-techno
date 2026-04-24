@@ -9,6 +9,8 @@ import { useModal } from "@lib/hooks/useModal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
+import dynamic from "next/dynamic";
+const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -29,8 +31,6 @@ const fmtDateIndo = (dateStr: string) => {
 };
 
 
-// Month names in Indonesian
-const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 interface Tx {
   id: string;
@@ -71,10 +71,10 @@ export default function Transactions() {
   const DEFAULT_FILTERS = { type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1, limit: 10 };
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
-  // Month picker state
-  const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  // Date range local state (for DatePicker inputs before apply)
+  const defaultRange = getDefaultDateRange();
+  const [localDateFrom, setLocalDateFrom] = useState(defaultRange.dateFrom);
+  const [localDateTo, setLocalDateTo] = useState(defaultRange.dateTo);
 
   // Transaction detail modal
   const { isOpen: isTxOpen, openModal: openTxDetail, closeModal: closeTxDetail } = useModal();
@@ -83,15 +83,6 @@ export default function Transactions() {
   useEffect(() => {
     setFilters((p) => ({ ...p, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
-
-  // Sync month picker → date filters
-  useEffect(() => {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-    const dateFrom = `${selectedYear}-${pad(selectedMonth + 1)}-01`;
-    const dateTo = `${selectedYear}-${pad(selectedMonth + 1)}-${pad(lastDay)}`;
-    setFilters((p) => ({ ...p, dateFrom, dateTo, page: 1 }));
-  }, [selectedMonth, selectedYear]);
 
   const fetchTx = useCallback(async () => {
     setLoading(true);
@@ -122,26 +113,16 @@ export default function Transactions() {
   const setFilter = (key: string, value: string | number) =>
     setFilters((p) => ({ ...p, [key]: value, page: key !== "page" ? 1 : (value as number) }));
 
-  const handlePrevMonth = () => {
-    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear((y) => y - 1); }
-    else setSelectedMonth((m) => m - 1);
-  };
-
-  const handleNextMonth = () => {
-    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear((y) => y + 1); }
-    else setSelectedMonth((m) => m + 1);
-  };
-
   const handleReset = () => {
-    const n = new Date();
-    setSelectedMonth(n.getMonth());
-    setSelectedYear(n.getFullYear());
+    const d = getDefaultDateRange();
+    setLocalDateFrom(d.dateFrom);
+    setLocalDateTo(d.dateTo);
     setSearchInput("");
-    setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", page: 1 }));
+    setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: d.dateFrom, dateTo: d.dateTo, page: 1 }));
   };
 
-  const isDefaultMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-  const hasActiveFilter = filters.type !== "ALL" || filters.source !== "ALL" || filters.search || !isDefaultMonth;
+  const hasActiveFilter = filters.type !== "ALL" || filters.source !== "ALL" || filters.search ||
+    filters.dateFrom !== getDefaultDateRange().dateFrom || filters.dateTo !== getDefaultDateRange().dateTo;
 
   return (
     <AppLayout>
@@ -194,9 +175,9 @@ export default function Transactions() {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Cari */}
-          <div className="flex flex-col gap-1 col-span-2 sm:col-span-3 lg:col-span-1">
+          <div className="flex flex-col gap-1 col-span-2 sm:col-span-3 lg:col-span-2">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Cari</label>
             <div className="relative">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -212,21 +193,29 @@ export default function Transactions() {
             </div>
           </div>
 
-          {/* Bulan */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Bulan</label>
-            <div className="flex items-center h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-              <button onClick={handlePrevMonth} className="h-full px-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              <span className="flex-1 text-center text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                {MONTHS[selectedMonth].slice(0, 3)} {selectedYear}
-              </span>
-              <button onClick={handleNextMonth} className="h-full px-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-            </div>
-          </div>
+          {/* Dari Tanggal */}
+          <DatePicker
+            id="tx-filter-from"
+            label="Dari Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={localDateFrom}
+            onChange={(v) => {
+              setLocalDateFrom(v);
+              setFilters((p) => ({ ...p, dateFrom: v || "", page: 1 }));
+            }}
+          />
+
+          {/* Sampai Tanggal */}
+          <DatePicker
+            id="tx-filter-to"
+            label="Sampai Tanggal"
+            placeholder="dd/mm/yyyy"
+            value={localDateTo}
+            onChange={(v) => {
+              setLocalDateTo(v);
+              setFilters((p) => ({ ...p, dateTo: v || "", page: 1 }));
+            }}
+          />
 
           {/* Tipe */}
           <div className="flex flex-col gap-1">
@@ -254,7 +243,11 @@ export default function Transactions() {
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">{total} transaksi ditemukan</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">{MONTHS[selectedMonth]} {selectedYear}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {filters.dateFrom && filters.dateTo
+              ? `${filters.dateFrom} – ${filters.dateTo}`
+              : filters.dateFrom || filters.dateTo || ""}
+          </p>
         </div>
         {loading ? (
           <div className="p-5 space-y-3">
