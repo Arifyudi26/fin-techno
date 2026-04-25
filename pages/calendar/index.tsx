@@ -10,6 +10,7 @@ import { useModal } from "@lib/hooks/useModal";
 import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { useI18n } from "@lib/i18n";
 
 
 interface TxDetail {
@@ -94,6 +95,7 @@ const AMT_RED: React.CSSProperties = {
 
 
 export default function Calendar() {
+  const { t, lang } = useI18n();
   const [daySummaries, setDaySummaries] = useState<DaySummary[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryMapRef = useRef<Record<string, DaySummary>>({});
@@ -213,7 +215,7 @@ export default function Calendar() {
 
   return (
     <AppLayout>
-      <PageMeta title="Kalender Transaksi" description="Kalender ringkasan transaksi harian" />
+      <PageMeta title={`${t.calendar.title} | Fin-Techno`} description={t.calendar.description} />
 
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
         <div className="custom-calendar relative p-2 sm:p-4">
@@ -223,7 +225,7 @@ export default function Calendar() {
             </div>
           )}
           <FullCalendar
-            locale={idLocale}
+            locale={lang === "id" ? idLocale : undefined}
             plugins={[dayGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
             headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
@@ -239,11 +241,11 @@ export default function Calendar() {
         <div className="flex items-center gap-4 px-4 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-success-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Pemasukan</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t.calendar.legendIncome}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-error-500" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Pengeluaran</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t.calendar.legendExpense}</span>
           </div>
         </div>
       </div>
@@ -258,19 +260,19 @@ export default function Calendar() {
           {dayTxs.length > 0 && (
             <div className="flex gap-2 mb-4 mt-3">
               <div className="flex-1 rounded-lg bg-success-50 dark:bg-success-500/10 px-3 py-2">
-                <p className="text-xs text-success-600 dark:text-success-400 font-medium">Masuk</p>
+                <p className="text-xs text-success-600 dark:text-success-400 font-medium">{t.calendar.in}</p>
                 <p className="text-sm font-semibold text-success-700 dark:text-success-300 truncate">
                   +{fmt(dayTxSummary.credit)}
                 </p>
               </div>
               <div className="flex-1 rounded-lg bg-error-50 dark:bg-error-500/10 px-3 py-2">
-                <p className="text-xs text-error-600 dark:text-error-400 font-medium">Keluar</p>
+                <p className="text-xs text-error-600 dark:text-error-400 font-medium">{t.calendar.out}</p>
                 <p className="text-sm font-semibold text-error-700 dark:text-error-300 truncate">
                   -{fmt(dayTxSummary.debit)}
                 </p>
               </div>
               <div className="flex-1 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Transaksi</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t.calendar.txCount}</p>
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{dayTxs.length}x</p>
               </div>
             </div>
@@ -285,7 +287,7 @@ export default function Calendar() {
           ) : dayTxs.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-sm text-gray-400 dark:text-gray-500">
               <span className="text-3xl mb-2">📭</span>
-              Tidak ada transaksi di tanggal ini
+              {t.calendar.noTransactions}
             </div>
           ) : (
             <div className="overflow-y-auto flex-1 space-y-1.5 no-scrollbar">

@@ -8,6 +8,7 @@ import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
 import DashboardFilters from "@components/finance/DashboardFilters";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { useI18n } from "@lib/i18n";
 import {
   DashboardMetrics,
   CashFlowMonth,
@@ -71,6 +72,7 @@ function buildParams(
 }
 
 export default function Home() {
+  const { t } = useI18n();
   const [data, setData] = useState<DashboardState>({
     metrics: null,
     cashFlow: [],
@@ -106,7 +108,7 @@ export default function Home() {
       setData((prev) => ({ ...prev, metrics: res.data }));
       setErrors((prev) => ({ ...prev, metrics: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, metrics: "Gagal memuat metrik" }));
+      setErrors((prev) => ({ ...prev, metrics: t.dashboard.errorMetrics }));
     } finally {
       setLoading((prev) => ({ ...prev, metrics: false }));
     }
@@ -125,7 +127,7 @@ export default function Home() {
       }));
       setErrors((prev) => ({ ...prev, cashflow: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, cashflow: "Gagal memuat cash flow" }));
+      setErrors((prev) => ({ ...prev, cashflow: t.dashboard.errorCashflow }));
     } finally {
       setLoading((prev) => ({ ...prev, cashflow: false }));
     }
@@ -138,7 +140,7 @@ export default function Home() {
       setData((prev) => ({ ...prev, bankAccounts: res.data }));
       setErrors((prev) => ({ ...prev, accounts: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, accounts: "Gagal memuat rekening" }));
+      setErrors((prev) => ({ ...prev, accounts: t.dashboard.errorAccounts }));
     } finally {
       setLoading((prev) => ({ ...prev, accounts: false }));
     }
@@ -174,7 +176,7 @@ export default function Home() {
     } catch {
       setErrors((prev) => ({
         ...prev,
-        transactions: "Gagal memuat transaksi",
+        transactions: t.dashboard.errorTransactions,
       }));
     } finally {
       setLoading((prev) => ({ ...prev, transactions: false }));
@@ -228,8 +230,8 @@ export default function Home() {
   return (
     <AppLayout>
       <PageMeta
-        title="Dashboard Keuangan | Fin-Techno"
-        description="Overview keuangan — pemasukan, pengeluaran, dan net flow dari semua rekening"
+        title={`${t.dashboard.title} | Fin-Techno`}
+        description={t.dashboard.description}
       />
 
       {errorMessages.length > 0 && (

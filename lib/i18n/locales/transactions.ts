@@ -1,0 +1,46 @@
+export const transactions = {
+  id: {
+    title: "Semua Transaksi",
+    description: "Daftar semua transaksi dari seluruh rekening",
+    pageTitle: "Semua Transaksi",
+    noTransactions: "Tidak ada transaksi",
+    headers: {
+      date: "Tanggal",
+      description: "Keterangan",
+      account: "Akun",
+      category: "Kategori",
+      amount: "Jumlah",
+      balance: "Saldo",
+      status: "Status",
+    },
+    detail: {
+      income: "Pemasukan",
+      expense: "Pengeluaran",
+      source: "Sumber",
+      wallet: "Dompet Digital",
+      bank: "Bank",
+    },
+  },
+  en: {
+    title: "All Transactions",
+    description: "List of all transactions from all accounts",
+    pageTitle: "All Transactions",
+    noTransactions: "No transactions",
+    headers: {
+      date: "Date",
+      description: "Description",
+      account: "Account",
+      category: "Category",
+      amount: "Amount",
+      balance: "Balance",
+      status: "Status",
+    },
+    detail: {
+      income: "Income",
+      expense: "Expense",
+      source: "Source",
+      wallet: "Digital Wallet",
+      bank: "Bank",
+    },
+  },
+} as const;

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 import dynamic from "next/dynamic";
+import { useI18n } from "@lib/i18n";
 const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
 function getDefaultDateRange() {
@@ -60,6 +61,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 }
 
 export default function Transactions() {
+  const { t } = useI18n();
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalCredit: 0, totalDebit: 0, netFlow: 0 });
   const [total, setTotal] = useState(0);
@@ -126,8 +128,8 @@ export default function Transactions() {
 
   return (
     <AppLayout>
-      <PageMeta title="Semua Transaksi | Fin-Techno" description="Daftar semua transaksi dari seluruh rekening" />
-      <PageBreadcrumb pageTitle="Semua Transaksi" />
+      <PageMeta title={`${t.transactions.title} | Fin-Techno`} description={t.transactions.description} />
+      <PageBreadcrumb pageTitle={t.transactions.pageTitle} />
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -136,7 +138,7 @@ export default function Transactions() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-success-600"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
           <div>
-            <p className="text-xs text-success-600 dark:text-success-400">Total Masuk</p>
+            <p className="text-xs text-success-600 dark:text-success-400">{t.common.totalIn}</p>
             <p className="text-base font-bold text-success-700 dark:text-success-400">+{formatIDR(summary.totalCredit)}</p>
           </div>
         </div>
@@ -145,7 +147,7 @@ export default function Transactions() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-error-600"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
           <div>
-            <p className="text-xs text-error-600 dark:text-error-400">Total Keluar</p>
+            <p className="text-xs text-error-600 dark:text-error-400">{t.common.totalOut}</p>
             <p className="text-base font-bold text-error-700 dark:text-error-400">-{formatIDR(summary.totalDebit)}</p>
           </div>
         </div>
@@ -154,7 +156,7 @@ export default function Transactions() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={summary.netFlow >= 0 ? "text-brand-600" : "text-error-600"}><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
           <div>
-            <p className={`text-xs ${summary.netFlow >= 0 ? "text-brand-600 dark:text-brand-400" : "text-error-600 dark:text-error-400"}`}>Net Flow</p>
+            <p className={`text-xs ${summary.netFlow >= 0 ? "text-brand-600 dark:text-brand-400" : "text-error-600 dark:text-error-400"}`}>{t.common.netFlow}</p>
             <p className={`text-base font-bold ${summary.netFlow >= 0 ? "text-brand-700 dark:text-brand-400" : "text-error-700 dark:text-error-400"}`}>
               {summary.netFlow >= 0 ? "+" : ""}{formatIDR(summary.netFlow)}
             </p>
@@ -165,27 +167,26 @@ export default function Transactions() {
       {/* Filters */}
       <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-5">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t.common.filter}</span>
           {hasActiveFilter && (
             <button
               onClick={handleReset}
               className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
             >
-              Reset Filter
+              {t.common.resetFilter}
             </button>
           )}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {/* Cari */}
           <div className="flex flex-col gap-1 col-span-2 sm:col-span-3 lg:col-span-2">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Cari</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.search}</label>
             <div className="relative">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" /><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               <input
                 type="text"
-                placeholder="Cari keterangan..."
+                placeholder={t.common.searchPlaceholder}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="h-9 w-full pl-8 pr-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
@@ -196,7 +197,7 @@ export default function Transactions() {
           {/* Dari Tanggal */}
           <DatePicker
             id="tx-filter-from"
-            label="Dari Tanggal"
+            label={t.common.dateFrom}
             placeholder="dd/mm/yyyy"
             value={localDateFrom}
             onChange={(v) => {
@@ -208,7 +209,7 @@ export default function Transactions() {
           {/* Sampai Tanggal */}
           <DatePicker
             id="tx-filter-to"
-            label="Sampai Tanggal"
+            label={t.common.dateTo}
             placeholder="dd/mm/yyyy"
             value={localDateTo}
             onChange={(v) => {
@@ -219,21 +220,21 @@ export default function Transactions() {
 
           {/* Tipe */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.type}</label>
             <select value={filters.type} onChange={(e) => setFilter("type", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
-              <option value="ALL">Semua Tipe</option>
-              <option value="CREDIT">Pemasukan</option>
-              <option value="DEBIT">Pengeluaran</option>
+              <option value="ALL">{t.common.allTypes}</option>
+              <option value="CREDIT">{t.common.income}</option>
+              <option value="DEBIT">{t.common.expense}</option>
             </select>
           </div>
 
           {/* Sumber */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sumber</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.source}</label>
             <select value={filters.source} onChange={(e) => setFilter("source", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
-              <option value="ALL">Bank & Dompet</option>
-              <option value="BANK">Bank</option>
-              <option value="WALLET">Dompet Digital</option>
+              <option value="ALL">{t.common.allSources}</option>
+              <option value="BANK">{t.common.bank}</option>
+              <option value="WALLET">{t.common.wallet}</option>
             </select>
           </div>
         </div>
@@ -242,7 +243,7 @@ export default function Transactions() {
       {/* Table */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{total} transaksi ditemukan</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{total} {t.common.transactions} {t.common.found}</p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {filters.dateFrom && filters.dateTo
               ? `${filters.dateFrom} – ${filters.dateTo}`
@@ -258,7 +259,7 @@ export default function Transactions() {
             <Table>
               <TableHeader className="border-b border-gray-100 dark:border-gray-800">
                 <TableRow>
-                  {["Tanggal", "Keterangan", "Akun", "Kategori", "Jumlah", "Saldo", "Status"].map((h) => (
+                  {[t.transactions.headers.date, t.transactions.headers.description, t.transactions.headers.account, t.transactions.headers.category, t.transactions.headers.amount, t.transactions.headers.balance, t.transactions.headers.status].map((h) => (
                     <TableCell key={h} isHeader className="py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</TableCell>
                   ))}
                 </TableRow>
@@ -266,7 +267,7 @@ export default function Transactions() {
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell className="py-12 text-center text-sm text-gray-400" colSpan={7}>Tidak ada transaksi</TableCell>
+                    <TableCell className="py-12 text-center text-sm text-gray-400" colSpan={7}>{t.transactions.noTransactions}</TableCell>
                   </TableRow>
                 ) : transactions.map((tx) => (
                   <TableRow
@@ -333,16 +334,16 @@ export default function Transactions() {
                 <p className={`text-xl font-bold ${selectedTx.type === "CREDIT" ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}>
                   {selectedTx.type === "CREDIT" ? "+" : "-"}{formatIDR(selectedTx.amount)}
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">{selectedTx.type === "CREDIT" ? "Pemasukan" : "Pengeluaran"}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{selectedTx.type === "CREDIT" ? t.transactions.detail.income : t.transactions.detail.expense}</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <DetailRow label="Keterangan" value={selectedTx.description} />
-              <DetailRow label="Tanggal" value={fmtDateIndo(selectedTx.date)} />
+              <DetailRow label={t.common.description} value={selectedTx.description} />
+              <DetailRow label={t.common.date} value={fmtDateIndo(selectedTx.date)} />
               {selectedTx.categories.length > 0 && (
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">Kategori</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">{t.common.category}</span>
                   <div className="flex flex-wrap gap-1 justify-end">
                     {selectedTx.categories.map((c, i) => (
                       <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">{c.name}</span>
@@ -350,15 +351,15 @@ export default function Transactions() {
                   </div>
                 </div>
               )}
-              <DetailRow label="Rekening" value={`${selectedTx.accountName}`} />
-              <DetailRow label="Provider" value={selectedTx.provider} />
-              <DetailRow label="Sumber" value={selectedTx.source === "WALLET" ? "Dompet Digital" : "Bank"} />
-              {selectedTx.reference && <DetailRow label="Referensi" value={selectedTx.reference} mono />}
-              {selectedTx.balance != null && <DetailRow label="Saldo Akhir" value={formatIDR(selectedTx.balance)} />}
+              <DetailRow label={t.common.accountName} value={`${selectedTx.accountName}`} />
+              <DetailRow label={t.common.provider} value={selectedTx.provider} />
+              <DetailRow label={t.common.source} value={selectedTx.source === "WALLET" ? t.transactions.detail.wallet : t.transactions.detail.bank} />
+              {selectedTx.reference && <DetailRow label={t.common.reference} value={selectedTx.reference} mono />}
+              {selectedTx.balance != null && <DetailRow label={t.common.endBalance} value={formatIDR(selectedTx.balance)} />}
               <div className="flex items-center justify-between gap-4">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.status}</span>
                 <Badge size="sm" color={selectedTx.status === "VERIFIED" ? "success" : "warning"}>
-                  {selectedTx.status === "VERIFIED" ? "Verified" : "Pending"}
+                  {selectedTx.status === "VERIFIED" ? t.common.verified : t.common.pending}
                 </Badge>
               </div>
             </div>
