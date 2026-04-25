@@ -317,6 +317,15 @@ span.flatpickr-weekday,
   background-color: transparent;
 }
 
+/* column header row background */
+.dark .custom-calendar .fc .fc-col-header {
+  background-color: transparent;
+}
+.dark .custom-calendar .fc-theme-standard .fc-col-header-cell {
+  background-color: #111827;
+  border-color: #1f2937;
+}
+
 /* text colors */
 .dark .custom-calendar .fc .fc-daygrid-day-number,
 .dark .custom-calendar .fc .fc-col-header-cell-cushion,
