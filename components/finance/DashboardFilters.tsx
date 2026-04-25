@@ -11,6 +11,8 @@ interface Props {
   activePeriodLabel?: string;
   onChange: (f: Partial<DashboardFilters>) => void;
   onReset: () => void;
+  defaultDateFrom?: string;
+  defaultDateTo?: string;
 }
 
 const selectClass =
@@ -23,6 +25,8 @@ export default function DashboardFilters({
   activePeriodLabel,
   onChange,
   onReset,
+  defaultDateFrom = "",
+  defaultDateTo = "",
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [local, setLocal] = useState({
@@ -60,7 +64,7 @@ export default function DashboardFilters({
   };
 
   const handleReset = () => {
-    setLocal({ dateFrom: "", dateTo: "", accountId: "", categoryId: "", txType: "" });
+    setLocal({ dateFrom: defaultDateFrom, dateTo: defaultDateTo, accountId: "", categoryId: "", txType: "" });
     onReset();
   };
 

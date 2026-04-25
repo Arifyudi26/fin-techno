@@ -254,6 +254,8 @@ export default function Home() {
           activePeriodLabel={data.metrics?.activePeriod?.label}
           onChange={handleFilterChange}
           onReset={handleReset}
+          defaultDateFrom={DEFAULT_FILTERS.dateFrom ?? ""}
+          defaultDateTo={DEFAULT_FILTERS.dateTo ?? ""}
         />
       </div>
 
