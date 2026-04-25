@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+﻿import { useState, useCallback, useEffect, useRef } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { formatBytes } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 // Types
 interface AccountOption {
@@ -97,27 +98,19 @@ const formatDate = (d: string) =>
     year: "numeric",
   });
 
-const statusConfig: Record<
-  string,
-  {
-    label: string;
-    color:
-      | "success"
-      | "error"
-      | "warning"
-      | "info"
-      | "light"
-      | "dark"
-      | "primary";
-  }
-> = {
-  SUCCESS: { label: "Berhasil", color: "success" },
-  FAILED: { label: "Gagal", color: "error" },
-  PARTIAL: { label: "Sebagian", color: "warning" },
-  PROCESSING: { label: "Memproses", color: "info" },
-  UPLOADING: { label: "Mengupload", color: "info" },
-  DUPLICATE: { label: "Duplikat", color: "light" },
-};
+type StatusColor = "success" | "error" | "warning" | "info" | "light" | "dark" | "primary";
+type StatusConfig = Record<string, { label: string; color: StatusColor }>;
+
+function buildStatusConfig(tr: { success: string; failed: string; partial: string; processing: string; uploading2: string; duplicate: string }): StatusConfig {
+  return {
+    SUCCESS: { label: tr.success, color: "success" },
+    FAILED: { label: tr.failed, color: "error" },
+    PARTIAL: { label: tr.partial, color: "warning" },
+    PROCESSING: { label: tr.processing, color: "info" },
+    UPLOADING: { label: tr.uploading2, color: "info" },
+    DUPLICATE: { label: tr.duplicate, color: "light" },
+  };
+}
 
 // Upload Form Modal
 interface UploadFormProps {
@@ -142,6 +135,8 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const { openModal, closeModal } = useModal();
+  const { t } = useI18n();
+  const tr = t.upload;
 
   useEffect(() => { openModal(); return () => closeModal(); }, [openModal, closeModal]);
 
@@ -150,11 +145,11 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const handleFile = (f: File) => {
     const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
     if (!["csv", "xlsx", "xls", "pdf"].includes(ext)) {
-      setError("Format tidak didukung. Gunakan CSV, XLSX, XLS, atau PDF.");
+      setError(tr.errorFormat);
       return;
     }
     if (f.size > 10 * 1024 * 1024) {
-      setError("Ukuran file maksimal 10 MB.");
+      setError(tr.errorSize);
       return;
     }
     setError("");
@@ -171,7 +166,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !accountId) {
-      setError("Pilih rekening dan file terlebih dahulu.");
+      setError(tr.errorRequired);
       return;
     }
     setError("");
@@ -179,7 +174,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     setProgress(10);
 
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append(tr.metaFile, file);
     fd.append("sourceType", sourceType);
     fd.append("accountId", accountId);
     fd.append("notes", notes);
@@ -212,7 +207,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Upload gagal. Coba lagi.";
+          ?.message ?? tr.errorUpload;
       setError(msg);
       setProgress(0);
     } finally {
@@ -231,10 +226,10 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div>
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Upload e-Statement
+              {tr.modalTitle}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Rekening bank atau dompet digital
+              {tr.modalSubtitle}
             </p>
           </div>
           {!loading && (
@@ -261,7 +256,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* Source type toggle */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Jenis Sumber
+              {tr.sourceType}
             </label>
             <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
               {(["BANK", "WALLET"] as const).map((t) => (
@@ -307,7 +302,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                       <circle cx="17" cy="15" r="1.5" fill="currentColor" />
                     </svg>
                   )}
-                  {t === "BANK" ? "Rekening Bank" : "Dompet Digital"}
+                  {t === "BANK" ? tr.bankLabel : tr.walletLabel}
                 </button>
               ))}
             </div>
@@ -316,22 +311,18 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* Account selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {sourceType === "BANK" ? "Pilih Rekening" : "Pilih Dompet"}
+              {sourceType === "BANK" ? tr.selectAccount : tr.selectWallet}
             </label>
             {filtered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Belum ada{" "}
-                  {sourceType === "BANK" ? "rekening bank" : "dompet digital"}{" "}
-                  terdaftar.
+                  {sourceType === "BANK" ? tr.noAccount : tr.noWallet}
                 </p>
                 <a
-                  href={
-                    sourceType === "BANK" ? "/bank-accounts/add" : "/wallets"
-                  }
+                  href={sourceType === "BANK" ? "/bank-accounts/add" : "/wallets"}
                   className="text-sm text-brand-500 hover:underline mt-1 inline-block"
                 >
-                  + Tambah sekarang
+                  {tr.addNow}
                 </a>
               </div>
             ) : (
@@ -385,7 +376,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* File drop zone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              File e-Statement
+              {tr.fileLabel}
             </label>
             <div
               onDragOver={(e) => {
@@ -444,7 +435,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     }}
                     className="text-xs text-error-500 hover:underline"
                   >
-                    Hapus file
+                    {tr.removeFile}
                   </button>
                 </>
               ) : (
@@ -466,12 +457,12 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                   </svg>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-medium text-brand-500">
-                      Klik untuk upload
+                      {tr.clickUpload}
                     </span>{" "}
-                    atau drag & drop
+                    {tr.dragDrop}
                   </p>
                   <p className="text-xs text-gray-400">
-                    CSV, XLSX, XLS, PDF � Maks. 10 MB
+                    {tr.fileFormats}
                   </p>
                 </>
               )}
@@ -481,14 +472,14 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Catatan{" "}
-              <span className="text-gray-400 font-normal">(opsional)</span>
+              {tr.notesLabel}{" "}
+              <span className="text-gray-400 font-normal">{tr.notesOptional}</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="Contoh: e-Statement BCA Januari 2025"
+              placeholder={tr.notesPlaceholder}
               className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-none"
             />
           </div>
@@ -522,10 +513,10 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               <div className="flex justify-between text-xs text-gray-500">
                 <span>
                   {progress < 70
-                    ? "Mengupload file..."
+                    ? tr.uploading
                     : progress < 100
-                      ? "Memproses transaksi..."
-                      : "Selesai"}
+                      ? tr.processingFile
+                      : tr.done}
                 </span>
                 <span>{progress}%</span>
               </div>
@@ -537,7 +528,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               </div>
               {progress >= 70 && progress < 100 && (
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  File besar diproses. Mohon tunggu...
+                  {tr.processingWait}
                 </p>
               )}
             </div>
@@ -551,7 +542,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               disabled={loading}
               className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05] disabled:opacity-50 transition-colors"
             >
-              Batal
+              {t.common.cancel}
             </button>
             <button
               type="submit"
@@ -583,7 +574,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
                   </svg>
-                  Memproses...
+                  {tr.processingBtn}
                 </>
               ) : (
                 <>
@@ -596,7 +587,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  Upload Sekarang
+                  {tr.uploadNow}
                 </>
               )}
             </button>
@@ -620,6 +611,9 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
   const [txFilter, setTxFilter] = useState<"ALL" | "CREDIT" | "DEBIT">("ALL");
   const [search, setSearch] = useState("");
   const { openModal, closeModal } = useModal();
+  const { t } = useI18n();
+  const tr = t.upload;
+  const statusConfig = buildStatusConfig(tr);
 
   useEffect(() => { openModal(); return () => closeModal(); }, [openModal, closeModal]);
 
@@ -651,7 +645,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Detail Upload
+            {tr.detailTitle}
           </h2>
           <button
             onClick={onClose}
@@ -699,7 +693,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Total Baris
+                    {tr.totalRows}
                   </p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white/90">
                     {detail.totalRows}
@@ -707,7 +701,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 </div>
                 <div className="rounded-xl bg-success-50 dark:bg-success-500/10 p-4">
                   <p className="text-xs text-success-600 dark:text-success-400 mb-1">
-                    Berhasil
+                    {tr.success}
                   </p>
                   <p className="text-xl font-bold text-success-700 dark:text-success-400">
                     {detail.parsedRows}
@@ -715,7 +709,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 </div>
                 <div className="rounded-xl bg-error-50 dark:bg-error-500/10 p-4">
                   <p className="text-xs text-error-600 dark:text-error-400 mb-1">
-                    Gagal
+                    {tr.failed}
                   </p>
                   <p className="text-xl font-bold text-error-700 dark:text-error-400">
                     {detail.failedRows}
@@ -738,7 +732,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4">
                   <p className="text-xs text-success-600 dark:text-success-400 mb-1">
-                    Total Kredit (Masuk)
+                    {tr.totalCredit}
                   </p>
                   <p className="text-lg font-bold text-success-700 dark:text-success-400">
                     +{formatIDR(detail.totalCredit)}
@@ -746,7 +740,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 </div>
                 <div className="rounded-xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
                   <p className="text-xs text-error-600 dark:text-error-400 mb-1">
-                    Total Debit (Keluar)
+                    {tr.totalDebit}
                   </p>
                   <p className="text-lg font-bold text-error-700 dark:text-error-400">
                     -{formatIDR(detail.totalDebit)}
@@ -758,19 +752,19 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
                 {[
                   [
-                    "Akun",
+                    tr.metaAccount,
                     `${detail.provider} � ${detail.accountIdentifier} (${detail.accountName})`,
                   ],
                   [
-                    "File",
+                    tr.metaFile,
                     `${detail.fileName} � ${formatBytes(detail.fileSizeBytes)} � ${detail.fileFormat}`,
                   ],
                   [
-                    "Periode",
+                    tr.metaPeriod,
                     `${formatDate(detail.periodStart)} � ${formatDate(detail.periodEnd)}`,
                   ],
                   [
-                    "Diupload oleh",
+                    tr.metaUploadedBy,
                     `${detail.uploadedBy} � ${formatDate(detail.uploadedAt)}`,
                   ],
                 ].map(([label, value]) => (
@@ -798,13 +792,13 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Semua transaksi sudah tercatat</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{tr.duplicate} — {t.common.filterAll}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {detail.totalRows} transaksi dari file ini identik dengan data yang sudah diupload sebelumnya.
-                      Tidak ada transaksi baru yang ditambahkan untuk menghindari duplikasi data.
+                      {detail.totalRows} {t.common.transactions} {tr.duplicate.toLowerCase()}.
+                      
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                      Jika ini bukan yang diharapkan, pastikan kamu tidak mengupload file yang sama dua kali (misal: CSV dan PDF dari periode yang sama).
+                      
                     </p>
                   </div>
                 </div>
@@ -823,26 +817,26 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">File mencakup periode yang overlap</p>
+                      <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">{tr.partial}</p>
                       <p className="text-sm text-brand-600/80 dark:text-brand-400/80 mt-1">
-                        File ini berisi <strong>{detail.totalRows} transaksi</strong> total:
+                        {detail.totalRows} {t.common.transactions}:
                       </p>
                       <div className="flex gap-4 mt-2">
                         <div className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
                           <span className="text-xs text-brand-600 dark:text-brand-400">
-                            <strong>{n.new}</strong> transaksi baru ditambahkan
+                            <strong>{n.new}</strong> {t.common.transactions}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-gray-400 shrink-0" />
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            <strong>{n.duplicate}</strong> sudah ada dari upload sebelumnya
+                            <strong>{n.duplicate}</strong> {tr.duplicate.toLowerCase()}
                           </span>
                         </div>
                       </div>
                       <p className="text-xs text-brand-500/70 dark:text-brand-400/60 mt-2">
-                        Data yang ditampilkan di bawah hanya transaksi baru dari file ini.
+                        
                       </p>
                     </div>
                   </div>
@@ -877,9 +871,9 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 <div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
                     <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90 flex-1">
-                      Transaksi{" "}
+                      {tr.txHeader}{" "}
                       <span className="text-gray-400 font-normal">
-                        ({filteredTx.length} dari {detail.transactions.length})
+                        ({filteredTx.length} {tr.txOf} {detail.transactions.length})
                       </span>
                     </h3>
                     <div className="flex items-center gap-2">
@@ -907,7 +901,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                         </svg>
                         <input
                           type="text"
-                          placeholder="Cari keterangan..."
+                          placeholder={tr.searchTx}
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/30 w-40"
@@ -925,10 +919,10 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                             }`}
                           >
                             {f === "ALL"
-                              ? "Semua"
+                              ? t.common.filterAll
                               : f === "CREDIT"
-                                ? "Masuk"
-                                : "Keluar"}
+                                ? t.common.filterIn
+                                : t.common.filterOut}
                           </button>
                         ))}
                       </div>
@@ -939,13 +933,13 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                       <TableHeader className="border-b border-gray-100 dark:border-gray-800">
                         <TableRow>
                           {[
-                            "Tanggal",
-                            "Keterangan",
-                            "Referensi",
-                            "Kategori",
-                            "Jumlah",
-                            "Saldo",
-                            "Status",
+                            t.common.date,
+                            t.common.description,
+                            t.common.reference,
+                            t.common.category,
+                            t.common.amount,
+                            t.common.balance,
+                            t.common.status,
                           ].map((h) => (
                             <TableCell
                               key={h}
@@ -964,7 +958,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                               className="py-8 text-center text-sm text-gray-400"
                               colSpan={7}
                             >
-                              Tidak ada transaksi
+                              {t.common.noData}
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -1021,7 +1015,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                   </div>
                   {detail.transactions.length >= 50 && (
                     <p className="text-xs text-gray-400 mt-2 text-center">
-                      Menampilkan 50 transaksi terbaru
+                      {tr.showingTx}
                     </p>
                   )}
                 </div>
@@ -1048,6 +1042,9 @@ function UploadCard({
   onViewDetail: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
+  const tr = t.upload;
+  const statusConfig = buildStatusConfig(tr);
   const duplicate = isDuplicate(item);
   const cfg = duplicate
     ? statusConfig["DUPLICATE"]
@@ -1147,9 +1144,9 @@ function UploadCard({
                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Semua transaksi sudah ada</p>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-300">{tr.duplicate} — {t.common.filterAll}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {item.totalRows} transaksi dari file ini sudah tercatat sebelumnya. Tidak ada data baru yang ditambahkan.
+                  {item.totalRows} {t.common.transactions} {tr.duplicate.toLowerCase()}. {t.common.noData}.
                 </p>
               </div>
             </div>
@@ -1163,10 +1160,9 @@ function UploadCard({
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
               <div>
-                <p className="text-xs font-medium text-brand-600 dark:text-brand-400">File mencakup periode yang overlap</p>
+                <p className="text-xs font-medium text-brand-600 dark:text-brand-400">{tr.partial}</p>
                 <p className="text-xs text-brand-500/80 dark:text-brand-400/70 mt-0.5">
-                  <span className="font-semibold">{n!.new} transaksi baru</span> ditambahkan �{" "}
-                  <span>{n!.duplicate} sudah ada</span> dari upload sebelumnya
+                  <span className="font-semibold">{n!.new} {t.common.transactions}</span> � <span>{n!.duplicate} {tr.duplicate.toLowerCase()}</span>
                 </p>
               </div>
             </div>
@@ -1178,7 +1174,7 @@ function UploadCard({
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-          <p className="text-xs text-gray-400 mb-0.5">Baris</p>
+          <p className="text-xs text-gray-400 mb-0.5">{tr.totalRows}</p>
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
             {item.totalRows}
           </p>
@@ -1188,7 +1184,7 @@ function UploadCard({
           if (duplicate) {
             return (
               <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <p className="text-xs text-gray-400 mb-0.5">Duplikat</p>
+                <p className="text-xs text-gray-400 mb-0.5">{tr.duplicate}</p>
                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{item.totalRows}</p>
               </div>
             );
@@ -1196,20 +1192,20 @@ function UploadCard({
           if (n && n.duplicate > 0) {
             return (
               <div className="text-center p-2 rounded-lg bg-brand-50 dark:bg-brand-500/10">
-                <p className="text-xs text-brand-500 dark:text-brand-400 mb-0.5">Baru</p>
+                <p className="text-xs text-brand-500 dark:text-brand-400 mb-0.5">New</p>
                 <p className="text-sm font-bold text-brand-600 dark:text-brand-400">{n.new}</p>
               </div>
             );
           }
           return (
             <div className="text-center p-2 rounded-lg bg-success-50 dark:bg-success-500/10">
-              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Berhasil</p>
+              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">{tr.success}</p>
               <p className="text-sm font-bold text-success-700 dark:text-success-400">{item.parsedRows}</p>
             </div>
           );
         })()}
         <div className="text-center p-2 rounded-lg bg-error-50 dark:bg-error-500/10">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Gagal</p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">{tr.failed}</p>
           <p className="text-sm font-bold text-error-700 dark:text-error-400">{item.failedRows}</p>
         </div>
       </div>
@@ -1218,27 +1214,27 @@ function UploadCard({
       {duplicate ? (
         <div className="flex items-center justify-center p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 mb-4">
           <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-            Data keuangan tersedia di upload sebelumnya
+            {tr.duplicate}
           </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2 mb-4">
             <div className="p-2.5 rounded-lg border border-success-100 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10">
-              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Masuk</p>
+              <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">{t.common.filterIn}</p>
               <p className="text-xs font-semibold text-success-700 dark:text-success-400 truncate">
                 +{formatIDR(item.totalCredit)}
               </p>
             </div>
             <div className="p-2.5 rounded-lg border border-error-100 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10">
-              <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Keluar</p>
+              <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">{t.common.filterOut}</p>
               <p className="text-xs font-semibold text-error-700 dark:text-error-400 truncate">
                 -{formatIDR(item.totalDebit)}
               </p>
             </div>
           </div>
           <div className={`flex items-center justify-between p-2.5 rounded-lg mb-4 ${netFlow >= 0 ? "bg-success-50 dark:bg-success-500/10" : "bg-error-50 dark:bg-error-500/10"}`}>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Net Flow</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t.common.netFlow}</span>
             <span className={`text-sm font-bold ${netFlow >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}>
               {netFlow >= 0 ? "+" : ""}{formatIDR(netFlow)}
             </span>
@@ -1255,7 +1251,7 @@ function UploadCard({
           <button
             onClick={onDelete}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:text-error-400 dark:hover:bg-error-500/10 transition-colors"
-            title="Hapus"
+            title={t.common.delete}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1266,7 +1262,7 @@ function UploadCard({
           <button
             onClick={onViewDetail}
             className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:text-brand-400 dark:hover:bg-brand-500/10 transition-colors"
-            title="Lihat Detail"
+            title={t.common.edit}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1300,13 +1296,15 @@ export default function UploadPage() {
   const { toastState, fire, close } = useToast();
   const { addNotification } = useNotifications();
   const { openModal, closeModal } = useModal();
+  const { t } = useI18n();
+  const tr = t.upload;
 
   const fetchAccounts = useCallback(async () => {
     try {
       const res = await axiosGlobal.get("/upload/accounts");
       setAccounts([...res.data.bankAccounts, ...res.data.wallets]);
     } catch {
-      fire("error", "Gagal memuat daftar akun");
+      fire("error", tr.errorLoad);
     } finally {
       setLoadingAccounts(false);
     }
@@ -1318,7 +1316,7 @@ export default function UploadPage() {
       const res = await axiosGlobal.get("/upload/list");
       setUploads(res.data.uploads);
     } catch {
-      fire("error", "Gagal memuat riwayat upload");
+      fire("error", tr.errorLoad);
     } finally {
       setLoadingUploads(false);
     }
@@ -1355,14 +1353,14 @@ export default function UploadPage() {
             const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
             addNotification({
               type: allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
-              title: allDuplicate ? "Transaksi Sudah Ada" : status === "SUCCESS" ? "Upload Berhasil" : status === "PARTIAL" ? "Upload Sebagian" : "Upload Gagal",
+              title: allDuplicate ? tr.notifDuplicateTitle : status === "SUCCESS" ? tr.notifSuccessTitle : status === "PARTIAL" ? tr.notifPartialTitle : tr.notifFailedTitle,
               message: allDuplicate
-                ? `${total} transaksi dari file ini sudah tercatat sebelumnya.`
+                ? tr.notifDuplicateMsg(total)
                 : status === "SUCCESS"
-                  ? `${parsed} dari ${total} transaksi berhasil diproses.`
+                  ? tr.notifSuccessMsg(parsed, total)
                   : status === "PARTIAL"
-                    ? `${parsed} dari ${total} transaksi berhasil. Beberapa baris gagal.`
-                    : "Terjadi kesalahan saat memproses file.",
+                    ? tr.notifPartialMsg(parsed, total)
+                    : tr.notifErrorMsg,
               fileName: fileName,
             });
           }
@@ -1376,12 +1374,12 @@ export default function UploadPage() {
     const isPartial = result.status === "PARTIAL";
     addNotification({
       type: isSuccess ? "success" : isPartial ? "warning" : "error",
-      title: isSuccess ? "Upload Berhasil" : isPartial ? "Upload Sebagian" : "Upload Gagal",
+      title: isSuccess ? tr.notifSuccessTitle : isPartial ? tr.notifPartialTitle : tr.notifFailedTitle,
       message: isSuccess
-        ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil diproses.`
+        ? tr.notifSuccessMsg(result.parsedRows, result.totalRows)
         : isPartial
-          ? `${result.parsedRows} dari ${result.totalRows} transaksi berhasil. Beberapa baris gagal diproses.`
-          : "Terjadi kesalahan saat memproses file.",
+          ? tr.notifPartialMsg(result.parsedRows, result.totalRows)
+          : tr.notifErrorMsg,
     });
   };
 
@@ -1393,9 +1391,9 @@ export default function UploadPage() {
       setUploads((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
       closeModal();
-      fire("success", "Upload dihapus", { message: "Data upload dan transaksi terkait berhasil dihapus.", duration: 3000 });
+      fire("success", tr.deleted, { message: tr.deleteMsg, duration: 3000 });
     } catch {
-      fire("error", "Gagal menghapus upload");
+      fire("error", tr.errorDelete);
     } finally {
       setDeleting(false);
     }
@@ -1424,37 +1422,37 @@ export default function UploadPage() {
   return (
     <AppLayout>
       <PageMeta
-        title="Upload e-Statement | Fin-Techno"
-        description="Upload e-Statement rekening bank dan dompet digital"
+        title={`${tr.pageTitle} | Fin-Techno`}
+        description={tr.description}
       />
-      <PageBreadcrumb pageTitle="Upload e-Statement" />
+      <PageBreadcrumb pageTitle={tr.pageTitle} />
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           {
-            label: "Total Upload",
+            label: tr.totalUpload,
             value: stats.total,
             icon: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12",
             color: "text-brand-500",
             bg: "bg-brand-50 dark:bg-brand-500/10",
           },
           {
-            label: "Berhasil",
+            label: tr.success,
             value: stats.success,
             icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
             color: "text-success-500",
             bg: "bg-success-50 dark:bg-success-500/10",
           },
           {
-            label: "Gagal",
+            label: tr.failed,
             value: stats.failed,
             icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
             color: "text-error-500",
             bg: "bg-error-50 dark:bg-error-500/10",
           },
           {
-            label: "Sebagian",
+            label: tr.partial,
             value: stats.partial,
             icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
             color: "text-warning-500",
@@ -1518,9 +1516,7 @@ export default function UploadPage() {
               </svg>
             </div>
             <div>
-              <p className="text-xs text-success-600 dark:text-success-400">
-                Total Kredit
-              </p>
+              <p className="text-xs text-success-600 dark:text-success-400">{tr.totalCredit2}</p>
               <p className="text-base font-bold text-success-700 dark:text-success-400">
                 +{formatIDR(stats.totalCredit)}
               </p>
@@ -1545,9 +1541,7 @@ export default function UploadPage() {
               </svg>
             </div>
             <div>
-              <p className="text-xs text-error-600 dark:text-error-400">
-                Total Debit
-              </p>
+              <p className="text-xs text-error-600 dark:text-error-400">{tr.totalDebit2}</p>
               <p className="text-base font-bold text-error-700 dark:text-error-400">
                 -{formatIDR(stats.totalDebit)}
               </p>
@@ -1583,7 +1577,7 @@ export default function UploadPage() {
               <p
                 className={`text-xs ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400"}`}
               >
-                Net Flow
+                {t.common.netFlow}
               </p>
               <p
                 className={`text-base font-bold ${stats.totalCredit - stats.totalDebit >= 0 ? "text-success-700 dark:text-success-400" : "text-error-700 dark:text-error-400"}`}
@@ -1622,7 +1616,7 @@ export default function UploadPage() {
           </svg>
           <input
             type="text"
-            placeholder="Cari akun, provider, atau nama file..."
+            placeholder={tr.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
@@ -1636,20 +1630,19 @@ export default function UploadPage() {
             }
             className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           >
-            <option value="ALL">Semua Jenis</option>
-            <option value="BANK">Bank</option>
-            <option value="WALLET">Dompet Digital</option>
+            <option value="ALL">{tr.allTypes}</option>
+            <option value="BANK">{t.common.bank}</option><option value="WALLET">{t.common.wallet}</option>
           </select>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           >
-            <option value="ALL">Semua Status</option>
-            <option value="SUCCESS">Berhasil</option>
-            <option value="PARTIAL">Sebagian</option>
-            <option value="FAILED">Gagal</option>
-            <option value="PROCESSING">Memproses</option>
+            <option value="ALL">{tr.allStatus}</option>
+            <option value="SUCCESS">{tr.success}</option>
+            <option value="PARTIAL">{tr.partial}</option>
+            <option value="FAILED">{tr.failed}</option>
+            <option value="PROCESSING">{tr.processing}</option>
           </select>
           <button
             onClick={() => setShowForm(true)}
@@ -1665,7 +1658,7 @@ export default function UploadPage() {
                 strokeLinejoin="round"
               />
             </svg>
-            Upload Baru
+            {tr.uploadNew}
           </button>
         </div>
       </div>
@@ -1725,12 +1718,12 @@ export default function UploadPage() {
             </svg>
           </div>
           <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {uploads.length === 0 ? "Belum ada upload" : "Tidak ada hasil"}
+            {uploads.length === 0 ? tr.noHistory : tr.noResult}
           </p>
           <p className="text-sm text-gray-400 mb-5">
             {uploads.length === 0
-              ? "Upload e-Statement rekening bank atau dompet digital Anda"
-              : "Coba ubah filter atau kata kunci pencarian"}
+              ? tr.noHistoryDesc
+              : tr.noResultDesc}
           </p>
           {uploads.length === 0 && (
             <button
@@ -1745,7 +1738,7 @@ export default function UploadPage() {
                   strokeLinecap="round"
                 />
               </svg>
-              Upload Pertama
+              {tr.uploadFirst}
             </button>
           )}
         </div>
@@ -1792,8 +1785,8 @@ export default function UploadPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Hapus Upload?</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tindakan ini tidak dapat dibatalkan</p>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{tr.deleteConfirm}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{tr.cancelAction}</p>
               </div>
             </div>
             <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
@@ -1801,7 +1794,7 @@ export default function UploadPage() {
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                 {deleteTarget.provider} � {deleteTarget.periodStart} s/d {deleteTarget.periodEnd}
               </p>
-              <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
+              <p className="text-xs text-error-500 mt-1">{tr.deleteRelated}</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -1809,7 +1802,7 @@ export default function UploadPage() {
                 disabled={deleting}
                 className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
-                Batal
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleDelete}
@@ -1822,9 +1815,9 @@ export default function UploadPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Menghapus...
+                    {tr.deleting}
                   </>
-                ) : "Hapus"}
+                ) : t.common.delete}
               </button>
             </div>
           </div>

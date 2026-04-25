@@ -8,6 +8,7 @@ import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
 import BankProviderIcon from "@components/icons/providers/BankIcon";
+import { useI18n } from "@lib/i18n";
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -33,6 +34,8 @@ export default function BankAccounts() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const { toastState, fire, confirm, close } = useToast();
+  const { t } = useI18n();
+  const tr = t.bankAccounts;
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -40,46 +43,46 @@ export default function BankAccounts() {
       const res = await axiosGlobal.get("/bank-accounts");
       setAccounts(res.data.accounts);
     } catch {
-      fire("error", "Gagal memuat rekening");
+      fire("error", tr.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [fire]);
+  }, [fire, tr]);
 
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
 
   const handleToggleActive = async (acc: BankAccount) => {
-    const ok = await confirm("warning", acc.isActive ? "Nonaktifkan Rekening?" : "Aktifkan Rekening?", {
+    const ok = await confirm("warning", acc.isActive ? tr.confirmDeactivate : tr.confirmActivate, {
       message: `${acc.bankProvider} · ${acc.accountNumber}`,
-      confirmText: acc.isActive ? "Nonaktifkan" : "Aktifkan",
-      cancelText: "Batal",
+      confirmText: acc.isActive ? tr.confirmDeactivate.replace("?", "") : tr.confirmActivate.replace("?", ""),
+      cancelText: t.common.cancel,
     });
     if (!ok) return;
     try {
       await axiosGlobal.put(`/bank-accounts/${acc.id}`, { isActive: !acc.isActive });
-      fire("success", acc.isActive ? "Rekening dinonaktifkan" : "Rekening diaktifkan", { duration: 3000 });
+      fire("success", acc.isActive ? tr.deactivated : tr.activated, { duration: 3000 });
       fetchAccounts();
     } catch {
-      fire("error", "Gagal mengubah status rekening");
+      fire("error", tr.errorToggle);
     }
   };
 
   const handleDelete = async (acc: BankAccount) => {
     const hasHistory = acc.totalTransactions > 0 || acc.totalUploads > 0;
-    const ok = await confirm("error", "Hapus Rekening?", {
+    const ok = await confirm("error", tr.confirmDelete, {
       message: hasHistory
-        ? `${acc.bankProvider} · ${acc.accountNumber} memiliki ${acc.totalTransactions} transaksi dan ${acc.totalUploads} upload. Semua data terkait akan dihapus permanen.`
-        : `${acc.bankProvider} · ${acc.accountNumber} akan dihapus permanen.`,
-      confirmText: "Hapus",
-      cancelText: "Batal",
+        ? `${acc.bankProvider} · ${acc.accountNumber} ${tr.deleteWithHistory.replace("{tx}", String(acc.totalTransactions)).replace("{up}", String(acc.totalUploads))}`
+        : `${acc.bankProvider} · ${acc.accountNumber} ${tr.deleteNoHistory}`,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
     });
     if (!ok) return;
     try {
       await axiosGlobal.delete(`/bank-accounts/${acc.id}`);
-      fire("success", "Rekening berhasil dihapus", { duration: 3000 });
+      fire("success", tr.deleted, { duration: 3000 });
       fetchAccounts();
     } catch {
-      fire("error", "Gagal menghapus rekening");
+      fire("error", tr.errorDelete);
     }
   };
 
@@ -88,19 +91,19 @@ export default function BankAccounts() {
 
   return (
     <AppLayout>
-      <PageMeta title="Rekening Bank | Fin-Techno" description="Kelola rekening bank yang terhubung" />
-      <PageBreadcrumb pageTitle="Rekening Bank" />
+      <PageMeta title={`${tr.pageTitle} | Fin-Techno`} description={tr.description} />
+      <PageBreadcrumb pageTitle={tr.pageTitle} />
 
       {/* Summary */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Rekening Aktif</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{tr.totalActive}</p>
           <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{loading ? "—" : activeAccounts.length}</p>
         </div>
         <div className="rounded-2xl border border-brand-200 bg-brand-50 p-5 dark:border-brand-500/20 dark:bg-brand-500/10 sm:col-span-2">
           <p className="text-sm text-brand-600 dark:text-brand-400 mb-1">
-            Estimasi Saldo Terakhir Upload
-            <span className="ml-2 text-xs font-normal text-brand-400">(bukan saldo real-time)</span>
+            {tr.estimatedBalance}
+            <span className="ml-2 text-xs font-normal text-brand-400">{tr.estimatedBalanceNote}</span>
           </p>
           <p className="text-2xl font-bold text-brand-700 dark:text-brand-300">{loading ? "—" : formatIDR(totalBalance)}</p>
         </div>
@@ -110,9 +113,7 @@ export default function BankAccounts() {
         <svg className="mt-0.5 shrink-0 text-warning-500" width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <p className="text-sm text-warning-700 dark:text-warning-400">
-          Saldo yang ditampilkan adalah estimasi dari e-statement terakhir yang diupload, bukan saldo rekening saat ini.
-        </p>
+        <p className="text-sm text-warning-700 dark:text-warning-400">{tr.balanceWarning}</p>
       </div>
 
       {/* Account cards */}
@@ -145,17 +146,17 @@ export default function BankAccounts() {
               <div className="p-5">
                 <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03]">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
-                    Estimasi Saldo
-                    {acc.lastPeriodEnd && <span className="ml-1 text-gray-400">· s/d {acc.lastPeriodEnd}</span>}
+                    {tr.estimatedBalanceLabel}
+                    {acc.lastPeriodEnd && <span className="ml-1 text-gray-400">· {tr.periodUntil} {acc.lastPeriodEnd}</span>}
                   </p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white/90">{formatIDR(acc.lastBalance)}</p>
                   {acc.lastUploadDate && (
-                    <p className="text-xs text-gray-400 mt-0.5">Upload: {new Date(acc.lastUploadDate).toLocaleDateString("id-ID")}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{tr.lastUpload}: {new Date(acc.lastUploadDate).toLocaleDateString("id-ID")}</p>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Upload</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{tr.uploadCount}</p>
                     <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{acc.totalUploads}x</p>
                   </div>
                   <div className="text-center border-x border-gray-100 dark:border-gray-800">
@@ -172,21 +173,21 @@ export default function BankAccounts() {
                     onClick={() => handleToggleActive(acc)}
                     className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]"
                   >
-                    {acc.isActive ? "Nonaktifkan" : "Aktifkan"}
+                    {acc.isActive ? tr.confirmDeactivate.replace("?", "") : tr.confirmActivate.replace("?", "")}
                   </button>
                   {acc.isActive ? (
                     <Link
                       href={`/upload?account=${acc.id}`}
                       className="flex-1 text-center rounded-lg bg-brand-500 px-3 py-2 text-xs font-medium text-white hover:bg-brand-600"
                     >
-                      Upload e-Statement
+                      {t.upload.uploadBtn}
                     </Link>
                   ) : (
                     <span
-                      title="Aktifkan rekening terlebih dahulu"
+                      title={tr.uploadDisabledTitle}
                       className="flex-1 text-center rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-2 text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed"
                     >
-                      Upload e-Statement
+                      {t.upload.uploadBtn}
                     </span>
                   )}
                   <button
@@ -211,8 +212,8 @@ export default function BankAccounts() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#465FFF" strokeWidth="1.5" strokeLinecap="round" /></svg>
             </div>
             <div className="text-center">
-              <p className="font-medium text-gray-700 dark:text-gray-300">Tambah Rekening</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Daftarkan rekening bank baru</p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">{tr.addAccount}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{tr.addAccountDesc}</p>
             </div>
           </Link>
         </div>

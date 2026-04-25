@@ -6,6 +6,7 @@ import Link from "next/link";
 import Toast from "@components/ui/toast/Toast";
 import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { useI18n } from "@lib/i18n";
 
 interface Category {
   id: string;
@@ -33,6 +34,8 @@ export default function Categories() {
   const [editDesc, setEditDesc] = useState("");
   const [saving, setSaving] = useState(false);
   const { toastState, fire, confirm, close } = useToast();
+  const { t } = useI18n();
+  const tr = t.categories;
 
   const fetchCategories = useCallback(async () => {
     setLoading(true);
@@ -40,11 +43,11 @@ export default function Categories() {
       const res = await axiosGlobal.get("/categories");
       setCategories(res.data.categories);
     } catch {
-      fire("error", "Gagal memuat kategori");
+      fire("error", tr.errorLoad);
     } finally {
       setLoading(false);
     }
-  }, [fire]);
+  }, [fire, tr]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
@@ -59,11 +62,11 @@ export default function Categories() {
     setSaving(true);
     try {
       await axiosGlobal.put(`/categories/${editId}`, { name: editName, description: editDesc });
-      fire("success", "Kategori diperbarui", { duration: 2000 });
+      fire("success", tr.updated, { duration: 2000 });
       setEditId(null);
       fetchCategories();
     } catch {
-      fire("error", "Gagal memperbarui kategori");
+      fire("error", tr.errorUpdate);
     } finally {
       setSaving(false);
     }
@@ -71,33 +74,33 @@ export default function Categories() {
 
   const handleDelete = async (cat: Category) => {
     const msg = cat.transactionCount > 0
-      ? `"${cat.name}" digunakan oleh ${cat.transactionCount} transaksi. Transaksi tersebut akan menjadi "Lainnya".`
-      : `"${cat.name}" akan dihapus permanen.`;
-    const ok = await confirm("error", "Hapus Kategori?", { message: msg, confirmText: "Hapus", cancelText: "Batal" });
+      ? `"${cat.name}" ${tr.deleteWithTx.replace("{count}", String(cat.transactionCount))}`
+      : `"${cat.name}" ${tr.deleteNoTx}`;
+    const ok = await confirm("error", tr.confirmDelete, { message: msg, confirmText: t.common.delete, cancelText: t.common.cancel });
     if (!ok) return;
     try {
       await axiosGlobal.delete(`/categories/${cat.id}`);
-      fire("success", "Kategori dihapus", { duration: 2000 });
+      fire("success", tr.deleted, { duration: 2000 });
       fetchCategories();
     } catch {
-      fire("error", "Gagal menghapus kategori");
+      fire("error", tr.errorDelete);
     }
   };
 
   return (
     <AppLayout>
-      <PageMeta title="Kategori Transaksi | Fin-Techno" description="Kelola kategori transaksi keuangan" />
-      <PageBreadcrumb pageTitle="Kategori Transaksi" />
+      <PageMeta title={`${tr.pageTitle} | Fin-Techno`} description={tr.description} />
+      <PageBreadcrumb pageTitle={tr.pageTitle} />
 
       <div className="mb-5 flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{loading ? "..." : `${categories.length} kategori`}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{loading ? "..." : `${categories.length} ${t.common.category.toLowerCase()}`}</p>
         <div className="flex items-center gap-2">
           <Link
             href="/categories/add"
             className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-            Tambah Kategori
+            {tr.addCategory}
           </Link>
         </div>
       </div>
@@ -116,17 +119,17 @@ export default function Categories() {
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                    placeholder="Nama kategori"
+                    placeholder={tr.namePlaceholder}
                   />
                   <input
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                    placeholder="Deskripsi (opsional)"
+                    placeholder={tr.descPlaceholder}
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => setEditId(null)} className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Batal</button>
-                    <button onClick={saveEdit} disabled={saving} className="flex-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs text-white hover:bg-brand-600 disabled:opacity-50">Simpan</button>
+                    <button onClick={() => setEditId(null)} className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">{t.common.cancel}</button>
+                    <button onClick={saveEdit} disabled={saving} className="flex-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs text-white hover:bg-brand-600 disabled:opacity-50">{t.common.save}</button>
                   </div>
                 </div>
               ) : (
@@ -137,7 +140,7 @@ export default function Categories() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800 dark:text-white/90">{cat.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{cat.transactionCount} transaksi</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{cat.transactionCount} {tr.transactionCount}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
