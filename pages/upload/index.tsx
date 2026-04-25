@@ -142,7 +142,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
   const filtered = accounts.filter((a) => a.type === sourceType);
 
-  const handleFile = (f: File) => {
+  const handleFile = useCallback((f: File) => {
     const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
     if (!["csv", "xlsx", "xls", "pdf"].includes(ext)) {
       setError(tr.errorFormat);
@@ -154,14 +154,14 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     }
     setError("");
     setFile(f);
-  };
+  }, [tr.errorFormat, tr.errorSize]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files[0];
     if (f) handleFile(f);
-  }, []);
+  }, [handleFile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +174,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     setProgress(10);
 
     const fd = new FormData();
-    fd.append(tr.metaFile, file);
+    fd.append("file", file);
     fd.append("sourceType", sourceType);
     fd.append("accountId", accountId);
     fd.append("notes", notes);
@@ -1308,7 +1308,7 @@ export default function UploadPage() {
     } finally {
       setLoadingAccounts(false);
     }
-  }, [fire]);
+  }, [fire, tr.errorLoad]);
 
   const fetchUploads = useCallback(async () => {
     setLoadingUploads(true);
@@ -1320,7 +1320,7 @@ export default function UploadPage() {
     } finally {
       setLoadingUploads(false);
     }
-  }, [fire]);
+  }, [fire, tr.errorLoad]);
 
   useEffect(() => {
     fetchAccounts();
