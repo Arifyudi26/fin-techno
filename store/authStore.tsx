@@ -11,12 +11,14 @@ interface AuthState {
   name: string | null;
   avatar: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   setId: (id: string) => void;
   setToken: (token: string) => void;
   setRole: (role: any) => void;
   setName: (name: string) => void;
   setAvatar: (avatar: string | null) => void;
   logout: () => void;
+  setHasHydrated: (v: boolean) => void;
 }
 
 const useAuthStore = create<AuthState>()(
@@ -28,9 +30,10 @@ const useAuthStore = create<AuthState>()(
       name: null,
       avatar: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       setId: (id: string) => set({ id }),
       setToken: (token: string) => {
-        Cookies.set("token", token, { expires: 1 });
+        Cookies.set("token", token, { expires: 1, path: "/", sameSite: "Lax" });
         set({ token, isAuthenticated: true });
       },
       setRole: (role: any) => set({ role, isAuthenticated: !!role }),
@@ -40,8 +43,14 @@ const useAuthStore = create<AuthState>()(
         Cookies.remove("token");
         set({ id: null, token: null, role: null, name: null, avatar: null, isAuthenticated: false });
       },
+      setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
     }),
-    { name: "auth-store" }
+    {
+      name: "auth-store",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );
 
