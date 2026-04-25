@@ -1,6 +1,7 @@
 import { ArrowDownIcon, ArrowUpIcon } from "@components/icons";
 import { DashboardMetrics } from "@/lib/types/dashboard";
 import { fmtIDR as fmt } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 interface Props {
   data?: DashboardMetrics;
@@ -8,9 +9,12 @@ interface Props {
 }
 
 export default function FinanceMetrics({ data, loading }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const metrics = [
     {
-      label: "Total Pemasukan",
+      label: tr.totalIncome,
       value: data?.totalIncome ?? 0,
       change: data?.changes.income ?? "0%",
       up: data?.isUp.income ?? true,
@@ -24,7 +28,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
       bg: "bg-success-50 dark:bg-success-500/10",
     },
     {
-      label: "Total Pengeluaran",
+      label: tr.totalExpense,
       value: data?.totalExpense ?? 0,
       change: data?.changes.expense ?? "0%",
       up: data?.isUp.expense ?? true,
@@ -38,7 +42,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
       bg: "bg-error-50 dark:bg-error-500/10",
     },
     {
-      label: "Net Flow",
+      label: tr.netFlow,
       value: data?.netFlow ?? 0,
       change: data?.changes.netFlow ?? "0%",
       up: data?.isUp.netFlow ?? true,
@@ -52,7 +56,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
       bg: "bg-brand-50 dark:bg-brand-500/10",
     },
     {
-      label: "Total Saldo",
+      label: tr.totalBalance,
       value: data?.totalBalance ?? 0,
       change: "",
       up: true,
@@ -68,7 +72,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
       bg: "bg-warning-50 dark:bg-warning-500/10",
     },
     {
-      label: "Jumlah Transaksi",
+      label: tr.txCount,
       value: data?.transactionCount ?? 0,
       change: data?.changes.transactions ?? "0%",
       up: data?.isUp.transactions ?? true,
@@ -103,7 +107,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
     <div>
       {data?.activePeriod && (
         <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-          Periode aktif: <span className="font-medium text-gray-600 dark:text-gray-300">{data.activePeriod.label}</span>
+          {tr.activePeriod}: <span className="font-medium text-gray-600 dark:text-gray-300">{data.activePeriod.label}</span>
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 md:gap-4">
@@ -127,7 +131,7 @@ export default function FinanceMetrics({ data, loading }: Props) {
                     {m.up ? <ArrowUpIcon /> : <ArrowDownIcon />}
                     {m.change}
                   </span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:inline">vs lalu</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:inline">{tr.vsLast}</span>
                 </div>
               )}
             </div>

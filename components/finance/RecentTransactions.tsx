@@ -5,6 +5,7 @@ import Badge from "@components/ui/badge/Badge";
 import { RecentTransaction } from "@/lib/types/dashboard";
 import { fmtDate } from "@/lib/utils";
 import { fmtIDR as fmt } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 interface Props {
   data?: RecentTransaction[];
@@ -12,6 +13,9 @@ interface Props {
 }
 
 export default function RecentTransactions({ data = [], loading }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const [localType, setLocalType] = useState<"" | "CREDIT" | "DEBIT">("");
 
   const filtered = data.filter((tx) => {
@@ -28,9 +32,9 @@ export default function RecentTransactions({ data = [], loading }: Props) {
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Transaksi Terbaru</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{tr.recentTitle}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {filtered.length} transaksi ·{" "}
+              {filtered.length} {tr.colDesc.toLowerCase()} ·{" "}
               <span className="text-success-600 font-medium">+{fmt(totalCredit)}</span>
               {" · "}
               <span className="text-error-600 font-medium">-{fmt(totalDebit)}</span>
@@ -40,7 +44,7 @@ export default function RecentTransactions({ data = [], loading }: Props) {
             href="/transactions"
             className="self-start inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
           >
-            Lihat Semua
+            {tr.viewAll}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -49,17 +53,17 @@ export default function RecentTransactions({ data = [], loading }: Props) {
 
         {/* Filter tabs */}
         <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden w-fit">
-          {(["", "CREDIT", "DEBIT"] as const).map((t) => (
+          {(["", "CREDIT", "DEBIT"] as const).map((type) => (
             <button
-              key={t}
-              onClick={() => setLocalType(t)}
+              key={type}
+              onClick={() => setLocalType(type)}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                localType === t
+                localType === type
                   ? "bg-brand-500 text-white"
                   : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
               }`}
             >
-              {t === "" ? "Semua" : t === "CREDIT" ? "Masuk" : "Keluar"}
+              {type === "" ? tr.filterAll : type === "CREDIT" ? tr.filterIn : tr.filterOut}
             </button>
           ))}
         </div>
@@ -72,7 +76,7 @@ export default function RecentTransactions({ data = [], loading }: Props) {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Tidak ada transaksi</p>
+        <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">{tr.noTx}</p>
       ) : (
         <>
           {/* Mobile card view */}
@@ -113,12 +117,12 @@ export default function RecentTransactions({ data = [], loading }: Props) {
             <Table>
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Tanggal</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Keterangan</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Rekening</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Kategori</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400">Jumlah</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Status</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colDate}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colDesc}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colAccount}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colCategory}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400">{tr.colAmount}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colStatus}</TableCell>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">

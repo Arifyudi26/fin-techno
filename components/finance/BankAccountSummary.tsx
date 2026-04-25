@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BankAccountBalance } from "@/lib/types/dashboard";
+import { useI18n } from "@lib/i18n";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
@@ -20,6 +21,9 @@ interface Props {
 }
 
 export default function BankAccountSummary({ data = [], loading, selectedAccountId, onSelectAccount }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const [filter, setFilter] = useState<"ALL" | "BANK" | "WALLET">("ALL");
 
   const banks = data.filter((a) => a.source !== "WALLET");
@@ -43,10 +47,9 @@ export default function BankAccountSummary({ data = [], loading, selectedAccount
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Rekening & Dompet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Klik untuk filter dashboard</p>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{tr.accountsTitle}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{tr.accountsSubtitle}</p>
         </div>
-        {/* Filter tabs */}
         <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden w-fit">
           {(["ALL", "BANK", "WALLET"] as const).map((f) => (
             <button
@@ -58,7 +61,7 @@ export default function BankAccountSummary({ data = [], loading, selectedAccount
                   : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
               }`}
             >
-              {f === "ALL" ? "Semua" : f === "BANK" ? "Bank" : "Wallet"}
+              {f === "ALL" ? tr.filterAll : f === "BANK" ? tr.bank : tr.wallet}
             </button>
           ))}
         </div>
@@ -72,24 +75,22 @@ export default function BankAccountSummary({ data = [], loading, selectedAccount
         </div>
       ) : (
         <>
-          {/* Total summary */}
           <div className="mb-4 p-4 rounded-xl bg-brand-50 dark:bg-brand-500/10">
-            <p className="text-sm text-brand-600 dark:text-brand-400 mb-1">Total Saldo Gabungan</p>
+            <p className="text-sm text-brand-600 dark:text-brand-400 mb-1">{tr.totalCombined}</p>
             <p className="text-2xl font-bold text-brand-700 dark:text-brand-300">{fmt(total)}</p>
             <div className="flex gap-4 mt-2">
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                Bank: <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(bankTotal)}</span>
+                {tr.bank}: <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(bankTotal)}</span>
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                Dompet: <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(walletTotal)}</span>
+                {tr.wallet}: <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(walletTotal)}</span>
               </span>
             </div>
           </div>
 
-          {/* Account list */}
           <div className="space-y-2">
             {displayed.length === 0 ? (
-              <p className="text-sm text-center text-gray-400 dark:text-gray-500 py-4">Tidak ada rekening</p>
+              <p className="text-sm text-center text-gray-400 dark:text-gray-500 py-4">{tr.noAccounts}</p>
             ) : (
               displayed.map((acc) => {
                 const isWallet = acc.source === "WALLET";
@@ -127,7 +128,7 @@ export default function BankAccountSummary({ data = [], loading, selectedAccount
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{fmt(acc.balance)}</p>
                       {isSelected && (
-                        <p className="text-[10px] text-brand-500 dark:text-brand-400 mt-0.5">Difilter</p>
+                        <p className="text-[10px] text-brand-500 dark:text-brand-400 mt-0.5">{tr.filtered}</p>
                       )}
                     </div>
                   </button>

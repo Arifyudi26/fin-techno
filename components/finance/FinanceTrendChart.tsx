@@ -3,6 +3,7 @@ import { ApexOptions } from "apexcharts";
 import { CashFlowMonth, NetFlowPoint } from "@/lib/types/dashboard";
 import { multiSeriestooltip } from "@/lib/apexTooltip";
 import { fmtIDR as fmt } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 interface Props {
   data?: CashFlowMonth[];
@@ -14,6 +15,9 @@ interface Props {
 const CHART_HEIGHT = 280;
 
 export default function FinanceTrendChart({ data = [], netFlowTrend = [], loading, periodLabel }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const categories = netFlowTrend.length > 0
     ? netFlowTrend.map((d) => d.month)
     : data.map((d) => d.month);
@@ -30,7 +34,6 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
   const lastBalance = balanceData[balanceData.length - 1] ?? 0;
   const totalTx     = txCountData.reduce((a, b) => a + b, 0);
 
-  // Shared y-axis range untuk bar chart (simetris agar 0 di tengah)
   const maxVal = Math.max(...creditData, ...data.map((d) => d.debit), 1);
   const yBarMax = maxVal * 1.15;
 
@@ -41,7 +44,6 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
     labels: { style: { fontFamily: "Outfit, sans-serif", fontSize: "11px" } },
   };
 
-  // ── Chart 1: Bar (pemasukan atas, pengeluaran bawah) ──────────────────────
   const barOptions: ApexOptions = {
     chart: {
       id: "bar-chart",
@@ -54,11 +56,7 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
     colors: ["#12B76A", "#F04438"],
     dataLabels: { enabled: false },
     plotOptions: {
-      bar: {
-        columnWidth: "50%",
-        borderRadius: 6,
-        borderRadiusApplication: "end",  // ujung terluar tiap bar
-      },
+      bar: { columnWidth: "50%", borderRadius: 6, borderRadiusApplication: "end" },
     },
     legend: { show: false },
     xaxis: commonXAxis,
@@ -87,7 +85,7 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
         const vals = [[credit], [debit], [netFlow], [balance], [txCount]];
         return multiSeriestooltip(
           vals, 0,
-          ["Pemasukan", "Pengeluaran", "Net Flow", "Saldo", "Transaksi"],
+          [tr.labelIncome, tr.labelExpense, tr.netFlow, tr.labelBalance, tr.labelTx],
           ["#12B76A", "#F04438", "#465FFF", "#F79009", "#7C3AED"],
           [true, true, true, true, false],
           200
@@ -97,11 +95,10 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
   };
 
   const barSeries = [
-    { name: "Pemasukan",   data: creditData },
-    { name: "Pengeluaran", data: debitNeg },
+    { name: tr.labelIncome,  data: creditData },
+    { name: tr.labelExpense, data: debitNeg },
   ];
 
-  // ── Chart 2: Line (net flow, saldo, transaksi) — overlay ─────────────────
   const lineOptions: ApexOptions = {
     chart: {
       id: "line-chart",
@@ -122,14 +119,11 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
       axisTicks: { show: false },
     },
     yaxis: [
-      {
-        seriesName: "Net Flow",
-        show: false,
-      },
-      { seriesName: "Net Flow", show: false },
+      { seriesName: tr.netFlow, show: false },
+      { seriesName: tr.netFlow, show: false },
       {
         opposite: true,
-        seriesName: "Transaksi",
+        seriesName: tr.labelTx,
         labels: {
           formatter: (val) => `${Math.round(val)}`,
           style: { fontFamily: "Outfit, sans-serif", fontSize: "11px" },
@@ -145,33 +139,33 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
       style: { fontFamily: "Outfit, sans-serif" },
       custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number }) => {
         const vals = series.map((s) => [s[dataPointIndex] ?? 0]);
-        return multiSeriestooltip(vals, 0, ["Net Flow", "Saldo", "Transaksi"], ["#465FFF", "#F79009", "#7C3AED"], [true, true, false], 180);
+        return multiSeriestooltip(vals, 0, [tr.netFlow, tr.labelBalance, tr.labelTx], ["#465FFF", "#F79009", "#7C3AED"], [true, true, false], 180);
       },
     },
   };
 
   const lineSeries = [
-    { name: "Net Flow",  data: netFlowData },
-    { name: "Saldo",     data: balanceData },
-    { name: "Transaksi", data: txCountData },
+    { name: tr.netFlow,     data: netFlowData },
+    { name: tr.labelBalance, data: balanceData },
+    { name: tr.labelTx,     data: txCountData },
   ];
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Tren Keuangan</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{periodLabel ?? "Ringkasan keuangan"}</p>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{tr.trendTitle}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{periodLabel ?? tr.trendDefault}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-4 mb-3">
         {[
-          { color: "#12B76A", label: "Masuk", value: fmt(totalCredit), cls: "" },
-          { color: "#F04438", label: "Keluar", value: fmt(totalDebit), cls: "" },
-          { color: "#465FFF", label: "Net Flow", value: fmt(totalNet), cls: totalNet >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400" },
-          { color: "#F79009", label: "Saldo", value: fmt(lastBalance), cls: lastBalance >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400" },
-          { color: "#7C3AED", label: "Transaksi", value: `${totalTx}x`, cls: "" },
+          { color: "#12B76A", label: tr.labelIncome,  value: fmt(totalCredit), cls: "" },
+          { color: "#F04438", label: tr.labelExpense, value: fmt(totalDebit),  cls: "" },
+          { color: "#465FFF", label: tr.netFlow,      value: fmt(totalNet),    cls: totalNet >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400" },
+          { color: "#F79009", label: tr.labelBalance, value: fmt(lastBalance), cls: lastBalance >= 0 ? "text-success-600 dark:text-success-400" : "text-error-600 dark:text-error-400" },
+          { color: "#7C3AED", label: tr.labelTx,      value: `${totalTx}x`,   cls: "" },
         ].map(({ color, label, value, cls }) => (
           <div key={label} className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style={{ background: color }} />
@@ -187,9 +181,7 @@ export default function FinanceTrendChart({ data = [], netFlowTrend = [], loadin
       ) : (
         <div className="max-w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="min-w-[500px] relative">
-            {/* Bar chart — base layer */}
             <Chart options={barOptions} series={barSeries} type="bar" height={CHART_HEIGHT} />
-            {/* Line chart — overlay, pointer-events none agar tooltip bar tetap jalan */}
             <div className="absolute inset-0 pointer-events-none">
               <Chart options={lineOptions} series={lineSeries} type="line" height={CHART_HEIGHT} />
             </div>

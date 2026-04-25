@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
+import { useI18n } from "@lib/i18n";
 
 const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
 
@@ -28,6 +29,9 @@ export default function DashboardFilters({
   defaultDateFrom = "",
   defaultDateTo = "",
 }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const [isOpen, setIsOpen] = useState(false);
   const [local, setLocal] = useState({
     dateFrom: filters.dateFrom ?? "",
@@ -104,7 +108,7 @@ export default function DashboardFilters({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
               <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{tr.filter}</span>
             {activeCount > 0 && (
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-[10px] font-bold text-white">
                 {activeCount}
@@ -123,7 +127,7 @@ export default function DashboardFilters({
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-500 dark:text-gray-400">
               <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{tr.filter}</span>
             {activePeriodLabel && (
               <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                 {activePeriodLabel}
@@ -143,7 +147,7 @@ export default function DashboardFilters({
               onClick={handleReset}
               className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
             >
-              Reset
+              {tr.reset}
             </button>
           )}
         </div>
@@ -154,14 +158,14 @@ export default function DashboardFilters({
         <div className="grid grid-cols-1 gap-3 xsm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <DatePicker
             id="dash-filter-from"
-            label="Dari Tanggal"
+            label={tr.dateFrom}
             placeholder="dd/mm/yyyy"
             value={local.dateFrom}
             onChange={(v) => set("dateFrom", v)}
           />
           <DatePicker
             id="dash-filter-to"
-            label="Sampai Tanggal"
+            label={tr.dateTo}
             placeholder="dd/mm/yyyy"
             value={local.dateTo}
             onChange={(v) => set("dateTo", v)}
@@ -169,9 +173,9 @@ export default function DashboardFilters({
 
           {accounts.length > 0 && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.account}</label>
               <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectClass}>
-                <option value="">Semua Rekening</option>
+                <option value="">{tr.allAccounts}</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.bankProvider} {a.source === "WALLET" ? "(Wallet)" : ""} ***{a.accountNumber.slice(-4)}
@@ -183,9 +187,9 @@ export default function DashboardFilters({
 
           {categories.length > 0 && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Kategori</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.category}</label>
               <select value={local.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={selectClass}>
-                <option value="">Semua Kategori</option>
+                <option value="">{tr.allCategories}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -194,16 +198,16 @@ export default function DashboardFilters({
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe Transaksi</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.txType}</label>
             <select value={local.txType} onChange={(e) => set("txType", e.target.value)} className={selectClass}>
-              <option value="">Semua Tipe</option>
-              <option value="CREDIT">Pemasukan</option>
-              <option value="DEBIT">Pengeluaran</option>
+              <option value="">{tr.allTypes}</option>
+              <option value="CREDIT">{tr.tabIncome}</option>
+              <option value="DEBIT">{tr.tabExpense}</option>
             </select>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-transparent select-none">Cari</label>
+            <label className="text-xs font-medium text-transparent select-none">_</label>
             <button
               onClick={handleApply}
               disabled={!isDirty}
@@ -213,7 +217,7 @@ export default function DashboardFilters({
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                 <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              Terapkan
+              {tr.apply}
             </button>
           </div>
         </div>

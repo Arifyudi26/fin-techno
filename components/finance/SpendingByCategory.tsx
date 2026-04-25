@@ -4,6 +4,7 @@ import { ApexOptions } from "apexcharts";
 import { SpendingCategory } from "@/lib/types/dashboard";
 import { donutTooltip, singleSeriesTooltip } from "@/lib/apexTooltip";
 import { fmtIDR as fmt } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 const COLORS = ["#465FFF", "#12B76A", "#F79009", "#F04438", "#7A5AF8", "#0BA5EC", "#EE46BC", "#16B364"];
 
@@ -14,6 +15,9 @@ interface Props {
 }
 
 export default function SpendingByCategory({ data = [], incomeData = [], loading }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const [view, setView] = useState<"donut" | "bar">("donut");
   const [tab, setTab] = useState<"expense" | "income">("expense");
 
@@ -44,7 +48,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
             },
             total: {
               show: true,
-              label: "Total",
+              label: tr.spendingTotal,
               fontSize: "12px",
               fontFamily: "Outfit",
               color: "#667085",
@@ -82,21 +86,23 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
     },
   };
 
+  const tabLabel = tab === "expense" ? tr.tabExpense : tr.tabIncome;
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            {tab === "expense" ? "Pengeluaran" : "Pemasukan"} per Kategori
+            {tabLabel} {tr.spendingTitle}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {sorted.length} kategori · Total {fmt(total)}
+            {sorted.length} {tr.spendingCategories} · {tr.spendingTotal} {fmt(total)}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Tab: Pengeluaran / Pemasukan */}
+          {/* Tab: Expense / Income */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipe</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.labelType}</label>
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <button
                 onClick={() => setTab("expense")}
@@ -106,7 +112,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
                     : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
-                Pengeluaran
+                {tr.tabExpense}
               </button>
               <button
                 onClick={() => setTab("income")}
@@ -116,13 +122,13 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
                     : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
-                Pemasukan
+                {tr.tabIncome}
               </button>
             </div>
           </div>
           {/* View toggle */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tampilan</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.labelView}</label>
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               {(["donut", "bar"] as const).map((v) => (
                 <button
@@ -134,7 +140,7 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
                       : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
-                  {v === "donut" ? "Donut" : "Bar"}
+                  {v === "donut" ? tr.viewDonut : tr.viewBar}
                 </button>
               ))}
             </div>
@@ -146,14 +152,14 @@ export default function SpendingByCategory({ data = [], incomeData = [], loading
         <div className="h-[240px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
       ) : series.length === 0 ? (
         <div className="h-[240px] flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-          Belum ada data {tab === "expense" ? "pengeluaran" : "pemasukan"}
+          {tab === "expense" ? tr.noDataExpense : tr.noDataIncome}
         </div>
       ) : (
         <>
           <Chart
             key={`${view}-${tab}`}
             options={view === "donut" ? donutOptions : barOptions}
-            series={view === "donut" ? series : [{ name: tab === "expense" ? "Pengeluaran" : "Pemasukan", data: series }]}
+            series={view === "donut" ? series : [{ name: tabLabel, data: series }]}
             type={view === "donut" ? "donut" : "bar"}
             height={280}
           />
