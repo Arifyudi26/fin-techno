@@ -1,11 +1,10 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { Endpoint, SectionTitle, SubTitle } from "@/components/docs/shared";
-import { useDocsLang } from "@lib/docs/LangContext";
-import { t } from "@lib/docs/translations";
+import { useI18n } from "@lib/i18n";
 
 export default function DocsAccounts() {
-  const { lang } = useDocsLang();
-  const tr = t[lang];
+  const { t } = useI18n();
+  const tr = t.docs;
 
   return (
     <DocLayout title="Bank & Wallet API">

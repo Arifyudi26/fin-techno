@@ -8,6 +8,7 @@ import { categories } from "./locales/categories";
 import { upload } from "./locales/upload";
 import { calendar } from "./locales/calendar";
 import { profile } from "./locales/profile";
+import { docs } from "./locales/docs";
 
 export type Lang = "id" | "en";
 
@@ -23,11 +24,11 @@ export const locales = {
   upload,
   calendar,
   profile,
+  docs,
 } as const;
 
 type LocalesMap = typeof locales;
 
-// Build typed translations for a given lang
 function buildT(lang: Lang) {
   return Object.fromEntries(
     Object.entries(locales).map(([k, v]) => [k, v[lang]])

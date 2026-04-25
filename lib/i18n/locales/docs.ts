@@ -1,6 +1,4 @@
-export type Lang = "id" | "en";
-
-export const t = {
+export const docs = {
   id: {
     // Layout
     nav: "Navigasi",
@@ -159,28 +157,23 @@ export const t = {
     middlewareNote: "Semua halaman lain redirect ke /auth/login jika tidak ada cookie",
     middlewareNote2: ". Semua API lain wajib header",
 
-    // API pages — endpoint descriptions
     api: {
       authPublicNote: "Semua endpoint di bawah ini bersifat publik — tidak memerlukan token.",
       authRequired: "Semua endpoint memerlukan",
 
-      // Auth
       registerDesc: "Daftar akun baru langsung (tanpa OTP). Mengembalikan JWT token.",
       loginDesc: "Login dengan email dan password. Mengembalikan JWT token. Tambahkan checkOnly: true untuk validasi credentials saja tanpa token (digunakan sebelum flow OTP).",
       sendOtpDesc: "Kirim kode OTP 6 digit ke email. OTP berlaku 5 menit. Purpose menentukan konteks penggunaan.",
       verifyOtpDesc: "Verifikasi kode OTP. Behavior berbeda tergantung purpose: register → buat user baru; login/oauth → return token; change-password → update password.",
       nextauthDesc: "NextAuth handler untuk OAuth Google dan Facebook. Digunakan secara internal oleh NextAuth — tidak dipanggil langsung.",
 
-      // Dashboard
       metricsDesc: "Metrik utama dashboard: total income, expense, net flow, balance, jumlah transaksi, dan persentase perubahan vs periode sebelumnya. Jika tidak ada filter tanggal, otomatis menggunakan bulan dari transaksi terbaru.",
       cashflowDesc: "Data cash flow (credit vs debit) dan net flow trend. Granularitas otomatis: per hari (≤31 hari), per minggu (≤92 hari), per bulan (>92 hari).",
       dashAccountsDesc: "Daftar semua rekening bank dan dompet digital aktif milik user, beserta saldo terakhir dari transaksi terbaru.",
       dashTxDesc: "Transaksi terbaru + spending by category + income by category. Digunakan untuk widget di dashboard.",
 
-      // Transactions
       txListDesc: "List semua transaksi (bank + wallet) dengan pagination, filter, dan summary. Menggunakan single UNION ALL query untuk performa optimal.",
 
-      // Bank accounts
       bankListDesc: "List semua rekening bank milik user beserta statistik: total upload, total transaksi, total credit/debit, dan info upload terakhir.",
       bankAddDesc: "Tambah rekening bank baru. Nomor rekening harus unik.",
       bankUpdateDesc: "Update data rekening bank (nama, deskripsi, status aktif).",
@@ -192,37 +185,31 @@ export const t = {
       walletUpdateDesc: "Update data dompet digital.",
       walletDeleteDesc: "Hapus dompet digital. Soft delete jika ada transaksi terkait (isActive = false), hard delete jika tidak ada transaksi.",
 
-      // Upload
       uploadListDesc: "List semua riwayat upload (bank + wallet) milik user, diurutkan dari terbaru.",
       uploadAccountsDesc: "Daftar rekening bank dan dompet digital aktif milik user — digunakan sebagai pilihan saat upload.",
       uploadSubmitDesc: "Upload file e-statement. Request harus menggunakan multipart/form-data. File maks 10MB. Format yang didukung: CSV, XLSX, XLS, PDF. Sistem otomatis mem-parsing file setelah upload.",
       uploadDetailDesc: "Detail satu upload berdasarkan ID, termasuk list transaksi yang berhasil di-parse.",
       uploadDeleteDesc: "Hapus upload beserta semua transaksi yang terkait dengan upload tersebut.",
 
-      // Categories
       catListDesc: "List semua kategori milik user beserta jumlah transaksi yang sudah dikategorikan.",
       catAddDesc: "Buat kategori baru. Kode harus unik per user (maks 5 karakter, otomatis uppercase). Setelah dibuat, sistem otomatis mengassign kategori ke transaksi yang deskripsinya mengandung keyword dari nama kategori.",
       catUpdateDesc: "Update nama, kode, atau deskripsi kategori.",
       catDeleteDesc: "Hapus kategori. Transaksi yang sudah dikategorikan akan kehilangan kategori ini.",
       catReassignDesc: "Re-assign semua transaksi yang belum memiliki kategori berdasarkan keyword dari semua kategori yang ada. Berguna setelah menambah kategori baru.",
 
-      // Reports
       expenseDesc: "Laporan pengeluaran (transaksi DEBIT) untuk periode tertentu. Granularitas trend otomatis: per hari/minggu/bulan. Default: seluruh tahun berjalan.",
       incomeDesc: "Laporan pemasukan (transaksi CREDIT). Struktur response sama dengan /reports/expense, dengan field bestPeriod (bukan highestPeriod).",
       periodDesc: "Laporan gabungan per periode: income, expense, net flow, dan breakdown per sumber.",
 
-      // Calendar
       calendarDesc: "Ringkasan transaksi per hari untuk rentang tanggal tertentu. Semua tanggal dikonversi ke WIB (UTC+7). Digunakan untuk render kalender bulanan.",
       calendarDateDesc: "Detail semua transaksi pada tanggal tertentu (format YYYY-MM-DD). Digunakan saat user klik hari di kalender.",
 
-      // Notifications
       notifListDesc: "List 50 notifikasi terbaru milik user beserta jumlah yang belum dibaca.",
       notifAddDesc: "Buat notifikasi baru (digunakan secara internal oleh sistem setelah proses upload).",
       notifPatchDesc: "Tandai semua notifikasi sebagai sudah dibaca.",
       notifDeleteDesc: "Hapus semua notifikasi milik user.",
       notifStreamDesc: "Server-Sent Events (SSE) stream untuk notifikasi real-time. Karena EventSource tidak bisa mengirim header, token dikirim via query param.",
 
-      // User
       userGetDesc: "Ambil data profil user yang sedang login beserta statistik akun: jumlah rekening bank, dompet, upload, dan transaksi.",
       userUpdateDesc: "Update nama atau ganti password. Untuk ganti password, currentPassword wajib diisi dan divalidasi.",
       userAvatarDesc: "Upload foto profil. Request menggunakan multipart/form-data. File disimpan ke Vercel Blob.",
@@ -441,5 +428,3 @@ export const t = {
     },
   },
 } as const;
-
-export type Translations = typeof t.id;

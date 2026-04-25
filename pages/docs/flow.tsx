@@ -1,7 +1,6 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { SectionTitle, SubTitle, FlowStep } from "@/components/docs/shared";
-import { useDocsLang } from "@lib/docs/LangContext";
-import { t } from "@lib/docs/translations";
+import { useI18n } from "@lib/i18n";
 
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 ${className}`}>
@@ -10,8 +9,8 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 );
 
 export default function DocsFlow() {
-  const { lang } = useDocsLang();
-  const tr = t[lang];
+  const { t } = useI18n();
+  const tr = t.docs;
 
   return (
     <DocLayout title={tr.flowTitle}>

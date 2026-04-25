@@ -4,7 +4,6 @@ import { ThemeProvider } from "@lib/context/ThemeContext";
 import { SessionProvider } from "next-auth/react";
 import { NotificationProvider } from "@lib/context/NotificationContext";
 import { ModalProvider } from "@lib/context/ModalContext";
-import { DocsLangProvider } from "@lib/docs/LangContext";
 import { I18nProvider } from "@lib/i18n";
 import { useEffect, useState } from "react";
 import useAuthStore from "@/store/authStore";
@@ -32,13 +31,11 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
     <SessionProvider session={session}>
       <ThemeProvider>
         <I18nProvider>
-          <DocsLangProvider>
             <NotificationProvider>
               <ModalProvider>
                 <Component {...pageProps} />
               </ModalProvider>
             </NotificationProvider>
-          </DocsLangProvider>
         </I18nProvider>
       </ThemeProvider>
     </SessionProvider>

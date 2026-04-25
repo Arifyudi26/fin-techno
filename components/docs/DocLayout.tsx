@@ -3,8 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@lib/context/ThemeContext";
-import { useDocsLang } from "@lib/docs/LangContext";
-import { t } from "@lib/docs/translations";
+import { useI18n } from "@lib/i18n";
 
 function SunIcon() {
   return (
@@ -51,7 +50,7 @@ const LANGS = [
 ] as const;
 
 function LangDropdown() {
-  const { lang, setLang } = useDocsLang();
+  const { lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = LANGS.find((l) => l.code === lang)!;
@@ -99,8 +98,8 @@ function LangDropdown() {
 }
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const { lang } = useDocsLang();
-  const tr = t[lang];
+  const { t } = useI18n();
+  const tr = t.docs;
 
   const NAV = [
     { href: "/docs", label: tr.navOverview },
@@ -143,8 +142,8 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 function DocLayoutInner({ title, children }: { title: string; children: React.ReactNode }) {
   const { pathname } = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const { lang } = useDocsLang();
-  const tr = t[lang];
+  const { t } = useI18n();
+  const tr = t.docs;
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => { setDrawerOpen(false); }, [pathname]);

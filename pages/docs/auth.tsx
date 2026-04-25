@@ -1,11 +1,10 @@
 import DocLayout from "@/components/docs/DocLayout";
 import { Endpoint, SectionTitle } from "@/components/docs/shared";
-import { useDocsLang } from "@lib/docs/LangContext";
-import { t } from "@lib/docs/translations";
+import { useI18n } from "@lib/i18n";
 
 export default function DocsAuth() {
-  const { lang } = useDocsLang();
-  const tr = t[lang].api;
+  const { t } = useI18n();
+  const tr = t.docs.api;
 
   return (
     <DocLayout title="Auth API">
