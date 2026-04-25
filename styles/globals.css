@@ -463,6 +463,33 @@ span.flatpickr-weekday,
 .custom-calendar .fc .fc-button {
   @apply text-sm font-medium;
 }
+.custom-calendar .fc .fc-button-primary {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
+  box-shadow: none !important;
+}
+.custom-calendar .fc .fc-button-primary:hover {
+  background-color: #e5e7eb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+.custom-calendar .fc .fc-button-primary:not(:disabled).fc-button-active,
+.custom-calendar .fc .fc-button-primary:not(:disabled):active {
+  background-color: #465fff;
+  border-color: #465fff;
+  color: #fff;
+}
+.custom-calendar .fc .fc-button-primary:focus {
+  box-shadow: none !important;
+  outline: none;
+}
+.custom-calendar .fc .fc-button-primary:disabled {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+  color: #9ca3af;
+  opacity: 1;
+}
 .custom-calendar .fc .fc-toolbar-title {
   @apply text-base font-semibold text-gray-800 dark:text-gray-100;
 }
