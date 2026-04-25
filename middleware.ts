@@ -35,7 +35,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // SSE stream: EventSource can't send headers, accept token via query param
+    // SSE stream: EventSource can't send headers, token verified in handler
     if (pathname === "/api/notifications/stream") {
       const tokenParam = req.nextUrl.searchParams.get("token");
       if (tokenParam) return NextResponse.next();

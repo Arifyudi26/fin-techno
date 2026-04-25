@@ -35,12 +35,24 @@ interface NotificationContextValue {
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
+/** Returns true only if token exists and is not expired (checks JWT exp claim) */
+function isTokenValid(token: string | null): boolean {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<UploadNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const token = useAuthStore((s) => s.token);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // Refs for SSE lifecycle — mutations only, no re-renders needed
   const esRef = useRef<EventSource | null>(null);
@@ -82,15 +94,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       es.close();
       esRef.current = null;
       connectedTokenRef.current = null;
-      const latest = useAuthStore.getState().token;
-      if (latest) retryRef.current = setTimeout(() => connect(latest), 10_000);
+      const state = useAuthStore.getState();
+      if (isTokenValid(state.token) && state.isAuthenticated) {
+        retryRef.current = setTimeout(() => connect(state.token!), 10_000);
+      }
     };
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!token) {
+    if (!isTokenValid(token) || !isAuthenticated) {
       disconnect();
       if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
       setNotifications([]);
@@ -99,7 +113,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
 
     if (typeof EventSource !== "undefined") {
-      connect(token);
+      connect(token!);
     } else {
       // SSE not supported — fallback polling
       refresh();
@@ -110,7 +124,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       disconnect();
       if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
     };
-  }, [token, connect, refresh]);
+  }, [token, isAuthenticated, connect, refresh]);
 
   const addNotification = useCallback(
     async (n: { type: NotifType; title: string; message: string; fileName?: string }) => {

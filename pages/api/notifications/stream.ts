@@ -1,6 +1,16 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
-import { verifyToken } from "@lib/auth";
+import jwt, { JwtPayload } from "jsonwebtoken";
+
+type DecodedToken = JwtPayload & { id: string; role: string };
+
+function verifyStreamToken(req: NextApiRequest): DecodedToken {
+  // SSE uses query param since EventSource can't send headers
+  const tokenParam = req.query.token as string | undefined;
+  const token = tokenParam ?? req.headers.authorization?.split(" ")[1];
+  if (!token) throw new Error("Unauthorized");
+  return jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
+}
 
 export const config = { maxDuration: 25 };
 
@@ -9,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try {
-    userId = verifyToken(req).id;
+    userId = verifyStreamToken(req).id;
   } catch {
     return res.status(401).json({ message: "Unauthorized" });
   }
