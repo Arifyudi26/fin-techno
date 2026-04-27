@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import AppLayout from "@components/layout/AppLayout";
 import PageBreadcrumb from "@components/common/PageBreadCrumb";
 import PageMeta from "@components/common/PageMeta";
@@ -36,7 +37,7 @@ export default function ProfilePage() {
       })
       .catch(() => fire("error", t.profile.errorLoad))
       .finally(() => setLoading(false));
-  }, [fire]);
+  }, [fire, t.profile.errorLoad]);
 
   const { setName, setAvatar } = useAuthStore();
 
@@ -138,7 +139,7 @@ export default function ProfilePage() {
               <div className="relative shrink-0">
                 <div className="h-16 w-16 rounded-full overflow-hidden bg-brand-500 flex items-center justify-center text-white text-2xl font-bold">
                   {avatarObjectUrl ? (
-                    <img src={avatarObjectUrl} alt={profile.name} className="object-cover w-full h-full" />
+                    <Image src={avatarObjectUrl} alt={profile.name} className="object-cover w-full h-full" width={64} height={64} unoptimized />
                   ) : (
                     profile.name.charAt(0).toUpperCase()
                   )}
