@@ -27,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sourceType = (fields.sourceType ?? "BANK").toUpperCase();
     const accountId = fields.accountId;
     const notes = fields.notes ?? "";
+    const pdfPassword = fields.pdfPassword ?? undefined;
 
     if (!accountId) return res.status(400).json({ message: "accountId wajib diisi" });
     if (!file) return res.status(400).json({ message: "File tidak ditemukan" });
@@ -119,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uploadId = upload.id;
     }
 
-    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
+    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId, pdfPassword };
 
     // Respond immediately — processUpload runs in background
     res.status(202).json({
