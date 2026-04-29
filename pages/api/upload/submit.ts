@@ -27,7 +27,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sourceType = (fields.sourceType ?? "BANK").toUpperCase();
     const accountId = fields.accountId;
     const notes = fields.notes ?? "";
-    const pdfPassword = fields.pdfPassword ?? undefined;
 
     if (!accountId) return res.status(400).json({ message: "accountId wajib diisi" });
     if (!file) return res.status(400).json({ message: "File tidak ditemukan" });
@@ -120,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uploadId = upload.id;
     }
 
-    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId, pdfPassword };
+    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
     // Respond immediately — processUpload runs in background
     res.status(202).json({
@@ -130,7 +129,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Fire-and-forget: do NOT await, runs after response is sent
-    // vercel.json sets maxDuration:60 on this function so it stays alive after res.end()
     processUpload(jobPayload).catch((err) => {
       console.error("[submit] processUpload background error:", err);
     });
