@@ -135,19 +135,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let finalStatus = "PROCESSING";
     let parsedRows = 0;
     let totalRows = 0;
+    let errorMessage: string | null = null;
     try {
       if (sourceType === "BANK") {
-        const up = await prisma.bankStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true } });
+        const up = await prisma.bankStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true, errorMessage: true } });
         finalStatus = up?.status ?? "PROCESSING";
         parsedRows = up?.parsedRows ?? 0;
         totalRows = up?.totalRows ?? 0;
+        errorMessage = up?.errorMessage ?? null;
       } else {
-        const up = await (prisma as any).walletStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true } });
+        const up = await (prisma as any).walletStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true, errorMessage: true } });
         finalStatus = up?.status ?? "PROCESSING";
         parsedRows = up?.parsedRows ?? 0;
         totalRows = up?.totalRows ?? 0;
+        errorMessage = up?.errorMessage ?? null;
       }
     } catch { /* non-fatal */ }
+
+    if (finalStatus === "FAILED") {
+      return res.status(422).json({ message: errorMessage ?? "Gagal memproses file.", uploadId, status: finalStatus });
+    }
 
     return res.status(200).json({ uploadId, status: finalStatus, parsedRows, totalRows });
 

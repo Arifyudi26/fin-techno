@@ -45,6 +45,14 @@ export function parseDate(val: string): Date | null {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  // BNI PDF: DD/MM/YYYY HH:MM:SS
+  const bniPdfMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+\d{2}:\d{2}:\d{2}/);
+  if (bniPdfMatch) {
+    const [, dd, mm, yyyy] = bniPdfMatch;
+    const d = new Date(`${yyyy}-${mm}-${dd}`);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
     [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, m, d]) => `${y}-${m}-${d}`],
     [/^(\d{2})\/(\d{2})\/(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
