@@ -184,26 +184,14 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       const res = await axiosGlobal.post("/upload/submit", fd, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (ev) => {
-          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 60) + 30);
+          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 70) + 20);
         },
       });
       setProgress(100);
-
-      // Debug logs - tampil di browser console untuk tracking masalah
-      if (res.data._debug?.length) {
-        console.group(`%c[Upload Debug] ${res.data.uploadId}`, "color: #6366f1; font-weight: bold");
-        for (const entry of res.data._debug) {
-          const ok = entry.step.includes("ERROR") || entry.step.includes("FATAL")
-            ? "color: #ef4444"
-            : entry.step.includes("OK") || entry.step === "DONE_OK"
-              ? "color: #22c55e"
-              : "color: #94a3b8";
-          console.log(`%c${entry.ts} [${entry.step}]${entry.detail ? " " + entry.detail : ""}`, ok);
-        }
-        console.groupEnd();
-      }
-
-      onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
+      // Beri jeda singkat agar progress bar 100% terlihat, lalu tutup modal
+      setTimeout(() => {
+        onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
+      }, 600);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -232,21 +220,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               {tr.modalSubtitle}
             </p>
           </div>
-          {!loading && (
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M18 6L6 18M6 6l12 12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          )}
         </div>
 
         <form
@@ -512,11 +485,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-gray-500">
                 <span>
-                  {progress < 70
-                    ? tr.uploading
-                    : progress < 100
-                      ? tr.processingFile
-                      : tr.done}
+                  {progress < 100 ? tr.uploading : tr.done}
                 </span>
                 <span>{progress}%</span>
               </div>
@@ -526,11 +495,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              {progress >= 70 && progress < 100 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {tr.processingWait}
-                </p>
-              )}
             </div>
           )}
 
@@ -1327,7 +1291,15 @@ export default function UploadPage() {
     fetchUploads();
   }, [fetchAccounts, fetchUploads]);
 
-  const handleUploadSuccess = (result: {
+  // Refs agar polling selalu pakai nilai terbaru (hindari stale closure)
+  const fetchUploadsRef = useRef(fetchUploads);
+  const addNotificationRef = useRef(addNotification);
+  const trRef = useRef(tr);
+  useEffect(() => { fetchUploadsRef.current = fetchUploads; }, [fetchUploads]);
+  useEffect(() => { addNotificationRef.current = addNotification; }, [addNotification]);
+  useEffect(() => { trRef.current = tr; }, [tr]);
+
+  const handleUploadSuccess = useCallback((result: {
     uploadId?: string;
     status: string;
     parsedRows: number;
@@ -1335,10 +1307,10 @@ export default function UploadPage() {
   }) => {
     setShowForm(false);
     closeModal();
-    fetchUploads();
+    fetchUploadsRef.current();
+    fire("success", trRef.current.toastUploaded, { message: trRef.current.toastUploadedMsg, duration: 4000 });
 
     if (result.status === "PROCESSING" && result.uploadId) {
-      // Polling di background - refresh list setiap 5 detik sampai selesai
       const uploadId = result.uploadId;
       const maxAttempts = 60;
       let attempt = 0;
@@ -1349,19 +1321,20 @@ export default function UploadPage() {
           const { status, parsedRows: parsed, totalRows: total, fileName } = res.data;
           if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
             clearInterval(poll);
-            fetchUploads();
+            fetchUploadsRef.current();
+            const t2 = trRef.current;
             const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
-            addNotification({
+            addNotificationRef.current({
               type: allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
-              title: allDuplicate ? tr.notifDuplicateTitle : status === "SUCCESS" ? tr.notifSuccessTitle : status === "PARTIAL" ? tr.notifPartialTitle : tr.notifFailedTitle,
+              title: allDuplicate ? t2.notifDuplicateTitle : status === "SUCCESS" ? t2.notifSuccessTitle : status === "PARTIAL" ? t2.notifPartialTitle : t2.notifFailedTitle,
               message: allDuplicate
-                ? tr.notifDuplicateMsg(total)
+                ? t2.notifDuplicateMsg(total)
                 : status === "SUCCESS"
-                  ? tr.notifSuccessMsg(parsed, total)
+                  ? t2.notifSuccessMsg(parsed, total)
                   : status === "PARTIAL"
-                    ? tr.notifPartialMsg(parsed, total)
-                    : tr.notifErrorMsg,
-              fileName: fileName,
+                    ? t2.notifPartialMsg(parsed, total)
+                    : t2.notifErrorMsg,
+              fileName,
             });
           }
         } catch { /* lanjut polling */ }
@@ -1369,19 +1342,7 @@ export default function UploadPage() {
       }, 5000);
       return;
     }
-
-    const isSuccess = result.status === "SUCCESS";
-    const isPartial = result.status === "PARTIAL";
-    addNotification({
-      type: isSuccess ? "success" : isPartial ? "warning" : "error",
-      title: isSuccess ? tr.notifSuccessTitle : isPartial ? tr.notifPartialTitle : tr.notifFailedTitle,
-      message: isSuccess
-        ? tr.notifSuccessMsg(result.parsedRows, result.totalRows)
-        : isPartial
-          ? tr.notifPartialMsg(result.parsedRows, result.totalRows)
-          : tr.notifErrorMsg,
-    });
-  };
+  }, [closeModal, fire]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
