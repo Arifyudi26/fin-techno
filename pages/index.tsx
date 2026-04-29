@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@components/layout/AppLayout";
 import PageMeta from "@components/common/PageMeta";
 import FinanceMetrics from "@components/finance/FinanceMetrics";
@@ -73,8 +73,6 @@ function buildParams(
 
 export default function Home() {
   const { t } = useI18n();
-  const tRef = useRef(t);
-  useEffect(() => { tRef.current = t; }, [t]);
   const [data, setData] = useState<DashboardState>({
     metrics: null,
     cashFlow: [],
@@ -110,7 +108,7 @@ export default function Home() {
       setData((prev) => ({ ...prev, metrics: res.data }));
       setErrors((prev) => ({ ...prev, metrics: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, metrics: tRef.current.dashboard.errorMetrics }));
+      setErrors((prev) => ({ ...prev, metrics: t.dashboard.errorMetrics }));
     } finally {
       setLoading((prev) => ({ ...prev, metrics: false }));
     }
@@ -129,7 +127,7 @@ export default function Home() {
       }));
       setErrors((prev) => ({ ...prev, cashflow: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, cashflow: tRef.current.dashboard.errorCashflow }));
+      setErrors((prev) => ({ ...prev, cashflow: t.dashboard.errorCashflow }));
     } finally {
       setLoading((prev) => ({ ...prev, cashflow: false }));
     }
@@ -142,7 +140,7 @@ export default function Home() {
       setData((prev) => ({ ...prev, bankAccounts: res.data }));
       setErrors((prev) => ({ ...prev, accounts: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, accounts: tRef.current.dashboard.errorAccounts }));
+      setErrors((prev) => ({ ...prev, accounts: t.dashboard.errorAccounts }));
     } finally {
       setLoading((prev) => ({ ...prev, accounts: false }));
     }
@@ -178,7 +176,7 @@ export default function Home() {
     } catch {
       setErrors((prev) => ({
         ...prev,
-        transactions: tRef.current.dashboard.errorTransactions,
+        transactions: t.dashboard.errorTransactions,
       }));
     } finally {
       setLoading((prev) => ({ ...prev, transactions: false }));
