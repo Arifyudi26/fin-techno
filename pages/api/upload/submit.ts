@@ -6,12 +6,11 @@ import { FileFormat, UploadStatus } from "@prisma/client";
 import crypto from "crypto";
 import { put } from "@vercel/blob";
 import path from "path";
-import { processUpload } from "./process";
 import { parseMultipart } from "@lib/multipartParser";
 
 export const config = {
   api: { bodyParser: false },
-  maxDuration: 60,
+  maxDuration: 30,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -121,15 +120,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
-    console.log("[submit] Starting processUpload for", uploadId);
-    const { logs } = await processUpload(jobPayload);
-    console.log("[submit] processUpload done for", uploadId);
+    // Trigger background processing via QStash SDK (non-blocking, Vercel-compatible)
+    const baseUrl = process.env.NEXTAUTH_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const processUrl = `${baseUrl}/api/upload/process`;
+
+    console.log("[submit] Queuing processUpload via QStash for", uploadId, "→", processUrl);
+
+    try {
+      const { Client } = await import("@upstash/qstash");
+      const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
+      await qstash.publishJSON({
+        url: processUrl,
+        body: jobPayload,
+        retries: 2,
+      });
+      console.log("[submit] QStash queued for", uploadId);
+    } catch (qErr: any) {
+      // QStash gagal — fallback ke processing synchronous agar tidak stuck PROCESSING
+      console.error("[submit] QStash failed, falling back to sync processing:", qErr.message);
+      const { processUpload } = await import("./process");
+      await processUpload(jobPayload).catch((e: any) =>
+        console.error("[submit] Sync fallback also failed:", e.message)
+      );
+    }
 
     return res.status(202).json({
       uploadId,
       status: "PROCESSING",
-      message: "File berhasil diproses.",
-      _debug: logs,
+      message: "File berhasil diupload dan sedang diproses di background.",
     });
 
   } catch (error: any) {

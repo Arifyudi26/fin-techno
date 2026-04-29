@@ -189,20 +189,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       });
       setProgress(100);
 
-      // Debug logs - tampil di browser console untuk tracking masalah
-      if (res.data._debug?.length) {
-        console.group(`%c[Upload Debug] ${res.data.uploadId}`, "color: #6366f1; font-weight: bold");
-        for (const entry of res.data._debug) {
-          const ok = entry.step.includes("ERROR") || entry.step.includes("FATAL")
-            ? "color: #ef4444"
-            : entry.step.includes("OK") || entry.step === "DONE_OK"
-              ? "color: #22c55e"
-              : "color: #94a3b8";
-          console.log(`%c${entry.ts} [${entry.step}]${entry.detail ? " " + entry.detail : ""}`, ok);
-        }
-        console.groupEnd();
-      }
-
+      // Langsung tutup modal dan beri tahu user — proses berjalan di background
       onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
       const msg =
@@ -512,11 +499,9 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-gray-500">
                 <span>
-                  {progress < 70
+                  {progress < 100
                     ? tr.uploading
-                    : progress < 100
-                      ? tr.processingFile
-                      : tr.done}
+                    : tr.done}
                 </span>
                 <span>{progress}%</span>
               </div>
@@ -526,11 +511,6 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              {progress >= 70 && progress < 100 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {tr.processingWait}
-                </p>
-              )}
             </div>
           )}
 
@@ -1335,9 +1315,14 @@ export default function UploadPage() {
   }) => {
     setShowForm(false);
     closeModal();
+
+    // Tampilkan toast "berhasil diupload" langsung
+    fire("success", tr.uploadQueued, { message: tr.uploadQueuedMsg, duration: 5000 });
+
+    // Refresh list agar item PROCESSING muncul
     fetchUploads();
 
-    if (result.status === "PROCESSING" && result.uploadId) {
+    if (result.uploadId) {
       // Polling di background - refresh list setiap 5 detik sampai selesai
       const uploadId = result.uploadId;
       const maxAttempts = 60;
@@ -1367,20 +1352,7 @@ export default function UploadPage() {
         } catch { /* lanjut polling */ }
         if (attempt >= maxAttempts) clearInterval(poll);
       }, 5000);
-      return;
     }
-
-    const isSuccess = result.status === "SUCCESS";
-    const isPartial = result.status === "PARTIAL";
-    addNotification({
-      type: isSuccess ? "success" : isPartial ? "warning" : "error",
-      title: isSuccess ? tr.notifSuccessTitle : isPartial ? tr.notifPartialTitle : tr.notifFailedTitle,
-      message: isSuccess
-        ? tr.notifSuccessMsg(result.parsedRows, result.totalRows)
-        : isPartial
-          ? tr.notifPartialMsg(result.parsedRows, result.totalRows)
-          : tr.notifErrorMsg,
-    });
   };
 
   const handleDelete = async () => {
