@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
 import { useI18n } from "@lib/i18n";
-
-const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
+import DatePicker from "@components/form/DatePicker";
 
 interface Props {
   filters: DashboardFilters;
@@ -156,23 +154,28 @@ export default function DashboardFilters({
       {/* Filter grid — collapsible on mobile, always open on lg+ */}
       <div className={`mt-3 ${isOpen ? "block" : "hidden"} lg:block`}>
         <div className="grid grid-cols-1 gap-3 xsm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <DatePicker
-            id="dash-filter-from"
-            label={tr.dateFrom}
-            placeholder="dd/mm/yyyy"
-            value={local.dateFrom}
-            onChange={(v) => set("dateFrom", v)}
-          />
-          <DatePicker
-            id="dash-filter-to"
-            label={tr.dateTo}
-            placeholder="dd/mm/yyyy"
-            value={local.dateTo}
-            onChange={(v) => set("dateTo", v)}
-          />
+          {/* wrapper tinggi fixed, input selalu di bawah */}
+          <div className="flex h-[52px] flex-col justify-end gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.dateFrom}</label>
+            <DatePicker
+              id="dash-filter-from"
+              placeholder="dd/mm/yyyy"
+              value={local.dateFrom}
+              onChange={(v) => set("dateFrom", v)}
+            />
+          </div>
+          <div className="flex h-[52px] flex-col justify-end gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.dateTo}</label>
+            <DatePicker
+              id="dash-filter-to"
+              placeholder="dd/mm/yyyy"
+              value={local.dateTo}
+              onChange={(v) => set("dateTo", v)}
+            />
+          </div>
 
           {accounts.length > 0 && (
-            <div className="flex flex-col gap-1">
+            <div className="flex h-[52px] flex-col justify-end gap-1">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.account}</label>
               <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectClass}>
                 <option value="">{tr.allAccounts}</option>
@@ -186,7 +189,7 @@ export default function DashboardFilters({
           )}
 
           {categories.length > 0 && (
-            <div className="flex flex-col gap-1">
+            <div className="flex h-[52px] flex-col justify-end gap-1">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.category}</label>
               <select value={local.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={selectClass}>
                 <option value="">{tr.allCategories}</option>
@@ -197,7 +200,7 @@ export default function DashboardFilters({
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
+          <div className="flex h-[52px] flex-col justify-end gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.txType}</label>
             <select value={local.txType} onChange={(e) => set("txType", e.target.value)} className={selectClass}>
               <option value="">{tr.allTypes}</option>
@@ -206,8 +209,7 @@ export default function DashboardFilters({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-transparent select-none">_</label>
+          <div className="flex h-[52px] flex-col justify-end">
             <button
               onClick={handleApply}
               disabled={!isDirty}

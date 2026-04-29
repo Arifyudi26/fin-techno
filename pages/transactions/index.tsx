@@ -9,9 +9,8 @@ import { useModal } from "@lib/hooks/useModal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@components/ui/table";
 import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
-import dynamic from "next/dynamic";
 import { useI18n } from "@lib/i18n";
-const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
+import DatePicker from "@components/form/DatePicker";
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -178,7 +177,7 @@ export default function Transactions() {
           )}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <div className="flex flex-col gap-1 col-span-2 sm:col-span-3 lg:col-span-2">
+          <div className="flex h-[52px] flex-col justify-end gap-1 col-span-2 sm:col-span-3 lg:col-span-2">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.search}</label>
             <div className="relative">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -195,31 +194,35 @@ export default function Transactions() {
           </div>
 
           {/* Dari Tanggal */}
-          <DatePicker
-            id="tx-filter-from"
-            label={t.common.dateFrom}
-            placeholder="dd/mm/yyyy"
-            value={localDateFrom}
-            onChange={(v) => {
-              setLocalDateFrom(v);
-              setFilters((p) => ({ ...p, dateFrom: v || "", page: 1 }));
-            }}
-          />
+          <div className="flex h-[52px] flex-col justify-end gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.dateFrom}</label>
+            <DatePicker
+              id="tx-filter-from"
+              placeholder="dd/mm/yyyy"
+              value={localDateFrom}
+              onChange={(v) => {
+                setLocalDateFrom(v);
+                setFilters((p) => ({ ...p, dateFrom: v || "", page: 1 }));
+              }}
+            />
+          </div>
 
           {/* Sampai Tanggal */}
-          <DatePicker
-            id="tx-filter-to"
-            label={t.common.dateTo}
-            placeholder="dd/mm/yyyy"
-            value={localDateTo}
-            onChange={(v) => {
-              setLocalDateTo(v);
-              setFilters((p) => ({ ...p, dateTo: v || "", page: 1 }));
-            }}
-          />
+          <div className="flex h-[52px] flex-col justify-end gap-1">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.dateTo}</label>
+            <DatePicker
+              id="tx-filter-to"
+              placeholder="dd/mm/yyyy"
+              value={localDateTo}
+              onChange={(v) => {
+                setLocalDateTo(v);
+                setFilters((p) => ({ ...p, dateTo: v || "", page: 1 }));
+              }}
+            />
+          </div>
 
           {/* Tipe */}
-          <div className="flex flex-col gap-1">
+          <div className="flex h-[52px] flex-col justify-end gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.type}</label>
             <select value={filters.type} onChange={(e) => setFilter("type", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
               <option value="ALL">{t.common.allTypes}</option>
@@ -229,7 +232,7 @@ export default function Transactions() {
           </div>
 
           {/* Sumber */}
-          <div className="flex flex-col gap-1">
+          <div className="flex h-[52px] flex-col justify-end gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t.common.source}</label>
             <select value={filters.source} onChange={(e) => setFilter("source", e.target.value)} className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
               <option value="ALL">{t.common.allSources}</option>

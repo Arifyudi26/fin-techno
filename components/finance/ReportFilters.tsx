@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import axiosGlobal from "@/services/AxiosGlobal";
 import type { BankAccountBalance } from "@/lib/types/dashboard";
-
-const DatePicker = dynamic(() => import("@components/form/DatePicker"), { ssr: false });
+import DatePicker from "@components/form/DatePicker";
 
 export interface ReportFilterState {
   dateFrom: string;
@@ -106,25 +104,29 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
 
       {/* Filter grid */}
       <div className={`grid gap-3 grid-cols-2 ${accounts.length > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
-        <DatePicker
-          id="report-filter-from"
-          label="Dari Tanggal"
-          placeholder="dd/mm/yyyy"
-          value={local.dateFrom}
-          onChange={(v) => set("dateFrom", v)}
-        />
+        <div className="flex h-[52px] flex-col justify-end gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
+          <DatePicker
+            id="report-filter-from"
+            placeholder="dd/mm/yyyy"
+            value={local.dateFrom}
+            onChange={(v) => set("dateFrom", v)}
+          />
+        </div>
 
-        <DatePicker
-          id="report-filter-to"
-          label="Sampai Tanggal"
-          placeholder="dd/mm/yyyy"
-          value={local.dateTo}
-          onChange={(v) => set("dateTo", v)}
-        />
+        <div className="flex h-[52px] flex-col justify-end gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
+          <DatePicker
+            id="report-filter-to"
+            placeholder="dd/mm/yyyy"
+            value={local.dateTo}
+            onChange={(v) => set("dateTo", v)}
+          />
+        </div>
 
         {/* Rekening */}
         {accounts.length > 0 && (
-          <div className="flex flex-col gap-1">
+          <div className="flex h-[52px] flex-col justify-end gap-1">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
             <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectCls}>
               <option value="">Semua Rekening</option>
@@ -138,8 +140,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
         )}
 
         {/* Tombol Apply */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-transparent select-none">Cari</label>
+        <div className="flex h-[52px] flex-col justify-end">
           <button
             onClick={handleApply}
             disabled={!isDirty}

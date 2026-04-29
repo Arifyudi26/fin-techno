@@ -67,7 +67,7 @@ export default function DatePicker({
   }, [value]);
 
   return (
-    <div>
+    <>
       {label && <Label htmlFor={id}>{label}</Label>}
       <div className="relative">
         <input
@@ -83,6 +83,6 @@ export default function DatePicker({
           </svg>
         </span>
       </div>
-    </div>
+    </>
   );
 }
