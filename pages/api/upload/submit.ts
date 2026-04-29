@@ -122,16 +122,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId, pdfPassword };
 
-    // Respond immediately — processUpload runs in background
-    res.status(202).json({
+    // On Vercel: publish to QStash → QStash calls /api/upload/process which awaits processUpload
+    // Locally: fire-and-forget (Node.js keeps running after res.end())
+    if (process.env.VERCEL && process.env.QSTASH_TOKEN) {
+      const { Client } = await import("@upstash/qstash");
+      const qstash = new Client({ token: process.env.QSTASH_TOKEN });
+      const appUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "");
+      await qstash.publishJSON({
+        url: `${appUrl}/api/upload/process`,
+        body: jobPayload,
+        retries: 0,
+      });
+    } else {
+      processUpload(jobPayload).catch((err) => {
+        console.error("[submit] processUpload background error:", err);
+      });
+    }
+
+    return res.status(202).json({
       uploadId,
       status: "PROCESSING",
       message: "File sedang diproses di background.",
-    });
-
-    // Fire-and-forget: do NOT await, runs after response is sent
-    processUpload(jobPayload).catch((err) => {
-      console.error("[submit] processUpload background error:", err);
     });
 
   } catch (error: any) {
