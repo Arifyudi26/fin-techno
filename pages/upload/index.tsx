@@ -128,6 +128,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [sourceType, setSourceType] = useState<"BANK" | "WALLET">("BANK");
   const [accountId, setAccountId] = useState("");
   const [notes, setNotes] = useState("");
+  const [pdfPassword, setPdfPassword] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -178,6 +179,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     fd.append("sourceType", sourceType);
     fd.append("accountId", accountId);
     fd.append("notes", notes);
+    if (pdfPassword) fd.append("pdfPassword", pdfPassword);
 
     try {
       setProgress(30);
@@ -190,7 +192,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       setProgress(100);
       // Beri jeda singkat agar progress bar 100% terlihat, lalu tutup modal
       setTimeout(() => {
-        onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
+        onSuccess({ uploadId: res.data.uploadId, status: res.data.status ?? "PROCESSING", parsedRows: res.data.parsedRows ?? 0, totalRows: res.data.totalRows ?? 0 });
       }, 600);
     } catch (err: unknown) {
       const msg =
@@ -404,6 +406,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     onClick={(e) => {
                       e.stopPropagation();
                       setFile(null);
+                      setPdfPassword("");
                       if (fileRef.current) fileRef.current.value = "";
                     }}
                     className="text-xs text-error-500 hover:underline"
@@ -441,6 +444,24 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               )}
             </div>
           </div>
+
+          {/* PDF Password — shown only when a PDF file is selected */}
+          {file && file.name.toLowerCase().endsWith(".pdf") && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                {tr.pdfPasswordLabel}{" "}
+                <span className="text-gray-400 font-normal">{tr.notesOptional}</span>
+              </label>
+              <input
+                type="password"
+                value={pdfPassword}
+                onChange={(e) => setPdfPassword(e.target.value)}
+                placeholder={tr.pdfPasswordHint}
+                autoComplete="off"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>

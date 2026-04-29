@@ -27,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sourceType = (fields.sourceType ?? "BANK").toUpperCase();
     const accountId = fields.accountId;
     const notes = fields.notes ?? "";
+    const pdfPassword = fields.pdfPassword ?? undefined;
 
     if (!accountId) return res.status(400).json({ message: "accountId wajib diisi" });
     if (!file) return res.status(400).json({ message: "File tidak ditemukan" });
@@ -119,19 +120,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uploadId = upload.id;
     }
 
-    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
+    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId, pdfPassword };
 
-    // Respond immediately — processUpload runs in background
-    res.status(202).json({
-      uploadId,
-      status: "PROCESSING",
-      message: "File sedang diproses di background.",
-    });
+    // Await processUpload — on Vercel serverless, fire-and-forget gets killed after res.end()
+    try {
+      await processUpload(jobPayload);
+    } catch (err: any) {
+      console.error("[submit] processUpload error:", err);
+      // Status already set to FAILED inside processUpload, just return error to client
+      return res.status(500).json({ message: "Gagal memproses file: " + err.message });
+    }
 
-    // Fire-and-forget: do NOT await, runs after response is sent
-    processUpload(jobPayload).catch((err) => {
-      console.error("[submit] processUpload background error:", err);
-    });
+    // Fetch final upload status to return to client
+    let finalStatus = "PROCESSING";
+    let parsedRows = 0;
+    let totalRows = 0;
+    try {
+      if (sourceType === "BANK") {
+        const up = await prisma.bankStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true } });
+        finalStatus = up?.status ?? "PROCESSING";
+        parsedRows = up?.parsedRows ?? 0;
+        totalRows = up?.totalRows ?? 0;
+      } else {
+        const up = await (prisma as any).walletStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true } });
+        finalStatus = up?.status ?? "PROCESSING";
+        parsedRows = up?.parsedRows ?? 0;
+        totalRows = up?.totalRows ?? 0;
+      }
+    } catch { /* non-fatal */ }
+
+    return res.status(200).json({ uploadId, status: finalStatus, parsedRows, totalRows });
 
   } catch (error: any) {
     console.error("[submit] error:", error);

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
@@ -107,18 +106,63 @@ function parseRows(rows: string[][]): ParsedRow[] {
   }));
 }
 
-async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const pdfParse = require("pdf-parse");
-  const data = await pdfParse(buffer);
+/** Ekstrak teks dari PDF menggunakan pdfjs-dist (mendukung PDF terproteksi password) */
+async function extractPdfText(buffer: Buffer, password?: string): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buffer),
+    password: password ?? "",
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  });
 
-  // Split per baris, buang yang kosong
-  const allLines: string[] = data.text
-    .split("\n")
-    .map((l: string) => l.trimEnd())
-    .filter((l: string) => l.trim());
+  let pdf: any;
+  try {
+    pdf = await loadingTask.promise;
+  } catch (e: any) {
+    const msg: string = e?.message ?? String(e);
+    if (msg.includes("No password") || msg.includes("Incorrect Password") || msg.includes("password")) {
+      throw new Error(
+        password
+          ? "Password PDF salah. Periksa kembali password yang dimasukkan."
+          : "PDF ini terproteksi password. Masukkan password PDF untuk melanjutkan."
+      );
+    }
+    throw e;
+  }
 
-  // Potong sebelum summary section
-  const summaryMarkers = ["Saldo Awal", "Opening Balance", "Total Transaksi Debet", "Terbilang"];
+  const pageTexts: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // Gabungkan item teks per baris berdasarkan posisi Y
+    const items: Array<{ str: string; y: number; x: number }> = (content.items as any[]).map((item: any) => ({
+      str: item.str as string,
+      y: Math.round(item.transform[5]),
+      x: Math.round(item.transform[4]),
+    }));
+    // Kelompokkan per baris (Y sama), urutkan X dalam baris
+    const byY = new Map<number, Array<{ str: string; x: number }>>();
+    for (const item of items) {
+      if (!byY.has(item.y)) byY.set(item.y, []);
+      byY.get(item.y)!.push({ str: item.str, x: item.x });
+    }
+    const sortedYs = [...byY.keys()].sort((a, b) => b - a); // PDF Y dari bawah ke atas
+    for (const y of sortedYs) {
+      const lineItems = byY.get(y)!.sort((a, b) => a.x - b.x);
+      pageTexts.push(lineItems.map((i) => i.str).join(" "));
+    }
+  }
+  return pageTexts.join("\n");
+}
+
+/** Parser BNI PDF — format: dd/mm/yyyy  keterangan  debit  kredit  saldo */
+function parseBniPdfText(text: string): ParsedRow[] {
+  const allLines = text.split("\n").map((l) => l.trimEnd()).filter((l) => l.trim());
+
+  // BNI summary markers
+  const summaryMarkers = ["Saldo Awal", "Opening Balance", "Total Transaksi Debet", "Terbilang", "Mutasi Debet", "Mutasi Kredit"];
   let endIdx = allLines.length;
   for (const marker of summaryMarkers) {
     const idx = allLines.findIndex((l) => l.includes(marker));
@@ -126,11 +170,20 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   }
   const lines = allLines.slice(0, endIdx);
 
-  // Gabungkan baris lanjutan ke baris transaksi sebelumnya.
-  // Baris transaksi dimulai dengan dd/mm/yy HH:MM:SS
-  // Baris angka trailing: <ref>\s{2,}<debit><credit><balance>
-  const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
+  // BNI date format: dd/mm/yyyy (10 chars) — berbeda dari BRI yang dd/mm/yy
+  const BNI_DATE = /^\d{2}\/\d{2}\/\d{4}/;
+  // BRI date format: dd/mm/yy HH:MM:SS
+  const BRI_DATE = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
 
+  const isBni = lines.some((l) => BNI_DATE.test(l));
+  const isBri = lines.some((l) => BRI_DATE.test(l));
+
+  if (!isBni && !isBri) return [];
+
+  const DATE_PREFIX = isBni ? BNI_DATE : BRI_DATE;
+  const DATE_LEN = isBni ? 10 : 17;
+
+  // Merge continuation lines
   const merged: string[] = [];
   for (const line of lines) {
     if (DATE_PREFIX.test(line)) {
@@ -141,15 +194,11 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
   }
 
   const rows: ParsedRow[] = [];
-
   for (const line of merged) {
-    const dateStr = line.slice(0, 17); // "dd/mm/yy HH:MM:SS"
-    const rest = line.slice(17).trim();
+    const dateStr = line.slice(0, DATE_LEN).trim();
+    const rest = line.slice(DATE_LEN).trim();
 
-    // Extract semua angka format ribuan dari rest ([\d,]+\.\d{2})
-    // 3 angka terakhir = debit, credit, balance (nempel tanpa spasi)
-    // Sebelum angka pertama dari 3 terakhir ada ref (dipisah \s{2,})
-    const allNums = [...rest.matchAll(/([\d,]+\.\d{2})/g)];
+    const allNums = [...rest.matchAll(/([\d.,]+\.\d{2})/g)];
     if (allNums.length < 3) continue;
 
     const balanceMatch = allNums[allNums.length - 1];
@@ -160,10 +209,7 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
     const creditStr  = creditMatch[0];
     const debitStr   = debitMatch[0];
 
-    // Teks sebelum debit (index dari debitMatch)
     const beforeDebit = rest.slice(0, debitMatch.index!).trimEnd();
-
-    // Pisahkan desc dan ref: ref adalah token terakhir setelah \s{2,}
     const refSplit = beforeDebit.match(/^(.*?)\s{2,}(\S+)$/);
     let desc: string;
     let ref: string;
@@ -171,7 +217,6 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
       desc = refSplit[1].trim();
       ref  = refSplit[2].trim();
     } else {
-      // Tidak ada ref terpisah — seluruhnya deskripsi
       desc = beforeDebit.trim();
       ref  = "";
     }
@@ -193,8 +238,12 @@ async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
       sign,
     });
   }
-
   return rows;
+}
+
+async function parsePDF(buffer: Buffer, password?: string): Promise<ParsedRow[]> {
+  const text = await extractPdfText(buffer, password);
+  return parseBniPdfText(text);
 }
 
 // Core processing logic 
@@ -207,8 +256,9 @@ export async function processUpload(payload: {
   fileUrl: string;
   fileFormat: string;
   userId: string;
+  pdfPassword?: string;
 }): Promise<{ logs: ProcessLog[] }> {
-  const { uploadId, sourceType, accountId, fileUrl, fileFormat } = payload;
+  const { uploadId, sourceType, accountId, fileUrl, fileFormat, pdfPassword } = payload;
   const db = prisma as any;
   const logs: ProcessLog[] = [];
   const log = (step: string, detail?: string) => {
@@ -247,7 +297,7 @@ export async function processUpload(payload: {
     } else if (fileFormat === "PDF") {
       try {
         log("PARSE_PDF_START");
-        parsedRows = await parsePDF(fileBuffer);
+        parsedRows = await parsePDF(fileBuffer, pdfPassword);
         if (parsedRows.length === 0) {
           parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
           log("PARSE_PDF_EMPTY");
