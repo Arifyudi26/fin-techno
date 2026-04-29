@@ -122,41 +122,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId, pdfPassword };
 
-    // Await processUpload — on Vercel serverless, fire-and-forget gets killed after res.end()
-    try {
-      await processUpload(jobPayload);
-    } catch (err: any) {
-      console.error("[submit] processUpload error:", err);
-      // Status already set to FAILED inside processUpload, just return error to client
-      return res.status(500).json({ message: "Gagal memproses file: " + err.message });
-    }
+    // Respond immediately — processUpload runs in background
+    res.status(202).json({
+      uploadId,
+      status: "PROCESSING",
+      message: "File sedang diproses di background.",
+    });
 
-    // Fetch final upload status to return to client
-    let finalStatus = "PROCESSING";
-    let parsedRows = 0;
-    let totalRows = 0;
-    let errorMessage: string | null = null;
-    try {
-      if (sourceType === "BANK") {
-        const up = await prisma.bankStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true, errorMessage: true } });
-        finalStatus = up?.status ?? "PROCESSING";
-        parsedRows = up?.parsedRows ?? 0;
-        totalRows = up?.totalRows ?? 0;
-        errorMessage = up?.errorMessage ?? null;
-      } else {
-        const up = await (prisma as any).walletStatementUpload.findUnique({ where: { id: uploadId }, select: { status: true, parsedRows: true, totalRows: true, errorMessage: true } });
-        finalStatus = up?.status ?? "PROCESSING";
-        parsedRows = up?.parsedRows ?? 0;
-        totalRows = up?.totalRows ?? 0;
-        errorMessage = up?.errorMessage ?? null;
-      }
-    } catch { /* non-fatal */ }
-
-    if (finalStatus === "FAILED") {
-      return res.status(422).json({ message: errorMessage ?? "Gagal memproses file.", uploadId, status: finalStatus });
-    }
-
-    return res.status(200).json({ uploadId, status: finalStatus, parsedRows, totalRows });
+    // Fire-and-forget: do NOT await, runs after response is sent
+    processUpload(jobPayload).catch((err) => {
+      console.error("[submit] processUpload background error:", err);
+    });
 
   } catch (error: any) {
     console.error("[submit] error:", error);

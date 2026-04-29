@@ -106,8 +106,8 @@ function parseRows(rows: string[][]): ParsedRow[] {
   }));
 }
 
-/** Ekstrak teks dari PDF menggunakan pdfjs-dist (mendukung PDF terproteksi password) */
-async function extractPdfText(buffer: Buffer, password?: string): Promise<string> {
+async function parsePDF(buffer: Buffer, password?: string): Promise<ParsedRow[]> {
+  // Use pdfjs-dist — supports password-protected PDFs (e.g. BNI)
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(buffer),
@@ -132,131 +132,122 @@ async function extractPdfText(buffer: Buffer, password?: string): Promise<string
     throw e;
   }
 
+  // Extract text with Y-tolerance line grouping
   const pageTexts: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const items: Array<{ str: string; y: number; x: number }> = (content.items as any[]).map((item: any) => ({
-      str: item.str as string,
-      y: item.transform[5] as number,  // keep full precision
-      x: item.transform[4] as number,
-    })).filter((item) => item.str.trim());
-
+    const items: Array<{ str: string; y: number; x: number }> = (content.items as any[])
+      .map((item: any) => ({ str: item.str as string, y: item.transform[5] as number, x: item.transform[4] as number }))
+      .filter((item) => item.str.trim());
     if (items.length === 0) continue;
-
-    // Sort by Y descending (top of page first), then X ascending
     items.sort((a, b) => b.y - a.y || a.x - b.x);
-
-    // Group into lines using Y tolerance of 3 units
-    const TOLERANCE = 3;
-    const lineGroups: Array<{ y: number; items: Array<{ str: string; x: number }> }> = [];
+    const groups: Array<{ y: number; items: Array<{ str: string; x: number }> }> = [];
     for (const item of items) {
-      const lastGroup = lineGroups[lineGroups.length - 1];
-      if (lastGroup && Math.abs(item.y - lastGroup.y) <= TOLERANCE) {
-        lastGroup.items.push({ str: item.str, x: item.x });
+      const last = groups[groups.length - 1];
+      if (last && Math.abs(item.y - last.y) <= 3) {
+        last.items.push({ str: item.str, x: item.x });
       } else {
-        lineGroups.push({ y: item.y, items: [{ str: item.str, x: item.x }] });
+        groups.push({ y: item.y, items: [{ str: item.str, x: item.x }] });
       }
     }
-
-    for (const group of lineGroups) {
-      group.items.sort((a, b) => a.x - b.x);
-      pageTexts.push(group.items.map((i) => i.str).join("  "));
+    for (const g of groups) {
+      g.items.sort((a, b) => a.x - b.x);
+      pageTexts.push(g.items.map((i) => i.str).join("  "));
     }
   }
-  return pageTexts.join("\n");
+  const text = pageTexts.join("\n");
+
+  // Detect format: BNI uses "DD Mon YYYY TipeTransaksi" lines
+  const BNI_DATE_LINE = /^\d{2}\s+\w{3}\s+\d{4}\s+\S/;
+  const isBni = text.split("\n").some((l) => BNI_DATE_LINE.test(l.trim()));
+
+  if (isBni) return parseBniPdf(text);
+
+  // Fallback: original BRI/generic PDF format (dd/mm/yy HH:MM:SS)
+  return parseLegacyPdf(text);
 }
 
-/** Parser BNI PDF — format per transaksi (3 baris):
- *  Line 1: " DD Mon YYYY  <TipeTransaksi>"
+/** BNI PDF: 3-line structure per transaction
+ *  Line 1: "DD Mon YYYY <TipeTransaksi>"
  *  Line 2: "<+/->Nominal   Saldo"
- *  Line 3: "HH:MM:SS WIB  <Keterangan>"
+ *  Line 3: "HH:MM:SS WIB <Keterangan>"
  */
-function parseBniPdfText(text: string, debugLog?: (msg: string) => void): ParsedRow[] {
-  const log = debugLog ?? (() => {});
+function parseBniPdf(text: string): ParsedRow[] {
   const allLines = text.split("\n").map((l) => l.trim()).filter((l) => l.trim());
-  log(`parseBniPdfText: total lines=${allLines.length}`);
-
-  // BNI date line: "DD Mon YYYY <TipeTransaksi>"
-  // e.g. "01 Dec 2025 Pembayaran Qris"
-  const DATE_LINE = /^(\d{2}\s+\w{3}\s+\d{4})\s+(.+)$/;
-  // Amount+balance line: "-20,000   1,023,097" or "+900,000   1,903,749"
+  const DATE_LINE  = /^(\d{2}\s+\w{3}\s+\d{4})\s+(.+)$/;
   const AMOUNT_LINE = /^([+-][\d,]+)\s+([\d,]+)$/;
-  // Time+desc line: "08:02:06 WIB KUE SUBUH JUARA - DEPOK"
-  const TIME_LINE = /^(\d{2}:\d{2}:\d{2})\s+WIB\s+(.*)$/;
-
-  // Month name → number
+  const TIME_LINE  = /^(\d{2}:\d{2}:\d{2})\s+WIB\s+(.*)$/;
   const MONTHS: Record<string, string> = {
     Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",
     Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12",
   };
-
   const rows: ParsedRow[] = [];
   let i = 0;
-
   while (i < allLines.length) {
-    const line = allLines[i];
-    const dateMatch = line.match(DATE_LINE);
-
+    const dateMatch = allLines[i].match(DATE_LINE);
     if (dateMatch) {
-      const rawDate = dateMatch[1]; // "01 Dec 2025"
-      const txType  = dateMatch[2]; // "Pembayaran Qris"
-
-      // Parse date → DD/MM/YYYY
-      const [dd, mon, yyyy] = rawDate.split(/\s+/);
+      const [dd, mon, yyyy] = dateMatch[1].split(/\s+/);
       const mm = MONTHS[mon] ?? "01";
-
-      // Next line should be amount + balance
-      const amtLine = allLines[i + 1] ?? "";
-      const amtMatch = amtLine.match(AMOUNT_LINE);
-
-      // Line after that should be time + description
-      const timeLine = allLines[i + 2] ?? "";
-      const timeMatch = timeLine.match(TIME_LINE);
-
+      const txType = dateMatch[2];
+      const amtMatch  = (allLines[i + 1] ?? "").match(AMOUNT_LINE);
+      const timeMatch = (allLines[i + 2] ?? "").match(TIME_LINE);
       if (amtMatch && timeMatch) {
-        const nominalRaw = amtMatch[1]; // e.g. "-20,000" or "+900,000"
-        const balanceRaw = amtMatch[2]; // e.g. "1,023,097"
-        const timeStr    = timeMatch[1]; // "08:02:06"
-        const desc       = (timeMatch[2] || txType).trim();
-
-        const nominalNum = Number(nominalRaw.replace(/,/g, ""));
-        const balanceNum = Number(balanceRaw.replace(/,/g, ""));
-        const isCredit   = nominalNum > 0;
-        const amount     = Math.abs(nominalNum);
-
+        const nominalNum = Number(amtMatch[1].replace(/,/g, ""));
+        const balanceNum = Number(amtMatch[2].replace(/,/g, ""));
+        const isCredit = nominalNum > 0;
+        const amount = Math.abs(nominalNum);
         rows.push({
-          date:           `${dd}/${mm}/${yyyy} ${timeStr}`,
-          valueDate:      "",
-          description:    desc || txType,
-          debit:          isCredit ? "0" : String(amount),
-          credit:         isCredit ? String(amount) : "0",
-          openingBalance: "",
-          balance:        String(balanceNum),
-          reference:      "",
-          sign:           isCredit ? "Cr" : "Db",
+          date: `${dd}/${mm}/${yyyy} ${timeMatch[1]}`,
+          valueDate: "", description: (timeMatch[2] || txType).trim(),
+          debit: isCredit ? "0" : String(amount),
+          credit: isCredit ? String(amount) : "0",
+          openingBalance: "", balance: String(balanceNum),
+          reference: "", sign: isCredit ? "Cr" : "Db",
         });
-
-        i += 3;
-        continue;
+        i += 3; continue;
       }
     }
     i++;
   }
-
-  log(`parseBniPdfText rows=${rows.length}`);
   return rows;
 }
 
-// parseBniColumnar removed — BNI format is now handled by parseBniPdfText
-
-async function parsePDF(buffer: Buffer, password?: string, debugLog?: (msg: string) => void): Promise<ParsedRow[]> {
-  const log = debugLog ?? (() => {});
-  const text = await extractPdfText(buffer, password);
-  log(`extractPdfText done, length=${text.length}`);
-  // Log first 2000 chars of raw text for debugging
-  log(`RAW_TEXT_SAMPLE: ${JSON.stringify(text.slice(0, 2000))}`);
-  return parseBniPdfText(text, log);
+/** Legacy PDF parser (BRI PDF / generic: dd/mm/yy HH:MM:SS format) */
+function parseLegacyPdf(text: string): ParsedRow[] {
+  const allLines = text.split("\n").map((l: string) => l.trimEnd()).filter((l: string) => l.trim());
+  const summaryMarkers = ["Saldo Awal", "Opening Balance", "Total Transaksi Debet", "Terbilang"];
+  let endIdx = allLines.length;
+  for (const marker of summaryMarkers) {
+    const idx = allLines.findIndex((l) => l.includes(marker));
+    if (idx > 0 && idx < endIdx) endIdx = idx;
+  }
+  const lines = allLines.slice(0, endIdx);
+  const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
+  const merged: string[] = [];
+  for (const line of lines) {
+    if (DATE_PREFIX.test(line)) { merged.push(line); }
+    else if (merged.length > 0) { merged[merged.length - 1] += " " + line.trim(); }
+  }
+  const rows: ParsedRow[] = [];
+  for (const line of merged) {
+    const dateStr = line.slice(0, 17);
+    const rest = line.slice(17).trim();
+    const allNums = [...rest.matchAll(/([\d,]+\.\d{2})/g)];
+    if (allNums.length < 3) continue;
+    const balanceStr = allNums[allNums.length - 1][0];
+    const creditStr  = allNums[allNums.length - 2][0];
+    const debitMatch = allNums[allNums.length - 3];
+    const debitStr   = debitMatch[0];
+    const beforeDebit = rest.slice(0, debitMatch.index!).trimEnd();
+    const refSplit = beforeDebit.match(/^(.*?)\s{2,}(\S+)$/);
+    const desc = refSplit ? refSplit[1].trim() : beforeDebit.trim();
+    const ref  = refSplit ? refSplit[2].trim() : "";
+    if (!desc) continue;
+    const parseAmt = (v: string) => Math.abs(Number(v.replace(/[^0-9.]/g, "")) || 0);
+    rows.push({ date: dateStr, valueDate: "", description: desc, debit: debitStr, credit: creditStr, openingBalance: "", balance: balanceStr, reference: ref, sign: parseAmt(creditStr) > 0 ? "Cr" : "Db" });
+  }
+  return rows;
 }
 
 // Core processing logic 
@@ -310,7 +301,7 @@ export async function processUpload(payload: {
     } else if (fileFormat === "PDF") {
       try {
         log("PARSE_PDF_START");
-        parsedRows = await parsePDF(fileBuffer, pdfPassword, (msg) => log("PDF_DEBUG", msg));
+        parsedRows = await parsePDF(fileBuffer, pdfPassword);
         if (parsedRows.length === 0) {
           parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
           log("PARSE_PDF_EMPTY");

@@ -112,84 +112,6 @@ function buildStatusConfig(tr: { success: string; failed: string; partial: strin
   };
 }
 
-// PDF Password Prompt
-function PdfPasswordPrompt({
-  fileName,
-  onConfirm,
-  onSkip,
-  tr,
-}: {
-  fileName: string;
-  onConfirm: (pwd: string) => void;
-  onSkip: () => void;
-  tr: { pdfPasswordLabel: string; pdfPasswordHint: string; pdfPasswordTitle: string; pdfPasswordDesc: string; pdfPasswordConfirm: string; pdfPasswordSkip: string };
-}) {
-  const [pwd, setPwd] = useState("");
-  const [show, setShow] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 backdrop-blur-sm" style={{ zIndex: 10 }}>
-      <div className="w-full max-w-sm mx-4 rounded-2xl bg-white dark:bg-gray-900 shadow-2xl p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-amber-500">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{tr.pdfPasswordTitle}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{fileName}</p>
-          </div>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{tr.pdfPasswordDesc}</p>
-        <div className="relative">
-          <input
-            ref={inputRef}
-            type={show ? "text" : "password"}
-            value={pwd}
-            onChange={(e) => setPwd(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && pwd) onConfirm(pwd); }}
-            placeholder={tr.pdfPasswordHint}
-            autoComplete="off"
-            className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 pr-10 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-          />
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            {show ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/></svg>
-            )}
-          </button>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors"
-          >
-            {tr.pdfPasswordSkip}
-          </button>
-          <button
-            type="button"
-            disabled={!pwd}
-            onClick={() => onConfirm(pwd)}
-            className="flex-1 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
-          >
-            {tr.pdfPasswordConfirm}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Upload Form Modal
 interface UploadFormProps {
   accounts: AccountOption[];
@@ -202,18 +124,64 @@ interface UploadFormProps {
   }) => void;
 }
 
+function PdfPasswordPrompt({ fileName, onConfirm, onSkip, tr }: {
+  fileName: string;
+  onConfirm: (pwd: string) => void;
+  onSkip: () => void;
+  tr: { pdfPasswordLabel: string; pdfPasswordTitle: string; pdfPasswordDesc: string; pdfPasswordHint: string; pdfPasswordConfirm: string; pdfPasswordSkip: string };
+}) {
+  const [pwd, setPwd] = useState("");
+  const [show, setShow] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  return (
+    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 backdrop-blur-sm" style={{ zIndex: 10 }}>
+      <div className="w-full max-w-sm mx-4 rounded-2xl bg-white dark:bg-gray-900 shadow-2xl p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-amber-500"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{tr.pdfPasswordTitle}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">{fileName}</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{tr.pdfPasswordDesc}</p>
+        <div className="relative">
+          <input ref={inputRef} type={show ? "text" : "password"} value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && pwd) onConfirm(pwd); }}
+            placeholder={tr.pdfPasswordHint} autoComplete="off"
+            className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 pr-10 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+          />
+          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            {show
+              ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/></svg>
+            }
+          </button>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onSkip} className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors">{tr.pdfPasswordSkip}</button>
+          <button type="button" disabled={!pwd} onClick={() => onConfirm(pwd)} className="flex-1 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors">{tr.pdfPasswordConfirm}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [sourceType, setSourceType] = useState<"BANK" | "WALLET">("BANK");
   const [accountId, setAccountId] = useState("");
   const [notes, setNotes] = useState("");
   const [pdfPassword, setPdfPassword] = useState("");
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [checkingPdf, setCheckingPdf] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
-  const [checkingPdf, setCheckingPdf] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { openModal, closeModal } = useModal();
   const { t } = useI18n();
@@ -223,44 +191,26 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
 
   const filtered = accounts.filter((a) => a.type === sourceType);
 
-  /** Check if a PDF file has /Encrypt in its cross-reference table (client-side, no library needed) */
   const isPdfEncrypted = useCallback((f: File): Promise<boolean> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const buf = e.target?.result as ArrayBuffer;
-        // Search for /Encrypt in the first 64KB and last 64KB of the file
-        const check = (bytes: Uint8Array) => {
-          const str = new TextDecoder("latin1").decode(bytes);
-          return str.includes("/Encrypt");
-        };
-        const bytes = new Uint8Array(buf);
-        resolve(check(bytes));
+        const bytes = new Uint8Array(e.target?.result as ArrayBuffer);
+        resolve(new TextDecoder("latin1").decode(bytes).includes("/Encrypt"));
       };
       reader.onerror = () => resolve(false);
-      // Read up to 64KB from start + last 64KB (covers xref at end of PDF)
       const CHUNK = 65536;
-      const blob = f.size > CHUNK * 2
-        ? new Blob([f.slice(0, CHUNK), f.slice(f.size - CHUNK)])
-        : f;
-      reader.readAsArrayBuffer(blob);
+      reader.readAsArrayBuffer(f.size > CHUNK * 2 ? new Blob([f.slice(0, CHUNK), f.slice(f.size - CHUNK)]) : f);
     });
   }, []);
 
   const handleFile = useCallback(async (f: File) => {
     const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!["csv", "xlsx", "xls", "pdf"].includes(ext)) {
-      setError(tr.errorFormat);
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      setError(tr.errorSize);
-      return;
-    }
+    if (!["csv", "xlsx", "xls", "pdf"].includes(ext)) { setError(tr.errorFormat); return; }
+    if (f.size > 10 * 1024 * 1024) { setError(tr.errorSize); return; }
     setError("");
     setPdfPassword("");
     setFile(f);
-
     if (ext === "pdf") {
       setCheckingPdf(true);
       const encrypted = await isPdfEncrypted(f);
@@ -304,7 +254,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       setProgress(100);
       // Beri jeda singkat agar progress bar 100% terlihat, lalu tutup modal
       setTimeout(() => {
-        onSuccess({ uploadId: res.data.uploadId, status: res.data.status ?? "PROCESSING", parsedRows: res.data.parsedRows ?? 0, totalRows: res.data.totalRows ?? 0 });
+        onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
       }, 600);
     } catch (err: unknown) {
       const msg =
@@ -493,30 +443,35 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
               />
               {file ? (
                 <>
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                    className="text-success-500">
-                    <path fillRule="evenodd" clipRule="evenodd"
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-success-500"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
                       d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L10 14.586l-2.293-2.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 000-1.414z"
-                      fill="currentColor" />
+                      fill="currentColor"
+                    />
                   </svg>
                   <p className="text-sm font-medium text-gray-800 dark:text-white/90 flex items-center gap-1.5">
                     {file.name}
                     {pdfPassword && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                          <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2.2"/>
-                          <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-                        </svg>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2.2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
                         {tr.pdfPasswordLabel}
                       </span>
                     )}
                   </p>
-                  {checkingPdf ? (
-                    <p className="text-xs text-gray-400 animate-pulse">{tr.checkingPdf}</p>
-                  ) : (
-                    <p className="text-xs text-gray-500">{formatBytes(file.size)}</p>
-                  )}
-                  <button type="button"
+                  {checkingPdf
+                    ? <p className="text-xs text-gray-400 animate-pulse">{tr.checkingPdf}</p>
+                    : <p className="text-xs text-gray-500">{formatBytes(file.size)}</p>
+                  }
+                  <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setFile(null);
@@ -524,7 +479,8 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                       setShowPasswordPrompt(false);
                       if (fileRef.current) fileRef.current.value = "";
                     }}
-                    className="text-xs text-error-500 hover:underline">
+                    className="text-xs text-error-500 hover:underline"
+                  >
                     {tr.removeFile}
                   </button>
                 </>
@@ -676,18 +632,11 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         </form>
       </div>
 
-      {/* PDF Password Popup */}
       {showPasswordPrompt && (
         <PdfPasswordPrompt
           fileName={file?.name ?? ""}
-          onConfirm={(pwd) => {
-            setPdfPassword(pwd);
-            setShowPasswordPrompt(false);
-          }}
-          onSkip={() => {
-            setPdfPassword("");
-            setShowPasswordPrompt(false);
-          }}
+          onConfirm={(pwd) => { setPdfPassword(pwd); setShowPasswordPrompt(false); }}
+          onSkip={() => { setPdfPassword(""); setShowPasswordPrompt(false); }}
           tr={tr}
         />
       )}
@@ -1441,51 +1390,32 @@ export default function UploadPage() {
     setShowForm(false);
     closeModal();
     fetchUploadsRef.current();
+    fire("success", trRef.current.toastUploaded, { message: trRef.current.toastUploadedMsg, duration: 4000 });
 
-    const t2 = trRef.current;
-    const { status, parsedRows: parsed, totalRows: total, uploadId } = result;
-
-    // If already resolved (not PROCESSING), show notification immediately
-    if (status === "SUCCESS" || status === "PARTIAL") {
-      fire("success", t2.toastUploaded, { duration: 4000 });
-      const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
-      addNotificationRef.current({
-        type: allDuplicate ? "info" : status === "SUCCESS" ? "success" : "warning",
-        title: allDuplicate ? t2.notifDuplicateTitle : status === "SUCCESS" ? t2.notifSuccessTitle : t2.notifPartialTitle,
-        message: allDuplicate
-          ? t2.notifDuplicateMsg(total)
-          : status === "SUCCESS"
-            ? t2.notifSuccessMsg(parsed, total)
-            : t2.notifPartialMsg(parsed, total),
-      });
-      return;
-    }
-
-    fire("success", t2.toastUploaded, { message: t2.toastUploadedMsg, duration: 4000 });
-
-    if (status === "PROCESSING" && uploadId) {
+    if (result.status === "PROCESSING" && result.uploadId) {
+      const uploadId = result.uploadId;
       const maxAttempts = 60;
       let attempt = 0;
       const poll = setInterval(async () => {
         attempt++;
         try {
           const res = await axiosGlobal.get(`/upload/${uploadId}`);
-          const { status: s, parsedRows: p, totalRows: tot, fileName } = res.data;
-          if (s === "SUCCESS" || s === "FAILED" || s === "PARTIAL") {
+          const { status, parsedRows: parsed, totalRows: total, fileName } = res.data;
+          if (status === "SUCCESS" || status === "FAILED" || status === "PARTIAL") {
             clearInterval(poll);
             fetchUploadsRef.current();
-            const tr2 = trRef.current;
-            const allDuplicate = s === "SUCCESS" && p === 0 && tot > 0;
+            const t2 = trRef.current;
+            const allDuplicate = status === "SUCCESS" && parsed === 0 && total > 0;
             addNotificationRef.current({
-              type: allDuplicate ? "info" : s === "SUCCESS" ? "success" : s === "PARTIAL" ? "warning" : "error",
-              title: allDuplicate ? tr2.notifDuplicateTitle : s === "SUCCESS" ? tr2.notifSuccessTitle : s === "PARTIAL" ? tr2.notifPartialTitle : tr2.notifFailedTitle,
+              type: allDuplicate ? "info" : status === "SUCCESS" ? "success" : status === "PARTIAL" ? "warning" : "error",
+              title: allDuplicate ? t2.notifDuplicateTitle : status === "SUCCESS" ? t2.notifSuccessTitle : status === "PARTIAL" ? t2.notifPartialTitle : t2.notifFailedTitle,
               message: allDuplicate
-                ? tr2.notifDuplicateMsg(tot)
-                : s === "SUCCESS"
-                  ? tr2.notifSuccessMsg(p, tot)
-                  : s === "PARTIAL"
-                    ? tr2.notifPartialMsg(p, tot)
-                    : tr2.notifErrorMsg,
+                ? t2.notifDuplicateMsg(total)
+                : status === "SUCCESS"
+                  ? t2.notifSuccessMsg(parsed, total)
+                  : status === "PARTIAL"
+                    ? t2.notifPartialMsg(parsed, total)
+                    : t2.notifErrorMsg,
               fileName,
             });
           }
