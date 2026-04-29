@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } = req.query as Record<string, string>;
 
   const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
   const offset   = (pageNum - 1) * limitNum;
 
   const includeBank   = source === "ALL" || source === "BANK";

@@ -12,14 +12,6 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
 import DatePicker from "@components/form/DatePicker";
 
-function getDefaultDateRange() {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    dateFrom: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`,
-    dateTo: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
-  };
-}
 
 const formatIDR = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
@@ -69,13 +61,12 @@ export default function Transactions() {
 
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const DEFAULT_FILTERS = { type: "ALL", source: "ALL", search: "", ...getDefaultDateRange(), page: 1, limit: 10 };
+  const DEFAULT_FILTERS = { type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1, limit: 25 };
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   // Date range local state (for DatePicker inputs before apply)
-  const defaultRange = getDefaultDateRange();
-  const [localDateFrom, setLocalDateFrom] = useState(defaultRange.dateFrom);
-  const [localDateTo, setLocalDateTo] = useState(defaultRange.dateTo);
+  const [localDateFrom, setLocalDateFrom] = useState("");
+  const [localDateTo, setLocalDateTo] = useState("");
 
   // Transaction detail modal
   const { isOpen: isTxOpen, openModal: openTxDetail, closeModal: closeTxDetail } = useModal();
@@ -115,15 +106,14 @@ export default function Transactions() {
     setFilters((p) => ({ ...p, [key]: value, page: key !== "page" ? 1 : (value as number) }));
 
   const handleReset = () => {
-    const d = getDefaultDateRange();
-    setLocalDateFrom(d.dateFrom);
-    setLocalDateTo(d.dateTo);
+    setLocalDateFrom("");
+    setLocalDateTo("");
     setSearchInput("");
-    setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: d.dateFrom, dateTo: d.dateTo, page: 1 }));
+    setFilters((p) => ({ ...p, type: "ALL", source: "ALL", search: "", dateFrom: "", dateTo: "", page: 1 }));
   };
 
   const hasActiveFilter = filters.type !== "ALL" || filters.source !== "ALL" || filters.search ||
-    filters.dateFrom !== getDefaultDateRange().dateFrom || filters.dateTo !== getDefaultDateRange().dateTo;
+    filters.dateFrom !== "" || filters.dateTo !== "";
 
   return (
     <AppLayout>
