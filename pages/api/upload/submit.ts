@@ -121,16 +121,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
 
-    // Respond immediately — processUpload runs in background
-    res.status(202).json({
+    console.log("[submit] Starting processUpload for", uploadId);
+    const { logs } = await processUpload(jobPayload);
+    console.log("[submit] processUpload done for", uploadId);
+
+    return res.status(202).json({
       uploadId,
       status: "PROCESSING",
-      message: "File sedang diproses di background.",
-    });
-
-    // Fire-and-forget: do NOT await, runs after response is sent
-    processUpload(jobPayload).catch((err) => {
-      console.error("[submit] processUpload background error:", err);
+      message: "File berhasil diproses.",
+      _debug: logs,
     });
 
   } catch (error: any) {
