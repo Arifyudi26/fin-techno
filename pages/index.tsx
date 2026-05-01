@@ -306,7 +306,7 @@ export default function Home() {
 
         {/* AI Insights */}
         <div className="col-span-12">
-          <AIInsights />
+          <AIInsights filters={filters} metrics={data.metrics} />
         </div>
       </div>
     </AppLayout>

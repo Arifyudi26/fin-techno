@@ -2,6 +2,7 @@
 import { useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
+import { DashboardFilters, DashboardMetrics } from "@/lib/types/dashboard";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -15,11 +16,17 @@ interface AnalysisContext {
   totalExpense: number;
   netFlow: number;
   negativeMonths: number;
+  usedFallback?: boolean;
   maxExpenseMonth?: { label: string; debit: number };
   topCategories: { name: string; amount: number }[];
 }
 
-export default function AIInsights() {
+interface Props {
+  filters?: DashboardFilters;
+  metrics?: DashboardMetrics | null;
+}
+
+export default function AIInsights({ filters, metrics }: Props) {
   const { t, lang } = useI18n();
   const tr = t.dashboard;
 
@@ -29,12 +36,28 @@ export default function AIInsights() {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(false);
 
+  // Cek apakah filter aktif tapi data kosong (income=0 & expense=0)
+  const hasFilteredData = metrics
+    ? metrics.totalIncome > 0 || metrics.totalExpense > 0
+    : true;
+
   const handleAnalyze = async () => {
     setLoading(true);
     setError("");
     setExpanded(true);
     try {
-      const res = await axiosGlobal.get("/ai/analyze", { params: { lang } });
+      const params: Record<string, string> = { lang };
+
+      // Kalau ada filter dan data tidak kosong, kirim filter
+      if (filters && hasFilteredData) {
+        if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+        if (filters.dateTo) params.dateTo = filters.dateTo;
+        if (filters.accountId) params.accountId = filters.accountId;
+        if (filters.accountType) params.accountType = filters.accountType;
+      }
+      // Kalau data kosong → tidak kirim filter → API fallback ke semua data
+
+      const res = await axiosGlobal.get("/ai/analyze", { params });
       setAnalysis(res.data.analysis);
       setContext(res.data.context);
     } catch (err: unknown) {
@@ -43,6 +66,21 @@ export default function AIInsights() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Subtitle dinamis
+  const getSubtitle = () => {
+    if (context?.usedFallback) {
+      return lang === "en"
+        ? "No data in selected period — showing all available data"
+        : "Tidak ada data di periode filter — menampilkan semua data";
+    }
+    if (filters?.dateFrom && filters?.dateTo && hasFilteredData) {
+      return lang === "en"
+        ? `${filters.dateFrom} – ${filters.dateTo}`
+        : `${filters.dateFrom} – ${filters.dateTo}`;
+    }
+    return tr.aiSubtitle;
   };
 
   const renderText = (text: string) => {
@@ -79,7 +117,7 @@ export default function AIInsights() {
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-500/10">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
@@ -88,35 +126,48 @@ export default function AIInsights() {
               {tr.aiTitle}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {tr.aiSubtitle}
+              {getSubtitle()}
             </p>
           </div>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+
+        <div className="flex items-center gap-2">
+          {/* Badge: no data warning */}
+          {filters && !hasFilteredData && (
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-2.5 py-1 text-xs text-amber-700 dark:text-amber-400">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              {tr.aiAnalyzing}
-            </>
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {analysis ? tr.aiReanalyze : tr.aiAnalyze}
-            </>
+              {lang === "en" ? "No data in filter" : "Filter kosong"}
+            </span>
           )}
-        </button>
+
+          <button
+            onClick={handleAnalyze}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                {tr.aiAnalyzing}
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {analysis ? tr.aiReanalyze : tr.aiAnalyze}
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Content */}
+      {/* Empty state */}
       {!expanded && !analysis && (
         <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10">
@@ -128,7 +179,12 @@ export default function AIInsights() {
             {tr.aiClickHint}
           </p>
           <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            {tr.aiClickDesc}
+            {filters && !hasFilteredData
+              ? (lang === "en"
+                ? "No data in selected period. AI will analyze all available data instead."
+                : "Tidak ada data di periode ini. AI akan menganalisis semua data yang tersedia.")
+              : tr.aiClickDesc
+            }
           </p>
         </div>
       )}
@@ -158,6 +214,21 @@ export default function AIInsights() {
 
       {!loading && analysis && (
         <>
+          {/* Fallback notice */}
+          {context?.usedFallback && (
+            <div className="mx-5 mt-4 flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-4 py-2.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-amber-500 shrink-0">
+                <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {lang === "en"
+                  ? "No data found in the selected filter period. Showing analysis for all available data."
+                  : "Tidak ada data di periode filter. Menampilkan analisis dari semua data yang tersedia."}
+              </p>
+            </div>
+          )}
+
+          {/* Quick stats */}
           {context && (
             <div className="grid grid-cols-2 gap-3 px-5 pt-4 sm:grid-cols-4">
               <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
@@ -186,6 +257,8 @@ export default function AIInsights() {
               </div>
             </div>
           )}
+
+          {/* Analysis text */}
           <div className="px-5 py-4 space-y-1">
             {renderText(analysis)}
           </div>
