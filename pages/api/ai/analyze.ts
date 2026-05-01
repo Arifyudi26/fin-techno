@@ -23,29 +23,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ message: "GEMINI_API_KEY belum dikonfigurasi." });
+    return res.status(503).json({ message: "GEMINI_API_KEY is not configured." });
   }
+
+  const lang = (req.query.lang as string) === "en" ? "en" : "id";
+  const isEn = lang === "en";
 
   try {
     const db = prisma as any;
 
-    // Ambil data 6 bulan terakhir
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-
+    // Ambil SEMUA transaksi tanpa filter tanggal
     const [bankTx, walletTx] = await Promise.all([
       prisma.bankTransaction.findMany({
-        where: {
-          bankAccount: { ownerId: userId },
-          transactionDate: { gte: sixMonthsAgo },
-        },
+        where: { bankAccount: { ownerId: userId } },
         select: { type: true, amount: true, transactionDate: true },
       }),
       db.walletTransaction.findMany({
-        where: {
-          wallet: { ownerId: userId },
-          transactionDate: { gte: sixMonthsAgo },
-        },
+        where: { wallet: { ownerId: userId } },
         select: { type: true, amount: true, transactionDate: true },
       }),
     ]);
@@ -67,56 +61,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, v]) => {
         const [year, month] = key.split("-");
-        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("id-ID", {
-          month: "long",
-          year: "numeric",
-        });
+        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString(
+          isEn ? "en-US" : "id-ID",
+          { month: "long", year: "numeric" }
+        );
         return { key, label, ...v, netFlow: v.credit - v.debit };
       });
 
-    // Agregasi per kategori pengeluaran (bank + wallet)
+    // Agregasi per kategori pengeluaran (semua data)
     const [catRows, walletCatRows] = await Promise.all([
       prisma.$queryRawUnsafe<{ cat_name: string; total: string; cnt: bigint }[]>(
-        `
-        SELECT COALESCE(tc.name, 'Lainnya') AS cat_name,
-               SUM(bt.amount)::text AS total,
-               COUNT(*) AS cnt
-        FROM "BankTransaction" bt
-        JOIN "BankAccount" ba ON ba.id = bt."bankAccountId"
-        LEFT JOIN "BankTransactionCategory" btc ON btc."transactionId" = bt.id
-        LEFT JOIN "TransactionCategory" tc ON tc.id = btc."categoryId"
-        WHERE ba."ownerId" = $1
-          AND bt.type = 'DEBIT'
-          AND bt."transactionDate" >= $2
-        GROUP BY tc.name
-        ORDER BY SUM(bt.amount) DESC
-        LIMIT 8
-        `,
-        userId,
-        sixMonthsAgo
+        `SELECT COALESCE(tc.name, 'Lainnya') AS cat_name,
+                SUM(bt.amount)::text AS total, COUNT(*) AS cnt
+         FROM "BankTransaction" bt
+         JOIN "BankAccount" ba ON ba.id = bt."bankAccountId"
+         LEFT JOIN "BankTransactionCategory" btc ON btc."transactionId" = bt.id
+         LEFT JOIN "TransactionCategory" tc ON tc.id = btc."categoryId"
+         WHERE ba."ownerId" = $1 AND bt.type = 'DEBIT'
+         GROUP BY tc.name ORDER BY SUM(bt.amount) DESC LIMIT 8`,
+        userId
       ),
       prisma.$queryRawUnsafe<{ cat_name: string; total: string; cnt: bigint }[]>(
-        `
-        SELECT COALESCE(tc.name, 'Lainnya') AS cat_name,
-               SUM(wt.amount)::text AS total,
-               COUNT(*) AS cnt
-        FROM "WalletTransaction" wt
-        JOIN "DigitalWallet" dw ON dw.id = wt."walletId"
-        LEFT JOIN "WalletTransactionCategory" wtc ON wtc."transactionId" = wt.id
-        LEFT JOIN "TransactionCategory" tc ON tc.id = wtc."categoryId"
-        WHERE dw."ownerId" = $1
-          AND wt.type = 'DEBIT'
-          AND wt."transactionDate" >= $2
-        GROUP BY tc.name
-        ORDER BY SUM(wt.amount) DESC
-        LIMIT 8
-        `,
-        userId,
-        sixMonthsAgo
+        `SELECT COALESCE(tc.name, 'Lainnya') AS cat_name,
+                SUM(wt.amount)::text AS total, COUNT(*) AS cnt
+         FROM "WalletTransaction" wt
+         JOIN "DigitalWallet" dw ON dw.id = wt."walletId"
+         LEFT JOIN "WalletTransactionCategory" wtc ON wtc."transactionId" = wt.id
+         LEFT JOIN "TransactionCategory" tc ON tc.id = wtc."categoryId"
+         WHERE dw."ownerId" = $1 AND wt.type = 'DEBIT'
+         GROUP BY tc.name ORDER BY SUM(wt.amount) DESC LIMIT 8`,
+        userId
       ),
     ]);
 
-    // Gabung kategori bank + wallet
     const catMerge: Record<string, number> = {};
     for (const r of [...catRows, ...walletCatRows]) {
       catMerge[r.cat_name] = (catMerge[r.cat_name] || 0) + Number(r.total);
@@ -128,16 +105,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const maxExpenseMonth = [...months].sort((a, b) => b.debit - a.debit)[0];
     const maxIncomeMonth = [...months].sort((a, b) => b.credit - a.credit)[0];
-
     const totalIncome = months.reduce((s, m) => s + m.credit, 0);
     const totalExpense = months.reduce((s, m) => s + m.debit, 0);
     const netFlow = totalIncome - totalExpense;
     const negativeMonths = months.filter((m) => m.netFlow < 0).length;
 
     const monthSummary = months
-      .map(
-        (m) =>
-          `- ${m.label}: Pemasukan ${fmt(m.credit)}, Pengeluaran ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transaksi)`
+      .map((m) => isEn
+        ? `- ${m.label}: Income ${fmt(m.credit)}, Expense ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transactions)`
+        : `- ${m.label}: Pemasukan ${fmt(m.credit)}, Pengeluaran ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transaksi)`
       )
       .join("\n");
 
@@ -145,10 +121,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map((c, i) => `${i + 1}. ${c.name}: ${fmt(c.amount)}`)
       .join("\n");
 
-    const prompt = `Kamu adalah analis keuangan pribadi yang membantu pengguna memahami kondisi keuangan mereka.
+    const prompt = isEn
+      ? `You are a personal finance analyst helping users understand their financial condition.
+Provide analysis in clear, concise, and actionable English.
+
+USER FINANCIAL DATA (all uploaded e-statements, ${months.length} months total):
+
+Total Summary:
+- Total Income: ${fmt(totalIncome)}
+- Total Expense: ${fmt(totalExpense)}
+- Net Flow: ${fmt(netFlow)} (${netFlow >= 0 ? "POSITIVE ✓" : "NEGATIVE ✗"})
+- Months with negative cash flow: ${negativeMonths} of ${months.length}
+
+Monthly Data:
+${monthSummary || "No data available"}
+
+Highest Expense Month: ${maxExpenseMonth ? `${maxExpenseMonth.label} (${fmt(maxExpenseMonth.debit)})` : "-"}
+Highest Income Month: ${maxIncomeMonth ? `${maxIncomeMonth.label} (${fmt(maxIncomeMonth.credit)})` : "-"}
+
+Top Expense Categories:
+${catSummary || "No category data available"}
+
+Provide analysis in the following format (use relevant emojis):
+1. **Overall Financial Health** - brief status of financial health
+2. **Highest Expense Month** - explain which month and possible reasons
+3. **Overspending Categories** - categories that need attention
+4. **Trend** - whether finances are improving or worsening
+5. **Recommendations** - 3 concrete steps to take
+
+Answer in 300-400 words, use easy-to-understand language.`
+      : `Kamu adalah analis keuangan pribadi yang membantu pengguna memahami kondisi keuangan mereka.
 Berikan analisis dalam Bahasa Indonesia yang jelas, ringkas, dan actionable.
 
-DATA KEUANGAN PENGGUNA (${months.length} bulan terakhir):
+DATA KEUANGAN PENGGUNA (semua e-statement yang diupload, total ${months.length} bulan):
 
 Ringkasan Total:
 - Total Pemasukan: ${fmt(totalIncome)}
@@ -174,7 +179,6 @@ Berikan analisis dengan format berikut (gunakan emoji yang relevan):
 
 Jawab dalam 300-400 kata, gunakan bahasa yang mudah dipahami.`;
 
-    // Inisialisasi Gemini di dalam handler agar env var sudah terbaca
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
@@ -196,7 +200,7 @@ Jawab dalam 300-400 kata, gunakan bahasa yang mudah dipahami.`;
   } catch (error: any) {
     console.error("AI analyze error:", error?.message || error);
     return res.status(500).json({
-      message: error?.message || "Gagal menganalisis data keuangan.",
+      message: error?.message || "Failed to analyze financial data.",
     });
   }
 }

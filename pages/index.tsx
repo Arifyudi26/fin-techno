@@ -40,7 +40,7 @@ interface LoadingState {
 function getDefaultFilters(): IFilters {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  const dateFrom = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+  const dateFrom = `${now.getFullYear()}-01-01`;
   const dateTo = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   return {
     dateFrom,

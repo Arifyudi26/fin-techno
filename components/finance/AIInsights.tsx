@@ -20,7 +20,7 @@ interface AnalysisContext {
 }
 
 export default function AIInsights() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const tr = t.dashboard;
 
   const [analysis, setAnalysis] = useState<string>("");
@@ -34,7 +34,7 @@ export default function AIInsights() {
     setError("");
     setExpanded(true);
     try {
-      const res = await axiosGlobal.get("/ai/analyze");
+      const res = await axiosGlobal.get("/ai/analyze", { params: { lang } });
       setAnalysis(res.data.analysis);
       setContext(res.data.context);
     } catch (err: unknown) {
@@ -79,8 +79,13 @@ export default function AIInsights() {
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-500/10">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
+              <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="9" cy="13" r="1.2" fill="white" />
+              <circle cx="15" cy="13" r="1.2" fill="white" />
+              <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="12" cy="2" r="1" fill="white" />
             </svg>
           </div>
           <div>
@@ -92,6 +97,7 @@ export default function AIInsights() {
             </p>
           </div>
         </div>
+
         <button
           onClick={handleAnalyze}
           disabled={loading}
@@ -116,7 +122,7 @@ export default function AIInsights() {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Empty state */}
       {!expanded && !analysis && (
         <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10">

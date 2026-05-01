@@ -23,16 +23,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ message: "GEMINI_API_KEY belum dikonfigurasi." });
+    return res.status(503).json({ message: "GEMINI_API_KEY is not configured." });
   }
 
-  const { message, history } = req.body as {
+  const { message, history, lang } = req.body as {
     message: string;
     history: { role: "user" | "model"; parts: string }[];
+    lang?: "id" | "en";
   };
 
   if (!message?.trim()) {
-    return res.status(400).json({ message: "Pesan tidak boleh kosong." });
+    return res.status(400).json({ message: "Message cannot be empty." });
   }
 
   try {
@@ -72,14 +73,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       monthMap[key].count++;
     }
 
+    const isEn = lang === "en";
+
     const months = Object.entries(monthMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, v]) => {
         const [year, month] = key.split("-");
-        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("id-ID", {
-          month: "long",
-          year: "numeric",
-        });
+        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString(
+          isEn ? "en-US" : "id-ID",
+          { month: "long", year: "numeric" }
+        );
         return { key, label, ...v, netFlow: v.credit - v.debit };
       });
 
@@ -110,7 +113,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const netFlow = totalIncome - totalExpense;
 
     const monthSummary = months
-      .map((m) => `${m.label}: masuk ${fmt(m.credit)}, keluar ${fmt(m.debit)}, net ${fmt(m.netFlow)}`)
+      .map((m) => isEn
+        ? `${m.label}: income ${fmt(m.credit)}, expense ${fmt(m.debit)}, net ${fmt(m.netFlow)}`
+        : `${m.label}: masuk ${fmt(m.credit)}, keluar ${fmt(m.debit)}, net ${fmt(m.netFlow)}`
+      )
       .join(" | ");
 
     const catSummary = catRows
@@ -118,7 +124,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .join(", ");
 
     // Konteks keuangan sebagai pesan sistem di awal history
-    const systemContext = `Kamu adalah asisten keuangan pribadi yang cerdas dan ramah. \
+    const systemContext = isEn
+      ? `You are a smart and friendly personal finance assistant. \
+You have access to the user's financial data and must answer questions based on that data. \
+Always respond in natural, easy-to-understand English. \
+If asked about topics unrelated to finance, politely redirect back to financial topics.
+
+USER FINANCIAL DATA (last 6 months):
+- Total Income: ${fmt(totalIncome)}
+- Total Expense: ${fmt(totalExpense)}
+- Net Flow: ${fmt(netFlow)} (${netFlow >= 0 ? "POSITIVE" : "NEGATIVE"})
+- Total Transactions: ${allTx.length}
+
+Monthly Data: ${monthSummary || "No data available"}
+
+Top Expense Categories: ${catSummary || "No category data available"}
+
+Today's date: ${now.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}`
+      : `Kamu adalah asisten keuangan pribadi yang cerdas dan ramah. \
 Kamu memiliki akses ke data keuangan pengguna dan harus menjawab pertanyaan berdasarkan data tersebut. \
 Selalu jawab dalam Bahasa Indonesia yang natural dan mudah dipahami. \
 Jika ditanya hal di luar keuangan, arahkan kembali ke topik keuangan dengan sopan.
@@ -148,7 +171,10 @@ Tanggal hari ini: ${now.toLocaleDateString("id-ID", { day: "numeric", month: "lo
       },
       {
         role: "model",
-        parts: [{ text: "Baik, saya sudah memahami data keuangan kamu dan siap membantu!" }],
+        parts: [{ text: isEn
+          ? "Got it! I've reviewed your financial data and I'm ready to help."
+          : "Baik, saya sudah memahami data keuangan kamu dan siap membantu!"
+        }],
       },
       ...(history || []).map((h) => ({
         role: h.role,
@@ -164,7 +190,7 @@ Tanggal hari ini: ${now.toLocaleDateString("id-ID", { day: "numeric", month: "lo
   } catch (error: any) {
     console.error("AI chat error:", error?.message || error);
     return res.status(500).json({
-      message: error?.message || "Gagal mendapatkan respons AI.",
+      message: error?.message || "Failed to get AI response.",
     });
   }
 }
