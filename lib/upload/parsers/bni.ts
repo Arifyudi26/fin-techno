@@ -71,6 +71,32 @@ export async function isBniPdfPasswordProtected(buffer: Buffer): Promise<boolean
   }
 }
 
+/**
+ * Verifikasi apakah password yang diberikan bisa membuka PDF BNI.
+ * Return true jika password benar, false jika salah.
+ */
+export async function verifyBniPdfPassword(buffer: Buffer, password: string): Promise<boolean> {
+  try {
+    await extractLines(buffer, password);
+    return true;
+  } catch (e: any) {
+    const name: string = e?.name ?? "";
+    const msg: string  = e?.message ?? "";
+    if (
+      name === "PasswordException" ||
+      msg.includes("PasswordException") ||
+      msg.includes("Incorrect password") ||
+      msg.includes("No password given") ||
+      msg.includes("password") ||
+      msg.includes("encrypted")
+    ) {
+      return false;
+    }
+    // Error lain (bukan password) — anggap password OK, biarkan proses lanjut
+    return true;
+  }
+}
+
 // Validasi format angka IDR: grup digit dipisah koma, tiap grup setelah pertama = 3 digit
 function isValidIDR(s: string): boolean {
   if (!s || !/^[\d,]+$/.test(s)) return false;

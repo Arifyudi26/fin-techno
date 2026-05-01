@@ -116,6 +116,71 @@ interface UploadFormProps {
   }) => void;
 }
 
+// Format yang didukung per provider
+// Key: provider name (uppercase), Value: array ekstensi yang didukung (lowercase)
+const PROVIDER_FORMAT_MAP: Record<string, string[]> = {
+  // Bank
+  BNI:     ["pdf"],
+  BRI:     ["csv", "pdf"],
+  BCA:     ["csv", "xlsx", "xls"],
+  MANDIRI: ["csv", "xlsx", "xls"],
+  CIMB:    ["csv", "xlsx", "xls"],
+  PERMATA: ["csv", "xlsx", "xls"],
+  DANAMON: ["csv", "xlsx", "xls"],
+  BTN:     ["csv", "xlsx", "xls"],
+  BSI:     ["csv", "xlsx", "xls"],
+  OTHER:   ["csv", "xlsx", "xls", "pdf"],
+  // Wallet — semua hanya CSV/XLSX
+  GOPAY:    ["csv", "xlsx", "xls"],
+  OVO:      ["csv", "xlsx", "xls"],
+  DANA:     ["csv", "xlsx", "xls"],
+  SHOPEEPAY:["csv", "xlsx", "xls"],
+  LINKAJA:  ["csv", "xlsx", "xls"],
+  SAKUKU:   ["csv", "xlsx", "xls"],
+  JENIUS:   ["csv", "xlsx", "xls"],
+};
+
+// Keyword nama file yang mengidentifikasi provider tertentu
+// Jika nama file mengandung keyword provider LAIN dari yang dipilih → warning
+const PROVIDER_FILENAME_KEYWORDS: Record<string, string[]> = {
+  BNI:      ["bni", "bank negara"],
+  BRI:      ["bri", "brimo", "e-statementbrimo", "estatementbrimo"],
+  BCA:      ["bca", "klikbca", "mybca"],
+  MANDIRI:  ["mandiri", "livin"],
+  CIMB:     ["cimb", "octo"],
+  PERMATA:  ["permata", "permatabank"],
+  DANAMON:  ["danamon"],
+  BTN:      ["btn", "bank tabungan"],
+  BSI:      ["bsi", "bank syariah"],
+  GOPAY:    ["gopay", "gojek"],
+  OVO:      ["ovo"],
+  DANA:     ["dana"],
+  SHOPEEPAY:["shopeepay", "shopee"],
+  LINKAJA:  ["linkaja"],
+  SAKUKU:   ["sakuku"],
+  JENIUS:   ["jenius"],
+};
+
+function getProviderFormats(provider: string): string[] {
+  return PROVIDER_FORMAT_MAP[provider.toUpperCase()] ?? ["csv", "xlsx", "xls", "pdf"];
+}
+
+/**
+ * Deteksi apakah nama file mengandung keyword provider lain.
+ * Return nama provider yang terdeteksi, atau null jika tidak ada konflik.
+ */
+function detectFilenameProviderConflict(filename: string, selectedProvider: string): string | null {
+  const lower = filename.toLowerCase();
+  const selected = selectedProvider.toUpperCase();
+  for (const [provider, keywords] of Object.entries(PROVIDER_FILENAME_KEYWORDS)) {
+    if (provider === selected) continue;
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return provider;
+    }
+  }
+  return null;
+}
+
 function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [sourceType, setSourceType] = useState<"BANK" | "WALLET">("BANK");
   const [accountId, setAccountId] = useState("");
@@ -170,9 +235,34 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
       setError(tr.errorSize);
       return;
     }
+    // Validasi format vs provider yang dipilih
+    if (accountId) {
+      const acc = accounts.find((a) => a.id === accountId);
+      if (acc) {
+        const allowed = getProviderFormats(acc.provider);
+        if (!allowed.includes(ext)) {
+          setError(
+            tr.errorFormatMismatch
+              .replace("{provider}", acc.provider)
+              .replace("{formats}", allowed.map((e) => e.toUpperCase()).join(", "))
+          );
+          return;
+        }
+        // Deteksi konflik nama file vs provider yang dipilih
+        const conflictProvider = detectFilenameProviderConflict(f.name, acc.provider);
+        if (conflictProvider) {
+          setError(
+            tr.errorFilenameMismatch
+              .replace("{selected}", acc.provider)
+              .replace("{detected}", conflictProvider)
+          );
+          return;
+        }
+      }
+    }
     setError("");
     setFile(f);
-  }, [tr.errorFormat, tr.errorSize]);
+  }, [tr.errorFormat, tr.errorSize, tr.errorFormatMismatch, tr.errorFilenameMismatch, accountId, accounts]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -221,8 +311,15 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         return;
       }
 
+      if (status === 422 && code === "PDF_PASSWORD_WRONG") {
+        // Password salah — tetap di popup, tampilkan error, biarkan user coba lagi
+        setPasswordError(msg);
+        setProgress(0);
+        return;
+      }
+
+      // Error lain
       if (showPasswordPopup) {
-        // Sedang di popup password — tampilkan error di sana
         setPasswordError(msg);
       } else {
         setError(msg);
@@ -556,6 +653,33 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                             key={acc.id}
                             type="button"
                             onClick={() => {
+                              // Validasi format & nama file yang sudah dipilih vs provider baru
+                              if (file) {
+                                const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+                                const allowed = getProviderFormats(acc.provider);
+                                if (!allowed.includes(ext)) {
+                                  setError(
+                                    tr.errorFormatMismatch
+                                      .replace("{provider}", acc.provider)
+                                      .replace("{formats}", allowed.map((e) => e.toUpperCase()).join(", "))
+                                  );
+                                  setFile(null);
+                                  if (fileRef.current) fileRef.current.value = "";
+                                } else {
+                                  const conflictProvider = detectFilenameProviderConflict(file.name, acc.provider);
+                                  if (conflictProvider) {
+                                    setError(
+                                      tr.errorFilenameMismatch
+                                        .replace("{selected}", acc.provider)
+                                        .replace("{detected}", conflictProvider)
+                                    );
+                                    setFile(null);
+                                    if (fileRef.current) fileRef.current.value = "";
+                                  } else {
+                                    setError("");
+                                  }
+                                }
+                              }
                               setAccountId(acc.id);
                               setAccountSearch("");
                               setDropdownOpen(false);
@@ -682,7 +806,16 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     {tr.dragDrop}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {tr.fileFormats}
+                    {(() => {
+                      if (accountId) {
+                        const acc = accounts.find((a) => a.id === accountId);
+                        if (acc) {
+                          const allowed = getProviderFormats(acc.provider);
+                          return `${allowed.map((e) => e.toUpperCase()).join(", ")} · ${tr.maxSize}`;
+                        }
+                      }
+                      return tr.fileFormats;
+                    })()}
                   </p>
                 </>
               )}

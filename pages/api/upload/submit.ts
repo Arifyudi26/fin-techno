@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { put } from "@vercel/blob";
 import path from "path";
 import { parseMultipart } from "@lib/multipartParser";
-import { isBniPdfPasswordProtected } from "@lib/upload/parsers/bni";
+import { isBniPdfPasswordProtected, verifyBniPdfPassword } from "@lib/upload/parsers/bni";
 
 export const config = {
   api: { bodyParser: false },
@@ -54,15 +54,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       providerName = wallet.walletProvider;
     }
 
-    // ── Khusus BNI PDF: cek apakah butuh password ────────────────────────────
-    // Pengecekan hanya dilakukan jika password belum diberikan.
-    if (sourceType === "BANK" && providerName === "BNI" && fileFormat === "PDF" && !pdfPassword) {
-      const needsPassword = await isBniPdfPasswordProtected(file.buffer);
-      if (needsPassword) {
-        return res.status(423).json({
-          code: "PDF_PASSWORD_REQUIRED",
-          message: "File PDF BNI ini dilindungi password. Masukkan password untuk melanjutkan.",
-        });
+    // ── Khusus BNI PDF: cek password ─────────────────────────────────────────
+    if (sourceType === "BANK" && providerName === "BNI" && fileFormat === "PDF") {
+      if (!pdfPassword) {
+        // Belum ada password — cek apakah file memang butuh password
+        const needsPassword = await isBniPdfPasswordProtected(file.buffer);
+        if (needsPassword) {
+          return res.status(423).json({
+            code: "PDF_PASSWORD_REQUIRED",
+            message: "File PDF BNI ini dilindungi password. Masukkan password untuk melanjutkan.",
+          });
+        }
+      } else {
+        // Password sudah diberikan — verifikasi kebenarannya sebelum lanjut
+        const passwordOk = await verifyBniPdfPassword(file.buffer, pdfPassword);
+        if (!passwordOk) {
+          return res.status(422).json({
+            code: "PDF_PASSWORD_WRONG",
+            message: "Password PDF salah. Periksa kembali password e-Statement BNI Anda.",
+          });
+        }
       }
     }
 
