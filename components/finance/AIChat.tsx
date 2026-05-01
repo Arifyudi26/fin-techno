@@ -129,8 +129,13 @@ export default function AIChat() {
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
         ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
+            <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="9" cy="13" r="1.2" fill="white" />
+            <circle cx="15" cy="13" r="1.2" fill="white" />
+            <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="12" cy="2" r="1" fill="white" />
           </svg>
         )}
       </button>
@@ -145,12 +150,12 @@ export default function AIChat() {
           <div className="flex items-center gap-3 border-b border-gray-100 bg-violet-600 px-4 py-3 dark:border-gray-700">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8"/>
-                <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-                <circle cx="9" cy="13" r="1.2" fill="white"/>
-                <circle cx="15" cy="13" r="1.2" fill="white"/>
-                <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-                <circle cx="12" cy="2" r="1" fill="white"/>
+                <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
+                <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="9" cy="13" r="1.2" fill="white" />
+                <circle cx="15" cy="13" r="1.2" fill="white" />
+                <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="12" cy="2" r="1" fill="white" />
               </svg>
             </div>
             <div className="flex-1">
@@ -176,11 +181,10 @@ export default function AIChat() {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed space-y-0.5 ${
-                    msg.role === "user"
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed space-y-0.5 ${msg.role === "user"
                       ? "bg-violet-600 text-white rounded-br-sm"
                       : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded-bl-sm"
-                  }`}
+                    }`}
                 >
                   {renderMessage(msg.parts)}
                   <p className={`text-[10px] mt-1 ${msg.role === "user" ? "text-violet-200 text-right" : "text-gray-400"}`}>

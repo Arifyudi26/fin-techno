@@ -80,7 +80,12 @@ export default function AIInsights() {
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-500/10">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
+              <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="9" cy="13" r="1.2" fill="white" />
+              <circle cx="15" cy="13" r="1.2" fill="white" />
+              <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="12" cy="2" r="1" fill="white" />
             </svg>
           </div>
           <div>
