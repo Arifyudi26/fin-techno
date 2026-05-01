@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
@@ -11,6 +10,9 @@ import crypto from "crypto";
 import { parseDate } from "@lib/dateUtils";
 import { parseAmount } from "@lib/formatters";
 import { loadCategories, resolveCategoryIds } from "@lib/categoryMatcher";
+import { ParsedRow, parseCSV, parseRows, detectType } from "@lib/upload/parsers/shared";
+import { parseBriCSV, parseBriPDF } from "@lib/upload/parsers/bri";
+import { parseBniPDF } from "@lib/upload/parsers/bni";
 
 // Vercel: set maxDuration agar tidak timeout saat proses file besar
 export const config = {
@@ -18,186 +20,44 @@ export const config = {
   maxDuration: 60,
 };
 
-// CSV parser
-function parseCSV(content: string): string[][] {
-  return content
-    .split(/\r?\n/)
-    .filter((l) => l.trim())
-    .map((line) => {
-      const cols: string[] = [];
-      let cur = "";
-      let inQuote = false;
-      for (const ch of line) {
-        if (ch === '"') { inQuote = !inQuote; continue; }
-        if (ch === "," && !inQuote) { cols.push(cur.trim()); cur = ""; continue; }
-        cur += ch;
+// ─── Routing parser berdasarkan provider & format ────────────────────────────
+async function parseFile(
+  fileBuffer: Buffer,
+  fileContent: string,
+  fileFormat: string,
+  bankProvider: string,
+  pdfPassword?: string,
+): Promise<ParsedRow[]> {
+  const provider = bankProvider.toUpperCase();
+  const format   = fileFormat.toUpperCase();
+
+  // ── BNI ──────────────────────────────────────────────────────────────────
+  if (provider === "BNI") {
+    if (format === "PDF") {
+      if (!pdfPassword) {
+        throw new Error("PDF e-Statement BNI membutuhkan password.");
       }
-      cols.push(cur.trim());
-      return cols;
-    });
-}
-
-// Column mapping 
-const COLUMN_CANDIDATES = {
-  date: ["tgl_tran", "tanggal transaksi", "tanggal", "transaction date", "date", "tgl"],
-  valueDate: ["tgl_efektif", "tanggal efektif", "value date", "tgl valuta"],
-  description: ["remark_custom", "desk_tran", "keterangan", "description", "deskripsi", "ket", "narasi", "detail transaksi"],
-  debit: ["mutasi_debet", "debet", "debit", "pengeluaran", "keluar", "db"],
-  credit: ["mutasi_kredit", "kredit", "credit", "pemasukan", "masuk", "cr"],
-  openingBalance: ["saldo_awal_mutasi", "saldo awal"],
-  balance: ["saldo_akhir_mutasi", "saldo akhir", "saldo", "balance", "saldo setelah"],
-  reference: ["seq", "no. referensi", "referensi", "reference", "no. transaksi", "nomor referensi", "ref"],
-  sign: ["glsign", "dc", "type", "jenis"],
-} as const;
-
-function findColIdx(header: string[], candidates: readonly string[]): number {
-  for (const candidate of candidates) {
-    const exact = header.indexOf(candidate);
-    if (exact >= 0) return exact;
-    const partial = header.findIndex((h) => h.includes(candidate));
-    if (partial >= 0) return partial;
-  }
-  return -1;
-}
-
-function detectType(desc: string, debitVal: string, creditVal: string, signVal?: string): TransactionType {
-  if (signVal) {
-    const s = signVal.trim().toLowerCase();
-    if (s === "cr" || s === "c") return TransactionType.CREDIT;
-    if (s === "db" || s === "d") return TransactionType.DEBIT;
-  }
-  if (creditVal && Number(creditVal.replace(/[^0-9.-]/g, "")) > 0) return TransactionType.CREDIT;
-  if (debitVal && Number(debitVal.replace(/[^0-9.-]/g, "")) > 0) return TransactionType.DEBIT;
-  const lower = desc.toLowerCase();
-  if (lower.includes("masuk") || lower.includes("kredit") || lower.includes("top up") || lower.includes("terima"))
-    return TransactionType.CREDIT;
-  return TransactionType.DEBIT;
-}
-
-type ParsedRow = {
-  date: string; valueDate: string; description: string;
-  debit: string; credit: string; openingBalance: string;
-  balance: string; reference: string; sign: string;
-};
-
-function parseRows(rows: string[][]): ParsedRow[] {
-  if (rows.length < 2) return [];
-  const header = rows[0].map((h) => h.toLowerCase().trim());
-  const idx = {
-    date: findColIdx(header, COLUMN_CANDIDATES.date),
-    valueDate: findColIdx(header, COLUMN_CANDIDATES.valueDate),
-    desc: findColIdx(header, COLUMN_CANDIDATES.description),
-    debit: findColIdx(header, COLUMN_CANDIDATES.debit),
-    credit: findColIdx(header, COLUMN_CANDIDATES.credit),
-    openingBalance: findColIdx(header, COLUMN_CANDIDATES.openingBalance),
-    balance: findColIdx(header, COLUMN_CANDIDATES.balance),
-    ref: findColIdx(header, COLUMN_CANDIDATES.reference),
-    sign: findColIdx(header, COLUMN_CANDIDATES.sign),
-  };
-  return rows.slice(1).map((row) => ({
-    date: idx.date >= 0 ? (row[idx.date] ?? "") : "",
-    valueDate: idx.valueDate >= 0 ? (row[idx.valueDate] ?? "") : "",
-    description: idx.desc >= 0 ? (row[idx.desc] ?? "") : (row[1] ?? ""),
-    debit: idx.debit >= 0 ? (row[idx.debit] ?? "") : "",
-    credit: idx.credit >= 0 ? (row[idx.credit] ?? "") : "",
-    openingBalance: idx.openingBalance >= 0 ? (row[idx.openingBalance] ?? "") : "",
-    balance: idx.balance >= 0 ? (row[idx.balance] ?? "") : "",
-    reference: idx.ref >= 0 ? (row[idx.ref] ?? "") : "",
-    sign: idx.sign >= 0 ? (row[idx.sign] ?? "") : "",
-  }));
-}
-
-async function parsePDF(buffer: Buffer): Promise<ParsedRow[]> {
-  const pdfParse = require("pdf-parse");
-  const data = await pdfParse(buffer);
-
-  // Split per baris, buang yang kosong
-  const allLines: string[] = data.text
-    .split("\n")
-    .map((l: string) => l.trimEnd())
-    .filter((l: string) => l.trim());
-
-  // Potong sebelum summary section
-  const summaryMarkers = ["Saldo Awal", "Opening Balance", "Total Transaksi Debet", "Terbilang"];
-  let endIdx = allLines.length;
-  for (const marker of summaryMarkers) {
-    const idx = allLines.findIndex((l) => l.includes(marker));
-    if (idx > 0 && idx < endIdx) endIdx = idx;
-  }
-  const lines = allLines.slice(0, endIdx);
-
-  // Gabungkan baris lanjutan ke baris transaksi sebelumnya.
-  // Baris transaksi dimulai dengan dd/mm/yy HH:MM:SS
-  // Baris angka trailing: <ref>\s{2,}<debit><credit><balance>
-  const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}/;
-
-  const merged: string[] = [];
-  for (const line of lines) {
-    if (DATE_PREFIX.test(line)) {
-      merged.push(line);
-    } else if (merged.length > 0) {
-      merged[merged.length - 1] += " " + line.trim();
+      return parseBniPDF(fileBuffer, pdfPassword);
     }
+    // BNI CSV — gunakan parser generik (kolom dideteksi otomatis)
+    return parseRows(parseCSV(fileContent));
   }
 
-  const rows: ParsedRow[] = [];
-
-  for (const line of merged) {
-    const dateStr = line.slice(0, 17); // "dd/mm/yy HH:MM:SS"
-    const rest = line.slice(17).trim();
-
-    // Extract semua angka format ribuan dari rest ([\d,]+\.\d{2})
-    // 3 angka terakhir = debit, credit, balance (nempel tanpa spasi)
-    // Sebelum angka pertama dari 3 terakhir ada ref (dipisah \s{2,})
-    const allNums = [...rest.matchAll(/([\d,]+\.\d{2})/g)];
-    if (allNums.length < 3) continue;
-
-    const balanceMatch = allNums[allNums.length - 1];
-    const creditMatch  = allNums[allNums.length - 2];
-    const debitMatch   = allNums[allNums.length - 3];
-
-    const balanceStr = balanceMatch[0];
-    const creditStr  = creditMatch[0];
-    const debitStr   = debitMatch[0];
-
-    // Teks sebelum debit (index dari debitMatch)
-    const beforeDebit = rest.slice(0, debitMatch.index!).trimEnd();
-
-    // Pisahkan desc dan ref: ref adalah token terakhir setelah \s{2,}
-    const refSplit = beforeDebit.match(/^(.*?)\s{2,}(\S+)$/);
-    let desc: string;
-    let ref: string;
-    if (refSplit) {
-      desc = refSplit[1].trim();
-      ref  = refSplit[2].trim();
-    } else {
-      // Tidak ada ref terpisah — seluruhnya deskripsi
-      desc = beforeDebit.trim();
-      ref  = "";
-    }
-
-    if (!desc) continue;
-
-    const parseAmt = (v: string) => Math.abs(Number(v.replace(/[^0-9.]/g, "")) || 0);
-    const sign = parseAmt(creditStr) > 0 ? "Cr" : "Db";
-
-    rows.push({
-      date: dateStr,
-      valueDate: "",
-      description: desc,
-      debit: debitStr,
-      credit: creditStr,
-      openingBalance: "",
-      balance: balanceStr,
-      reference: ref,
-      sign,
-    });
+  // ── BRI ──────────────────────────────────────────────────────────────────
+  if (provider === "BRI") {
+    if (format === "PDF") return parseBriPDF(fileBuffer);
+    return parseBriCSV(fileContent);
   }
 
-  return rows;
+  // ── Provider lain (BCA, Mandiri, CIMB, dll.) — parser generik ────────────
+  if (format === "PDF") {
+    // Gunakan parser BRI PDF sebagai fallback generik
+    return parseBriPDF(fileBuffer);
+  }
+  return parseRows(parseCSV(fileContent));
 }
 
-// Core processing logic 
+// ─── Core processing logic ───────────────────────────────────────────────────
 export type ProcessLog = { ts: string; step: string; detail?: string };
 
 export async function processUpload(payload: {
@@ -207,8 +67,12 @@ export async function processUpload(payload: {
   fileUrl: string;
   fileFormat: string;
   userId: string;
+  bankProvider?: string;
+  pdfPassword?: string;
 }): Promise<{ logs: ProcessLog[] }> {
-  const { uploadId, sourceType, accountId, fileUrl, fileFormat } = payload;
+  const { uploadId, sourceType, accountId, fileUrl, fileFormat, pdfPassword } = payload;
+  // bankProvider bisa tidak ada untuk wallet — default ke string kosong
+  const bankProvider = payload.bankProvider ?? "";
   const db = prisma as any;
   const logs: ProcessLog[] = [];
   const log = (step: string, detail?: string) => {
@@ -218,7 +82,7 @@ export async function processUpload(payload: {
   };
 
   try {
-    log("START", `uploadId=${uploadId} format=${fileFormat} sourceType=${sourceType}`);
+    log("START", `uploadId=${uploadId} format=${fileFormat} provider=${bankProvider} sourceType=${sourceType}`);
 
     // Download file dari Vercel Blob
     const blobUrl = fileUrl.split("#")[0];
@@ -228,44 +92,26 @@ export async function processUpload(payload: {
     });
     if (!response.ok) throw new Error(`Gagal download file: ${response.status} ${response.statusText}`);
     const arrayBuffer = await response.arrayBuffer();
-    const fileBuffer = Buffer.from(arrayBuffer);
+    const fileBuffer  = Buffer.from(arrayBuffer);
     const fileContent = fileFormat !== "PDF" ? fileBuffer.toString("utf-8") : "";
     log("DOWNLOAD_OK", `size=${fileBuffer.length} bytes`);
 
-    // Parse file
+    // Parse file — routing ke parser yang sesuai
     let parsedRows: ParsedRow[] = [];
     let parseError: string | null = null;
 
-    if (fileFormat === "CSV") {
-      try {
-        parsedRows = parseRows(parseCSV(fileContent));
-        log("PARSE_CSV_OK", `rows=${parsedRows.length}`);
-      } catch (e: any) {
-        parseError = "Gagal membaca CSV: " + e.message;
-        log("PARSE_CSV_ERROR", parseError);
+    try {
+      log("PARSE_START", `provider=${bankProvider} format=${fileFormat}`);
+      parsedRows = await parseFile(fileBuffer, fileContent, fileFormat, bankProvider, pdfPassword);
+      if (parsedRows.length === 0) {
+        parseError = "Tidak ada transaksi yang berhasil dibaca dari file.";
+        log("PARSE_EMPTY");
+      } else {
+        log("PARSE_OK", `rows=${parsedRows.length}`);
       }
-    } else if (fileFormat === "PDF") {
-      try {
-        log("PARSE_PDF_START");
-        parsedRows = await parsePDF(fileBuffer);
-        if (parsedRows.length === 0) {
-          parseError = "Tidak ada transaksi yang berhasil dibaca dari PDF.";
-          log("PARSE_PDF_EMPTY");
-        } else {
-          log("PARSE_PDF_OK", `rows=${parsedRows.length}`);
-        }
-      } catch (e: any) {
-        parseError = "Gagal membaca PDF: " + e.message;
-        log("PARSE_PDF_ERROR", parseError);
-      }
-    } else {
-      try {
-        parsedRows = parseRows(parseCSV(fileContent));
-        log("PARSE_OTHER_OK", `rows=${parsedRows.length}`);
-      } catch {
-        parseError = "Gagal membaca file. Pastikan format sesuai template.";
-        log("PARSE_OTHER_ERROR", parseError);
-      }
+    } catch (e: any) {
+      parseError = e.message ?? "Gagal membaca file.";
+      log("PARSE_ERROR", parseError ?? undefined);
     }
 
     if (parseError) {
@@ -279,7 +125,7 @@ export async function processUpload(payload: {
     // Auto-detect period
     const allDates = parsedRows.map((r) => parseDate(r.date)).filter((d): d is Date => d !== null);
     const detectedStart = allDates.length > 0 ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : new Date();
-    const detectedEnd = allDates.length > 0 ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : new Date();
+    const detectedEnd   = allDates.length > 0 ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : new Date();
 
     if (sourceType === "BANK") {
       await prisma.bankStatementUpload.update({ where: { id: uploadId }, data: { periodStart: detectedStart, periodEnd: detectedEnd } });
@@ -287,10 +133,10 @@ export async function processUpload(payload: {
       await db.walletStatementUpload.update({ where: { id: uploadId }, data: { periodStart: detectedStart, periodEnd: detectedEnd } });
     }
 
-    // Load kategori sekali saja (bukan per-row)
+    // Load kategori sekali saja
     const categories = await loadCategories(payload.userId);
     log("CATEGORIES_LOADED", `count=${categories.length}`);
-    // Build semua transaksi valid terlebih dahulu
+
     type TxRecord = {
       hash: string;
       txDate: Date;
@@ -311,18 +157,28 @@ export async function processUpload(payload: {
       const txDate = parseDate(row.date);
       if (!txDate) { failCount++; continue; }
       const creditAmt = parseAmount(row.credit);
-      const debitAmt = parseAmount(row.debit);
-      const amount = creditAmt > 0 ? creditAmt : debitAmt;
+      const debitAmt  = parseAmount(row.debit);
+      const amount    = creditAmt > 0 ? creditAmt : debitAmt;
       if (amount === 0) { failCount++; continue; }
-      const type = detectType(row.description, row.debit, row.credit, row.sign);
-      const balance = parseAmount(row.balance);
+      const type      = detectType(row.description, row.debit, row.credit, row.sign);
+      const balance   = parseAmount(row.balance);
       const valueDate = parseDate(row.valueDate);
-      const catIds = resolveCategoryIds(row.description, categories);
-      const hash = crypto.createHash("md5").update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`).digest("hex");
-      validTx.push({ hash, txDate, valueDate, description: row.description, reference: row.reference || null, amount, type, balance: balance || null, catIds });
+      const catIds    = resolveCategoryIds(row.description, categories);
+      const hash      = crypto
+        .createHash("md5")
+        .update(`${accountId}|${txDate.toISOString()}|${amount}|${balance}`)
+        .digest("hex");
+      validTx.push({
+        hash, txDate, valueDate,
+        description: row.description,
+        reference: row.reference || null,
+        amount, type,
+        balance: balance || null,
+        catIds,
+      });
     }
 
-    // Cek hash yang sudah ada di DB (satu query, bukan N queries)
+    // Cek hash yang sudah ada di DB (satu query)
     const existingHashes = new Set<string>();
     if (validTx.length > 0) {
       const hashes = validTx.map((t) => t.hash);
@@ -341,11 +197,10 @@ export async function processUpload(payload: {
       }
     }
 
-    // Filter hanya transaksi baru (belum ada di DB)
     const newTx = validTx.filter((t) => !existingHashes.has(t.hash));
     log("DEDUP_OK", `valid=${validTx.length} existing=${existingHashes.size} new=${newTx.length}`);
 
-    // Batch insert dalam chunk 100 agar tidak overload DB
+    // Batch insert dalam chunk 100
     const BATCH_SIZE = 100;
     let insertFailed = 0;
 
@@ -369,15 +224,15 @@ export async function processUpload(payload: {
             })),
             skipDuplicates: true,
           });
-          // Insert junction rows for categories
+          // Insert junction rows untuk kategori
           const inserted = await prisma.bankTransaction.findMany({
             where: { hash: { in: chunk.map((t) => t.hash) } },
             select: { id: true, hash: true },
           });
           const hashToId = Object.fromEntries(inserted.map((r) => [r.hash!, r.id]));
-          const junctionRows = chunk.flatMap((t) =>
-            t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId }))
-          ).filter((r) => r.transactionId);
+          const junctionRows = chunk
+            .flatMap((t) => t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId })))
+            .filter((r) => r.transactionId);
           if (junctionRows.length > 0) {
             await (prisma as any).bankTransactionCategory.createMany({ data: junctionRows, skipDuplicates: true });
           }
@@ -397,15 +252,14 @@ export async function processUpload(payload: {
             })),
             skipDuplicates: true,
           });
-          // Insert junction rows for categories
           const inserted = await db.walletTransaction.findMany({
             where: { hash: { in: chunk.map((t) => t.hash) } },
             select: { id: true, hash: true },
           });
           const hashToId = Object.fromEntries(inserted.map((r: any) => [r.hash!, r.id]));
-          const junctionRows = chunk.flatMap((t) =>
-            t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId }))
-          ).filter((r) => r.transactionId);
+          const junctionRows = chunk
+            .flatMap((t) => t.catIds.map((catId) => ({ transactionId: hashToId[t.hash], categoryId: catId })))
+            .filter((r) => r.transactionId);
           if (junctionRows.length > 0) {
             await db.walletTransactionCategory.createMany({ data: junctionRows, skipDuplicates: true });
           }
@@ -415,11 +269,10 @@ export async function processUpload(payload: {
       }
     }
 
-    // Hitung summary langsung dari DB — sumber kebenaran tunggal
-    // Ini menangani kasus duplikat (semua skip) maupun insert sebagian
+    // Hitung summary dari DB
     let actualCredit = 0;
-    let actualDebit = 0;
-    let actualCount = 0;
+    let actualDebit  = 0;
+    let actualCount  = 0;
 
     if (sourceType === "BANK") {
       const agg = await prisma.bankTransaction.aggregate({
@@ -431,9 +284,9 @@ export async function processUpload(payload: {
         where: { uploadId, type: TransactionType.CREDIT },
         _sum: { amount: true },
       });
-      actualCount = agg._count.id;
+      actualCount  = agg._count.id;
       actualCredit = Number(creditAgg._sum.amount ?? 0);
-      actualDebit = Number(agg._sum.amount ?? 0) - actualCredit;
+      actualDebit  = Number(agg._sum.amount ?? 0) - actualCredit;
     } else {
       const agg = await db.walletTransaction.aggregate({
         where: { uploadId },
@@ -444,27 +297,17 @@ export async function processUpload(payload: {
         where: { uploadId, type: TransactionType.CREDIT },
         _sum: { amount: true },
       });
-      actualCount = agg._count.id;
+      actualCount  = agg._count.id;
       actualCredit = Number(creditAgg._sum.amount ?? 0);
-      actualDebit = Number(agg._sum.amount ?? 0) - actualCredit;
+      actualDebit  = Number(agg._sum.amount ?? 0) - actualCredit;
     }
 
-    const successCount = actualCount;
-    const totalCredit = actualCredit;
-    const totalDebit = actualDebit;
-    // failCount = baris yang tidak bisa di-parse (bukan duplikat)
-    // insertFailed = baris yang gagal masuk DB karena error teknis
     failCount += insertFailed;
+    const successCount    = actualCount;
+    const duplicateCount  = validTx.length - newTx.length;
+    const newCount        = newTx.length - insertFailed;
+    const overlapNotes    = `new:${newCount},duplicate:${duplicateCount},failed:${failCount}`;
 
-    // Hitung berapa baris yang overlap (sudah ada di DB dari upload lain)
-    const duplicateCount = validTx.length - newTx.length;
-    const newCount = newTx.length - insertFailed;
-
-    // Simpan info overlap di notes agar UI bisa menampilkan dengan jelas
-    // Format: "new:38,duplicate:52,failed:0" 
-    const overlapNotes = `new:${newCount},duplicate:${duplicateCount},failed:${failCount}`;
-
-    // Update summary
     const finalStatus =
       failCount === 0
         ? UploadStatus.SUCCESS
@@ -477,8 +320,8 @@ export async function processUpload(payload: {
       totalRows: parsedRows.length,
       parsedRows: successCount,
       failedRows: failCount,
-      totalCredit,
-      totalDebit,
+      totalCredit: actualCredit,
+      totalDebit: actualDebit,
       notes: overlapNotes,
     };
 
@@ -508,7 +351,7 @@ export async function processUpload(payload: {
   }
 }
 
-// HTTP handler (dipanggil oleh QStash) 
+// ─── HTTP handler (dipanggil oleh QStash) ────────────────────────────────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -528,12 +371,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error("[process] Missing QStash signature header");
       return res.status(401).json({ message: "Missing QStash signature" });
     }
-
     try {
       const { Receiver } = await import("@upstash/qstash");
       const receiver = new Receiver({
         currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-        nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
+        nextSigningKey:    process.env.QSTASH_NEXT_SIGNING_KEY!,
       });
       const isValid = await receiver.verify({ signature, body: rawBody });
       if (!isValid) {
@@ -557,16 +399,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   console.log("[process] Starting processUpload for uploadId:", payload.uploadId);
 
-  // Di Vercel serverless, JANGAN respond dulu lalu proses di background
-  // karena function akan di-kill setelah res.end().
-  // QStash menunggu response, jadi proses dulu baru respond.
   try {
     await processUpload(payload);
     console.log("[process] processUpload completed for uploadId:", payload.uploadId);
     return res.status(200).json({ message: "Processing completed" });
   } catch (e: any) {
     console.error("[process] processUpload failed:", e.message);
-    // Return 500 agar QStash retry
     return res.status(500).json({ message: "Processing failed: " + e.message });
   }
 }

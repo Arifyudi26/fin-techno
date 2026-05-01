@@ -33,7 +33,7 @@ interface NotificationContextValue {
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
+const API_BASE = "/api";
 
 /** Returns true only if token exists and is not expired (checks JWT exp claim) */
 function isTokenValid(token: string | null): boolean {

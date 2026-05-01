@@ -133,6 +133,11 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  // State untuk popup password PDF
+  const [showPasswordPopup, setShowPasswordPopup] = useState(false);
+  const [pdfPassword, setPdfPassword] = useState("");
+  const [showPasswordText, setShowPasswordText] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const { openModal, closeModal } = useModal();
   const { t } = useI18n();
@@ -163,13 +168,12 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     if (f) handleFile(f);
   }, [handleFile]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !accountId) {
-      setError(tr.errorRequired);
-      return;
-    }
+  // Fungsi inti submit — bisa dipanggil dengan atau tanpa password
+  const doSubmit = async (password?: string) => {
+    if (!file || !accountId) return;
+
     setError("");
+    setPasswordError("");
     setLoading(true);
     setProgress(10);
 
@@ -178,6 +182,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
     fd.append("sourceType", sourceType);
     fd.append("accountId", accountId);
     fd.append("notes", notes);
+    if (password) fd.append("pdfPassword", password);
 
     try {
       setProgress(30);
@@ -188,18 +193,49 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         },
       });
       setProgress(100);
-
-      // Langsung tutup modal dan beri tahu user — proses berjalan di background
       onSuccess({ uploadId: res.data.uploadId, status: "PROCESSING", parsedRows: 0, totalRows: 0 });
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? tr.errorUpload;
-      setError(msg);
+      const errResp = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
+      const status = errResp?.response?.status;
+      const code = errResp?.response?.data?.code;
+      const msg = errResp?.response?.data?.message ?? tr.errorUpload;
+
+      if (status === 423 && code === "PDF_PASSWORD_REQUIRED") {
+        // PDF butuh password — tampilkan popup
+        setLoading(false);
+        setProgress(0);
+        setShowPasswordPopup(true);
+        return;
+      }
+
+      if (showPasswordPopup) {
+        // Sedang di popup password — tampilkan error di sana
+        setPasswordError(msg);
+      } else {
+        setError(msg);
+      }
       setProgress(0);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file || !accountId) {
+      setError(tr.errorRequired);
+      return;
+    }
+    await doSubmit();
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pdfPassword.trim()) {
+      setPasswordError("Password tidak boleh kosong.");
+      return;
+    }
+    await doSubmit(pdfPassword.trim());
   };
 
   return (
@@ -208,6 +244,125 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
         className="absolute inset-0"
         onClick={!loading ? onClose : undefined}
       />
+
+      {/* Popup Password PDF */}
+      {showPasswordPopup && (
+        <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/20 shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-orange-500">
+                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
+                Password PDF
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                File ini dilindungi password
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Masukkan password untuk membuka file PDF e-Statement ini.
+            </p>
+
+            {/* Password input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPasswordText ? "text" : "password"}
+                  value={pdfPassword}
+                  onChange={(e) => { setPdfPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="Masukkan password PDF..."
+                  autoFocus
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 pr-10 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordText((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPasswordText ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {passwordError && (
+              <div className="flex items-start gap-2 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 p-3">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-error-500 shrink-0 mt-0.5">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 5a1 1 0 112 0v5a1 1 0 11-2 0V7zm1 9a1.25 1.25 0 100-2.5A1.25 1.25 0 0013 16z" fill="currentColor" />
+                </svg>
+                <p className="text-xs text-error-700 dark:text-error-400">{passwordError}</p>
+              </div>
+            )}
+
+            {/* Progress */}
+            {loading && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{tr.uploading}</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  <div className="h-full rounded-full bg-brand-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => { setShowPasswordPopup(false); setPdfPassword(""); setPasswordError(""); }}
+                disabled={loading}
+                className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05] disabled:opacity-50 transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !pdfPassword.trim()}
+                className="flex-1 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    {tr.processingBtn}
+                  </>
+                ) : (
+                  "Buka & Upload"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Main upload form — sembunyikan saat popup password aktif */}
+      {!showPasswordPopup && (
       <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -574,6 +729,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
           </div>
         </form>
       </div>
+      )}
     </div>
   );
 }

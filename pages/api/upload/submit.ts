@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { put } from "@vercel/blob";
 import path from "path";
 import { parseMultipart } from "@lib/multipartParser";
+import { isBniPdfPasswordProtected } from "@lib/upload/parsers/bni";
 
 export const config = {
   api: { bodyParser: false },
@@ -23,12 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { fields, file } = await parseMultipart(req);
 
-    const sourceType = (fields.sourceType ?? "BANK").toUpperCase();
-    const accountId = fields.accountId;
-    const notes = fields.notes ?? "";
+    const sourceType  = (fields.sourceType ?? "BANK").toUpperCase();
+    const accountId   = fields.accountId;
+    const notes       = fields.notes ?? "";
+    const pdfPassword = fields.pdfPassword ?? "";
 
     if (!accountId) return res.status(400).json({ message: "accountId wajib diisi" });
-    if (!file) return res.status(400).json({ message: "File tidak ditemukan" });
+    if (!file)      return res.status(400).json({ message: "File tidak ditemukan" });
 
     const ext = path.extname(file.filename).toLowerCase().replace(".", "").toUpperCase();
     if (!["CSV", "XLSX", "XLS", "PDF"].includes(ext)) {
@@ -36,11 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const fileFormat = ext as FileFormat;
-    const fileHash = crypto.createHash("md5").update(file.buffer).digest("hex");
-    const fileName = file.filename || `upload_${Date.now()}.${ext.toLowerCase()}`;
-    const db = prisma as any;
+    const fileHash   = crypto.createHash("md5").update(file.buffer).digest("hex");
+    const fileName   = file.filename || `upload_${Date.now()}.${ext.toLowerCase()}`;
+    const db         = prisma as any;
 
-    // Verify account
+    // Verify account & ambil providerName
     let providerName: string;
     if (sourceType === "BANK") {
       const acc = await prisma.bankAccount.findFirst({ where: { id: accountId, ownerId: userId } });
@@ -50,6 +52,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const wallet = await db.digitalWallet.findFirst({ where: { id: accountId, ownerId: userId } });
       if (!wallet) return res.status(404).json({ message: "Dompet tidak ditemukan" });
       providerName = wallet.walletProvider;
+    }
+
+    // ── Khusus BNI PDF: cek apakah butuh password ────────────────────────────
+    // Pengecekan hanya dilakukan jika password belum diberikan.
+    if (sourceType === "BANK" && providerName === "BNI" && fileFormat === "PDF" && !pdfPassword) {
+      const needsPassword = await isBniPdfPasswordProtected(file.buffer);
+      if (needsPassword) {
+        return res.status(423).json({
+          code: "PDF_PASSWORD_REQUIRED",
+          message: "File PDF BNI ini dilindungi password. Masukkan password untuk melanjutkan.",
+        });
+      }
     }
 
     // Cek duplikat nama
@@ -118,10 +132,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uploadId = upload.id;
     }
 
-    const jobPayload = { uploadId, sourceType, accountId, fileUrl: blob.url, fileFormat, userId };
+    const jobPayload = {
+      uploadId,
+      sourceType,
+      accountId,
+      fileUrl: blob.url,
+      fileFormat,
+      userId,
+      bankProvider: providerName,
+      pdfPassword: pdfPassword || undefined,
+    };
 
-    // Trigger background processing via QStash SDK (non-blocking, Vercel-compatible)
-    const baseUrl = process.env.NEXTAUTH_URL
+    // Trigger background processing via QStash
+    const baseUrl    = process.env.NEXTAUTH_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const processUrl = `${baseUrl}/api/upload/process`;
 
@@ -130,14 +153,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const { Client } = await import("@upstash/qstash");
       const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
-      await qstash.publishJSON({
-        url: processUrl,
-        body: jobPayload,
-        retries: 2,
-      });
+      await qstash.publishJSON({ url: processUrl, body: jobPayload, retries: 2 });
       console.log("[submit] QStash queued for", uploadId);
     } catch (qErr: any) {
-      // QStash gagal — fallback ke processing synchronous agar tidak stuck PROCESSING
       console.error("[submit] QStash failed, falling back to sync processing:", qErr.message);
       const { processUpload } = await import("./process");
       await processUpload(jobPayload).catch((e: any) =>
