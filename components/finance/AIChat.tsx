@@ -11,7 +11,7 @@ interface Message {
 }
 
 export default function AIChat() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const tr = t.dashboard;
 
   const SUGGESTED_QUESTIONS = [
@@ -70,6 +70,7 @@ export default function AIChat() {
       const res = await axiosGlobal.post("/ai/chat", {
         message: text.trim(),
         history: historyForApi,
+        lang,
       });
 
       const aiMsg: Message = {

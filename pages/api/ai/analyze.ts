@@ -23,8 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ message: "GEMINI_API_KEY belum dikonfigurasi." });
+    return res.status(503).json({ message: "GEMINI_API_KEY is not configured." });
   }
+
+  const lang = (req.query.lang as string) === "en" ? "en" : "id";
+  const isEn = lang === "en";
 
   try {
     const db = prisma as any;
@@ -136,8 +139,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const monthSummary = months
       .map(
-        (m) =>
-          `- ${m.label}: Pemasukan ${fmt(m.credit)}, Pengeluaran ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transaksi)`
+        (m) => isEn
+          ? `- ${m.label}: Income ${fmt(m.credit)}, Expense ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transactions)`
+          : `- ${m.label}: Pemasukan ${fmt(m.credit)}, Pengeluaran ${fmt(m.debit)}, Net Flow ${fmt(m.netFlow)} (${m.count} transaksi)`
       )
       .join("\n");
 
@@ -145,7 +149,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map((c, i) => `${i + 1}. ${c.name}: ${fmt(c.amount)}`)
       .join("\n");
 
-    const prompt = `Kamu adalah analis keuangan pribadi yang membantu pengguna memahami kondisi keuangan mereka.
+    const prompt = isEn
+      ? `You are a personal finance analyst helping users understand their financial condition.
+Provide analysis in clear, concise, and actionable English.
+
+USER FINANCIAL DATA (last ${months.length} months):
+
+Total Summary:
+- Total Income: ${fmt(totalIncome)}
+- Total Expense: ${fmt(totalExpense)}
+- Net Flow: ${fmt(netFlow)} (${netFlow >= 0 ? "POSITIVE ✓" : "NEGATIVE ✗"})
+- Months with negative cash flow: ${negativeMonths} of ${months.length}
+
+Monthly Data:
+${monthSummary || "No data available"}
+
+Highest Expense Month: ${maxExpenseMonth ? `${maxExpenseMonth.label} (${fmt(maxExpenseMonth.debit)})` : "-"}
+Highest Income Month: ${maxIncomeMonth ? `${maxIncomeMonth.label} (${fmt(maxIncomeMonth.credit)})` : "-"}
+
+Top Expense Categories:
+${catSummary || "No category data available"}
+
+Provide analysis in the following format (use relevant emojis):
+1. **Overall Financial Health** - brief status of financial health
+2. **Highest Expense Month** - explain which month and possible reasons
+3. **Overspending Categories** - categories that need attention
+4. **Trend** - whether finances are improving or worsening
+5. **Recommendations** - 3 concrete steps to take
+
+Answer in 300-400 words, use easy-to-understand language.`
+      : `Kamu adalah analis keuangan pribadi yang membantu pengguna memahami kondisi keuangan mereka.
 Berikan analisis dalam Bahasa Indonesia yang jelas, ringkas, dan actionable.
 
 DATA KEUANGAN PENGGUNA (${months.length} bulan terakhir):
@@ -196,7 +229,7 @@ Jawab dalam 300-400 kata, gunakan bahasa yang mudah dipahami.`;
   } catch (error: any) {
     console.error("AI analyze error:", error?.message || error);
     return res.status(500).json({
-      message: error?.message || "Gagal menganalisis data keuangan.",
+      message: error?.message || "Failed to analyze financial data.",
     });
   }
 }

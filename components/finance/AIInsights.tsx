@@ -20,7 +20,7 @@ interface AnalysisContext {
 }
 
 export default function AIInsights() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const tr = t.dashboard;
 
   const [analysis, setAnalysis] = useState<string>("");
@@ -34,7 +34,7 @@ export default function AIInsights() {
     setError("");
     setExpanded(true);
     try {
-      const res = await axiosGlobal.get("/ai/analyze");
+      const res = await axiosGlobal.get("/ai/analyze", { params: { lang } });
       setAnalysis(res.data.analysis);
       setContext(res.data.context);
     } catch (err: unknown) {
