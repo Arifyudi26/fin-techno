@@ -11,7 +11,7 @@ import PageMeta from "@components/common/PageMeta";
 import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
-
+import { fmtIDR as fmt } from "@lib/formatters";
 
 interface TxDetail {
   id: string;
@@ -36,25 +36,16 @@ interface DaySummary {
   // transactions no longer pre-loaded — fetched lazily via /api/calendar/[date]
 }
 
-
-const idrFmt = new Intl.NumberFormat("id-ID", {
-  style: "currency",
-  currency: "IDR",
-  maximumFractionDigits: 0,
-});
 const timeFmt = new Intl.DateTimeFormat("id-ID", {
   hour: "2-digit",
   minute: "2-digit",
 });
-
-const fmt = (v: number) => idrFmt.format(v);
 
 const fmtShort = (v: number) => {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)}rb`;
   return String(v);
 };
-
 const fmtDateIndo = (dateStr: string) => {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-").map(Number);

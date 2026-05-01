@@ -89,7 +89,6 @@ export const dashboard = {
 
     // AIChat
     chatTitle: "Asisten Keuangan AI",
-    chatSubtitle: "Powered by Gemini",
     chatPlaceholder: "Tanya tentang keuangan kamu...",
     chatHint: "Enter untuk kirim · Shift+Enter untuk baris baru",
     chatWelcome: "Halo! Saya asisten keuangan AI kamu. Saya sudah membaca data transaksi kamu dan siap membantu menjawab pertanyaan seputar keuangan.\n\nApa yang ingin kamu tanyakan?",
@@ -184,7 +183,6 @@ export const dashboard = {
 
     // AIChat
     chatTitle: "AI Financial Assistant",
-    chatSubtitle: "Powered by Gemini",
     chatPlaceholder: "Ask about your finances...",
     chatHint: "Enter to send · Shift+Enter for new line",
     chatWelcome: "Hello! I'm your AI financial assistant. I've read your transaction data and I'm ready to answer questions about your finances.\n\nWhat would you like to know?",

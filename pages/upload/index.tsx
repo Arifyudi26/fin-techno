@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@components/ui/table";
-import { formatBytes } from "@lib/formatters";
+import { formatBytes, fmtIDR as formatIDR } from "@lib/formatters";
 import { useI18n } from "@lib/i18n";
 
 // Types
@@ -84,20 +84,12 @@ interface TxRow {
 }
 
 // Helpers
-const formatIDR = (v: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v);
-
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-
 type StatusColor = "success" | "error" | "warning" | "info" | "light" | "dark" | "primary";
 type StatusConfig = Record<string, { label: string; color: StatusColor }>;
 

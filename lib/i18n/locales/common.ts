@@ -53,6 +53,7 @@ export const common = {
     endBalance: "Saldo Akhir",
     accountName: "Rekening",
     saveChanges: "Simpan Perubahan",
+    sidebarTagline: "Kelola keuangan kamu dengan mudah dari satu dashboard.",
   },
   en: {
     filter: "Filter",
@@ -108,5 +109,6 @@ export const common = {
     endBalance: "End Balance",
     accountName: "Account",
     saveChanges: "Save Changes",
+    sidebarTagline: "Manage your finances easily from one dashboard.",
   },
 } as const;

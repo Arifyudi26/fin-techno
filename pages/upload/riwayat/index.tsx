@@ -7,10 +7,7 @@ import Badge from "@components/ui/badge/Badge";
 import axiosGlobal from "@/services/AxiosGlobal";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
 import { fmtDate } from "@/lib/utils";
-import { formatBytes } from "@lib/formatters";
-
-const formatIDR = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { formatBytes, fmtIDR as formatIDR } from "@lib/formatters";
 
 interface UploadItem {
   id: string;

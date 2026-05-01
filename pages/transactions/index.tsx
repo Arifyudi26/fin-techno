@@ -11,10 +11,7 @@ import Pagination from "@components/ui/pagination/Pagination";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
 import DatePicker from "@components/form/DatePicker";
-
-
-const formatIDR = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
+import { fmtIDR as formatIDR } from "@lib/formatters";
 
 const fmtDateIndo = (dateStr: string) => {
   if (!dateStr) return "—";

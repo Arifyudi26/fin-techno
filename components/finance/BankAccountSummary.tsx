@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { BankAccountBalance } from "@/lib/types/dashboard";
 import { useI18n } from "@lib/i18n";
-
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 const providerColors: Record<string, string> = {
   BCA: "bg-blue-500", BRI: "bg-brand-500", MANDIRI: "bg-warning-500",
