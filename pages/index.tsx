@@ -7,6 +7,7 @@ import SpendingByCategory from "@components/finance/SpendingByCategory";
 import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
 import DashboardFilters from "@components/finance/DashboardFilters";
+import AIInsights from "@components/finance/AIInsights";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
 import {
@@ -301,6 +302,11 @@ export default function Home() {
             data={data.recentTransactions}
             loading={loading.transactions}
           />
+        </div>
+
+        {/* AI Insights */}
+        <div className="col-span-12">
+          <AIInsights />
         </div>
       </div>
     </AppLayout>
