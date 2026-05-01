@@ -70,10 +70,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, v]) => {
         const [year, month] = key.split("-");
-        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("id-ID", {
-          month: "long",
-          year: "numeric",
-        });
+        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString(
+          isEn ? "en-US" : "id-ID",
+          { month: "long", year: "numeric" }
+        );
         return { key, label, ...v, netFlow: v.credit - v.debit };
       });
 

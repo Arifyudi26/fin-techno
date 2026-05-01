@@ -73,14 +73,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       monthMap[key].count++;
     }
 
+    const isEn = lang === "en";
+
     const months = Object.entries(monthMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, v]) => {
         const [year, month] = key.split("-");
-        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("id-ID", {
-          month: "long",
-          year: "numeric",
-        });
+        const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString(
+          isEn ? "en-US" : "id-ID",
+          { month: "long", year: "numeric" }
+        );
         return { key, label, ...v, netFlow: v.credit - v.debit };
       });
 
@@ -111,7 +113,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const netFlow = totalIncome - totalExpense;
 
     const monthSummary = months
-      .map((m) => `${m.label}: masuk ${fmt(m.credit)}, keluar ${fmt(m.debit)}, net ${fmt(m.netFlow)}`)
+      .map((m) => isEn
+        ? `${m.label}: income ${fmt(m.credit)}, expense ${fmt(m.debit)}, net ${fmt(m.netFlow)}`
+        : `${m.label}: masuk ${fmt(m.credit)}, keluar ${fmt(m.debit)}, net ${fmt(m.netFlow)}`
+      )
       .join(" | ");
 
     const catSummary = catRows
@@ -119,7 +124,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .join(", ");
 
     // Konteks keuangan sebagai pesan sistem di awal history
-    const isEn = lang === "en";
     const systemContext = isEn
       ? `You are a smart and friendly personal finance assistant. \
 You have access to the user's financial data and must answer questions based on that data. \
