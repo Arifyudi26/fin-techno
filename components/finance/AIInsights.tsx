@@ -75,10 +75,14 @@ export default function AIInsights({ filters, metrics }: Props) {
         ? "No data in selected period — showing all available data"
         : "Tidak ada data di periode filter — menampilkan semua data";
     }
-    if (filters?.dateFrom && filters?.dateTo && hasFilteredData) {
-      return lang === "en"
-        ? `${filters.dateFrom} – ${filters.dateTo}`
-        : `${filters.dateFrom} – ${filters.dateTo}`;
+    if (filters?.dateFrom && filters?.dateTo) {
+      return `${filters.dateFrom} – ${filters.dateTo}`;
+    }
+    if (filters?.dateFrom) {
+      return lang === "en" ? `From ${filters.dateFrom}` : `Dari ${filters.dateFrom}`;
+    }
+    if (filters?.dateTo) {
+      return lang === "en" ? `Until ${filters.dateTo}` : `Sampai ${filters.dateTo}`;
     }
     return tr.aiSubtitle;
   };

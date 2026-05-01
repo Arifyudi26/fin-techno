@@ -75,7 +75,7 @@ export const dashboard = {
 
     // AIInsights
     aiTitle: "Analisis AI",
-    aiSubtitle: "Insight keuangan berbasis data 6 bulan terakhir",
+    aiSubtitle: "Insight keuangan berdasarkan filter aktif",
     aiAnalyze: "Analisis Sekarang",
     aiReanalyze: "Analisis Ulang",
     aiAnalyzing: "Menganalisis...",
@@ -170,7 +170,7 @@ export const dashboard = {
 
     // AIInsights
     aiTitle: "AI Analysis",
-    aiSubtitle: "Financial insights based on last 6 months of data",
+    aiSubtitle: "Financial insights based on active filter",
     aiAnalyze: "Analyze Now",
     aiReanalyze: "Re-analyze",
     aiAnalyzing: "Analyzing...",
