@@ -1,12 +1,5 @@
 import { useState } from "react";
-
-interface SwitchProps {
-  label: string;
-  defaultChecked?: boolean;
-  disabled?: boolean;
-  onChange?: (checked: boolean) => void;
-  color?: "blue" | "gray"; // Added prop to toggle color theme
-}
+import type { SwitchProps } from "@/lib/types/form";
 
 const Switch: React.FC<SwitchProps> = ({
   label,

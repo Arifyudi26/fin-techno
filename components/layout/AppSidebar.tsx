@@ -10,13 +10,7 @@ import {
 } from "@components/icons";
 import { useSidebar } from "@lib/context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
-
-type NavItem = {
-  name: string;
-  icon: React.ReactNode;
-  path?: string;
-  subItems?: { name: string; path: string }[];
-};
+import type { NavItem } from "@/lib/types/components";
 
 const UploadIcon = () => (
   <svg

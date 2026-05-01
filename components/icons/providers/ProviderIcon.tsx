@@ -1,14 +1,8 @@
 import BankProviderIcon from "./BankIcon";
 import WalletProviderIcon from "./WalletIcon";
+import type { ProviderIconProps } from "@/lib/types/components";
 
-interface Props {
-  provider: string;
-  sourceType: "BANK" | "WALLET";
-  size?: number;
-  className?: string;
-}
-
-export default function ProviderIcon({ provider, sourceType, size = 40, className }: Props) {
+export default function ProviderIcon({ provider, sourceType, size = 40, className }: ProviderIconProps) {
   if (sourceType === "WALLET") {
     return <WalletProviderIcon provider={provider} size={size} className={className} />;
   }

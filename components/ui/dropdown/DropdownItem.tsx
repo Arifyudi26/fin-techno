@@ -1,15 +1,6 @@
 import type React from "react";
 import Link from "next/link";
-
-interface DropdownItemProps {
-  tag?: "a" | "button";
-  to?: string;
-  onClick?: () => void;
-  onItemClick?: () => void;
-  baseClassName?: string;
-  className?: string;
-  children: React.ReactNode;
-}
+import type { DropdownItemProps } from "@/lib/types/ui";
 
 export const DropdownItem: React.FC<DropdownItemProps> = ({
   tag = "button",

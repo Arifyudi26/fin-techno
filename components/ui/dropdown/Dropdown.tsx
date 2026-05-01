@@ -1,12 +1,6 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
-
-interface DropdownProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  className?: string;
-}
+import type { DropdownProps } from "@/lib/types/ui";
 
 export const Dropdown: React.FC<DropdownProps> = ({
   isOpen,

@@ -1,8 +1,5 @@
 import Link from "next/link";
-
-interface BreadcrumbProps {
-  pageTitle: string;
-}
+import type { BreadcrumbProps } from "@/lib/types/components";
 
 const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle }) => {
   return (

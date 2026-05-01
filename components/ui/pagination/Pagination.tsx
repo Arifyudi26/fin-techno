@@ -1,15 +1,8 @@
-interface Props {
-  page: number;
-  totalPages: number;
-  total: number;
-  limit: number;
-  onPageChange: (p: number) => void;
-  onLimitChange: (l: number) => void;
-}
+import type { PaginationProps } from "@/lib/types/ui";
 
 const LIMIT_OPTIONS = [10, 25, 50, 100];
 
-export default function Pagination({ page, totalPages, total, limit, onPageChange, onLimitChange }: Props) {
+export default function Pagination({ page, totalPages, total, limit, onPageChange, onLimitChange }: PaginationProps) {
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
 

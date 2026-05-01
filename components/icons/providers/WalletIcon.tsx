@@ -1,8 +1,4 @@
-interface Props {
-  provider: string;
-  size?: number;
-  className?: string;
-}
+import type { WalletIconProps } from "@/lib/types/components";
 
 // GoPay — hijau Gojek
 function GOPAY({ size }: { size: number }) {
@@ -111,7 +107,7 @@ const walletMap: Record<string, React.FC<{ size: number }>> = {
   LINKAJA: LINKAJA, SAKUKU: SAKUKU, JENIUS: JENIUS, OTHER: OTHER_WALLET,
 };
 
-export default function WalletProviderIcon({ provider, size = 40, className }: Props) {
+export default function WalletProviderIcon({ provider, size = 40, className }: WalletIconProps) {
   const Icon = walletMap[provider] ?? OTHER_WALLET;
   return (
     <span className={className}>

@@ -4,15 +4,7 @@ import flatpickr from "flatpickr";
 import { Indonesian } from "flatpickr/dist/l10n/id";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
-
-interface Props {
-  id: string;
-  label?: string;
-  placeholder?: string;
-  value?: string;
-  onChange?: (dateStr: string) => void;
-  mode?: "single" | "range";
-}
+import type { DatePickerProps } from "@/lib/types/form";
 
 export default function DatePicker({
   id,
@@ -21,7 +13,7 @@ export default function DatePicker({
   value,
   onChange,
   mode = "single",
-}: Props) {
+}: DatePickerProps) {
   const fpRef = useRef<flatpickr.Instance | null>(null);
 
   useEffect(() => {

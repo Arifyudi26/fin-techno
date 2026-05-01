@@ -1,22 +1,4 @@
-type BadgeVariant = "light" | "solid";
-type BadgeSize = "sm" | "md";
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
-
-interface BadgeProps {
-  variant?: BadgeVariant; // Light or solid variant
-  size?: BadgeSize; // Badge size
-  color?: BadgeColor; // Badge color
-  startIcon?: React.ReactNode; // Icon at the start
-  endIcon?: React.ReactNode; // Icon at the end
-  children: React.ReactNode; // Badge content
-}
+import type { BadgeProps } from "@/lib/types/ui";
 
 const Badge: React.FC<BadgeProps> = ({
   variant = "light",

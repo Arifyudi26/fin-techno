@@ -3,10 +3,7 @@ import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 import AIChat from "@components/finance/AIChat";
-
-interface LayoutProps {
-  children: React.ReactNode;
-}
+import type { LayoutProps } from "@/lib/types/components";
 
 const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();

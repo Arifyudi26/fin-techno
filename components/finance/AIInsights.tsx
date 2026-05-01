@@ -2,6 +2,7 @@
 import { useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
+import type { AnalysisContext } from "@/lib/types/finance";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -9,15 +10,6 @@ const fmt = (val: number) =>
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(val);
-
-interface AnalysisContext {
-  totalIncome: number;
-  totalExpense: number;
-  netFlow: number;
-  negativeMonths: number;
-  maxExpenseMonth?: { label: string; debit: number };
-  topCategories: { name: string; amount: number }[];
-}
 
 export default function AIInsights() {
   const { t, lang } = useI18n();
