@@ -9,9 +9,7 @@ import { useToast } from "@lib/hooks/useToast";
 import axiosGlobal from "@/services/AxiosGlobal";
 import BankProviderIcon from "@components/icons/providers/BankIcon";
 import { useI18n } from "@lib/i18n";
-
-const formatIDR = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
+import { fmtIDR as formatIDR } from "@lib/formatters";
 
 interface BankAccount {
   id: string;

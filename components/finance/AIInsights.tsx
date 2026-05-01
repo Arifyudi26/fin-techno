@@ -3,13 +3,7 @@ import { useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
 import type { AnalysisContext } from "@/lib/types/finance";
-
-const fmt = (val: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(val);
+import { fmtIDR as fmt } from "@lib/formatters";
 
 export default function AIInsights() {
   const { t, lang } = useI18n();

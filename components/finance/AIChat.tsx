@@ -154,7 +154,6 @@ export default function AIChat() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{tr.chatTitle}</p>
-              <p className="text-xs text-violet-200">{tr.chatSubtitle}</p>
             </div>
             <button
               onClick={() => { setMessages([]); setIsOpen(false); }}
