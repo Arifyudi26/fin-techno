@@ -12,12 +12,10 @@
 
 import { ParsedRow, parseCSV, parseRows } from "./shared";
 
-// ─── BRI CSV ─────────────────────────────────────────────────────────────────
 export function parseBriCSV(content: string): ParsedRow[] {
   return parseRows(parseCSV(content));
 }
 
-// ─── BRI PDF ─────────────────────────────────────────────────────────────────
 export async function parseBriPDF(buffer: Buffer): Promise<ParsedRow[]> {
   const pdfParse = require("pdf-parse");
   const data: { text: string } = await pdfParse(buffer);

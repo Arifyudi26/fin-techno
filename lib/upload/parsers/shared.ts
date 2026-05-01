@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TransactionType } from "@prisma/client";
 
-// ─── Tipe baris hasil parse ───────────────────────────────────────────────────
+// Tipe baris hasil parse
 export type ParsedRow = {
   date: string;
   valueDate: string;
@@ -14,7 +14,7 @@ export type ParsedRow = {
   sign: string;
 };
 
-// ─── CSV parser ───────────────────────────────────────────────────────────────
+// CSV parser
 export function parseCSV(content: string): string[][] {
   return content
     .split(/\r?\n/)
@@ -33,7 +33,7 @@ export function parseCSV(content: string): string[][] {
     });
 }
 
-// ─── Column mapping (kandidat nama kolom yang dikenali) ──────────────────────
+// Column mapping (kandidat nama kolom yang dikenali)
 export const COLUMN_CANDIDATES = {
   date:           ["tgl_tran", "tanggal transaksi", "tanggal", "transaction date", "date", "tgl"],
   valueDate:      ["tgl_efektif", "tanggal efektif", "value date", "tgl valuta"],
@@ -56,7 +56,7 @@ export function findColIdx(header: string[], candidates: readonly string[]): num
   return -1;
 }
 
-// ─── Deteksi tipe transaksi (CREDIT / DEBIT) ─────────────────────────────────
+// Deteksi tipe transaksi (CREDIT / DEBIT)
 export function detectType(
   desc: string,
   debitVal: string,
@@ -80,7 +80,7 @@ export function detectType(
   return TransactionType.DEBIT;
 }
 
-// ─── Parse baris CSV menjadi ParsedRow[] ─────────────────────────────────────
+// Parse baris CSV menjadi ParsedRow[]
 export function parseRows(rows: string[][]): ParsedRow[] {
   if (rows.length < 2) return [];
   const header = rows[0].map((h) => h.toLowerCase().trim());
