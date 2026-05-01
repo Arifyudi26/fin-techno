@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { useI18n } from "@lib/i18n";
 
 const fmt = (val: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -19,6 +20,9 @@ interface AnalysisContext {
 }
 
 export default function AIInsights() {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const [analysis, setAnalysis] = useState<string>("");
   const [context, setContext] = useState<AnalysisContext | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,10 +45,8 @@ export default function AIInsights() {
     }
   };
 
-  // Render markdown-like text (bold, bullet)
   const renderText = (text: string) => {
     return text.split("\n").map((line, i) => {
-      // Bold: **text**
       const parts = line.split(/\*\*(.*?)\*\*/g);
       const rendered = parts.map((part, j) =>
         j % 2 === 1 ? (
@@ -55,7 +57,6 @@ export default function AIInsights() {
           <span key={j}>{part}</span>
         )
       );
-
       if (line.startsWith("- ") || line.startsWith("• ")) {
         return (
           <li key={i} className="ml-4 list-disc text-gray-700 dark:text-gray-300">
@@ -84,10 +85,10 @@ export default function AIInsights() {
           </div>
           <div>
             <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">
-              Analisis AI
+              {tr.aiTitle}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Insight keuangan berbasis data 6 bulan terakhir
+              {tr.aiSubtitle}
             </p>
           </div>
         </div>
@@ -102,14 +103,14 @@ export default function AIInsights() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Menganalisis...
+              {tr.aiAnalyzing}
             </>
           ) : (
             <>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              {analysis ? "Analisis Ulang" : "Analisis Sekarang"}
+              {analysis ? tr.aiReanalyze : tr.aiAnalyze}
             </>
           )}
         </button>
@@ -124,10 +125,10 @@ export default function AIInsights() {
             </svg>
           </div>
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Klik &quot;Analisis Sekarang&quot; untuk mendapatkan insight keuangan
+            {tr.aiClickHint}
           </p>
           <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            AI akan membaca data transaksi dan memberikan rekomendasi personal
+            {tr.aiClickDesc}
           </p>
         </div>
       )}
@@ -144,7 +145,7 @@ export default function AIInsights() {
             ))}
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            AI sedang membaca data keuangan kamu...
+            {tr.aiReading}
           </p>
         </div>
       )}
@@ -157,37 +158,34 @@ export default function AIInsights() {
 
       {!loading && analysis && (
         <>
-          {/* Quick stats */}
           {context && (
             <div className="grid grid-cols-2 gap-3 px-5 pt-4 sm:grid-cols-4">
               <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Pemasukan</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{tr.aiTotalIncome}</p>
                 <p className="mt-0.5 text-sm font-semibold text-green-600 dark:text-green-400">
                   {fmt(context.totalIncome)}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Pengeluaran</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{tr.aiTotalExpense}</p>
                 <p className="mt-0.5 text-sm font-semibold text-red-600 dark:text-red-400">
                   {fmt(context.totalExpense)}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Net Flow</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{tr.aiNetFlow}</p>
                 <p className={`mt-0.5 text-sm font-semibold ${context.netFlow >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                   {fmt(context.netFlow)}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Bulan Terboros</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{tr.aiMaxExpense}</p>
                 <p className="mt-0.5 text-sm font-semibold text-gray-800 dark:text-white truncate">
                   {context.maxExpenseMonth?.label ?? "-"}
                 </p>
               </div>
             </div>
           )}
-
-          {/* Analysis text */}
           <div className="px-5 py-4 space-y-1">
             {renderText(analysis)}
           </div>
