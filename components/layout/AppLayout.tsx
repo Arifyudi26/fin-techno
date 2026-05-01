@@ -2,6 +2,7 @@ import { SidebarProvider, useSidebar } from "@lib/context/SidebarContext";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import AIChat from "@components/finance/AIChat";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,6 +25,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
         <AppHeader />
         <div className="p-3 mx-auto max-w-screen-2xl sm:p-4 md:p-6">{children}</div>
       </div>
+      <AIChat />
     </div>
   );
 };
