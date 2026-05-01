@@ -253,7 +253,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pdfPassword.trim()) {
-      setPasswordError("Password tidak boleh kosong.");
+      setPasswordError(tr.pdfPasswordRequired);
       return;
     }
     await doSubmit(pdfPassword.trim());
@@ -279,30 +279,30 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
-                Password PDF
+                {tr.pdfPasswordTitle}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                File ini dilindungi password
+                {tr.pdfPasswordSubtitle}
               </p>
             </div>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Masukkan password untuk membuka file PDF e-Statement ini.
+              {tr.pdfPasswordDesc}
             </p>
 
             {/* Password input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Password
+                {tr.pdfPasswordLabel}
               </label>
               <div className="relative">
                 <input
                   type={showPasswordText ? "text" : "password"}
                   value={pdfPassword}
                   onChange={(e) => { setPdfPassword(e.target.value); setPasswordError(""); }}
-                  placeholder="Masukkan password PDF..."
+                  placeholder={tr.pdfPasswordPlaceholder}
                   autoFocus
                   autoComplete="off"
                   className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 pr-10 text-sm text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
@@ -374,7 +374,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     {tr.processingBtn}
                   </>
                 ) : (
-                  "Buka & Upload"
+                  tr.pdfPasswordOpen
                 )}
               </button>
             </div>
@@ -545,7 +545,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                           type="text"
                           value={accountSearch}
                           onChange={(e) => setAccountSearch(e.target.value)}
-                          placeholder="Cari nama, provider, atau nomor..."
+                          placeholder={tr.searchAccountPlaceholder}
                           autoFocus
                           className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 rounded-lg border-0 text-gray-800 dark:text-white/90 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                         />
@@ -556,7 +556,7 @@ function UploadFormModal({ accounts, onClose, onSuccess }: UploadFormProps) {
                     <div className="max-h-52 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                       {filteredSearch.length === 0 ? (
                         <p className="py-6 text-center text-sm text-gray-400">
-                          Tidak ada hasil
+                          {tr.dropdownNoResult}
                         </p>
                       ) : (
                         filteredSearch.map((acc) => (
@@ -939,7 +939,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                 </div>
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Status
+                    {tr.statusLabel}
                   </p>
                   <Badge
                     size="sm"
@@ -1225,8 +1225,8 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
                                   }
                                 >
                                   {tx.status === "VERIFIED"
-                                    ? "Verified"
-                                    : "Pending"}
+                                    ? tr.txVerified
+                                    : tr.txPending}
                                 </Badge>
                               </TableCell>
                             </TableRow>
@@ -1245,7 +1245,7 @@ function DetailModal({ uploadId, sourceType, onClose }: DetailModalProps) {
             </div>
           ) : (
             <div className="py-20 text-center text-sm text-gray-400">
-              Data tidak ditemukan
+              {tr.dataNotFound}
             </div>
           )}
         </div>
@@ -1414,7 +1414,7 @@ function UploadCard({
           if (n && n.duplicate > 0) {
             return (
               <div className="text-center p-2 rounded-lg bg-brand-50 dark:bg-brand-500/10">
-                <p className="text-xs text-brand-500 dark:text-brand-400 mb-0.5">New</p>
+                <p className="text-xs text-brand-500 dark:text-brand-400 mb-0.5">{tr.newLabel}</p>
                 <p className="text-sm font-bold text-brand-600 dark:text-brand-400">{n.new}</p>
               </div>
             );

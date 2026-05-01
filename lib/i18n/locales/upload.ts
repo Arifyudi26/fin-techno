@@ -88,6 +88,28 @@ export const upload = {
     bniPasswordRequired: "Password PDF wajib diisi untuk e-Statement BNI.",
     bniPasswordModalTitle: "Password PDF BNI",
     bniPasswordModalDesc: "Masukkan password untuk membuka file PDF e-Statement BNI.",
+
+    // PDF password popup (generic)
+    pdfPasswordTitle: "Password PDF",
+    pdfPasswordSubtitle: "File ini dilindungi password",
+    pdfPasswordDesc: "Masukkan password untuk membuka file PDF e-Statement ini.",
+    pdfPasswordLabel: "Password",
+    pdfPasswordPlaceholder: "Masukkan password PDF...",
+    pdfPasswordRequired: "Password tidak boleh kosong.",
+    pdfPasswordOpen: "Buka & Upload",
+
+    // Dropdown search
+    searchAccountPlaceholder: "Cari nama, provider, atau nomor...",
+    dropdownNoResult: "Tidak ada hasil",
+
+    // Detail modal
+    statusLabel: "Status",
+    txVerified: "Verified",
+    txPending: "Pending",
+    dataNotFound: "Data tidak ditemukan",
+
+    // UploadCard
+    newLabel: "Baru",
   },
   en: {
     title: "Upload e-Statement",
@@ -178,5 +200,27 @@ export const upload = {
     bniPasswordRequired: "PDF password is required for BNI e-Statement.",
     bniPasswordModalTitle: "BNI PDF Password",
     bniPasswordModalDesc: "Enter the password to open the BNI e-Statement PDF file.",
+
+    // PDF password popup (generic)
+    pdfPasswordTitle: "PDF Password",
+    pdfPasswordSubtitle: "This file is password protected",
+    pdfPasswordDesc: "Enter the password to open this PDF e-Statement file.",
+    pdfPasswordLabel: "Password",
+    pdfPasswordPlaceholder: "Enter PDF password...",
+    pdfPasswordRequired: "Password cannot be empty.",
+    pdfPasswordOpen: "Open & Upload",
+
+    // Dropdown search
+    searchAccountPlaceholder: "Search name, provider, or number...",
+    dropdownNoResult: "No results",
+
+    // Detail modal
+    statusLabel: "Status",
+    txVerified: "Verified",
+    txPending: "Pending",
+    dataNotFound: "Data not found",
+
+    // UploadCard
+    newLabel: "New",
   },
 } as const;

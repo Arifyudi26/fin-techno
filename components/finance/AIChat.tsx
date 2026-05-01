@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
+import { useI18n } from "@lib/i18n";
 
 interface Message {
   id: string;
@@ -9,15 +10,18 @@ interface Message {
   timestamp: Date;
 }
 
-const SUGGESTED_QUESTIONS = [
-  "Bulan apa pengeluaran saya paling besar?",
-  "Apakah keuangan saya sehat?",
-  "Kategori apa yang paling boros?",
-  "Bagaimana cara menghemat pengeluaran saya?",
-  "Bandingkan pemasukan dan pengeluaran saya",
-];
-
 export default function AIChat() {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
+  const SUGGESTED_QUESTIONS = [
+    tr.chatSuggest1,
+    tr.chatSuggest2,
+    tr.chatSuggest3,
+    tr.chatSuggest4,
+    tr.chatSuggest5,
+  ];
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -28,18 +32,16 @@ export default function AIChat() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Pesan sambutan
       setMessages([
         {
           id: "welcome",
           role: "model",
-          parts:
-            "Halo! 👋 Saya asisten keuangan AI kamu. Saya sudah membaca data transaksi kamu dan siap membantu menjawab pertanyaan seputar keuangan.\n\nApa yang ingin kamu tanyakan?",
+          parts: tr.chatWelcome,
           timestamp: new Date(),
         },
       ]);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, tr.chatWelcome]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,7 +63,6 @@ export default function AIChat() {
     setError("");
 
     try {
-      // Kirim history (kecuali welcome message) ke API
       const historyForApi = messages
         .filter((m) => m.id !== "welcome")
         .map((m) => ({ role: m.role, parts: m.parts }));
@@ -98,20 +99,13 @@ export default function AIChat() {
       const parts = line.split(/\*\*(.*?)\*\*/g);
       const rendered = parts.map((part, j) =>
         j % 2 === 1 ? (
-          <strong key={j} className="font-semibold">
-            {part}
-          </strong>
+          <strong key={j} className="font-semibold">{part}</strong>
         ) : (
           <span key={j}>{part}</span>
         )
       );
-
       if (line.startsWith("- ") || line.startsWith("• ")) {
-        return (
-          <li key={i} className="ml-4 list-disc">
-            {rendered}
-          </li>
-        );
+        return <li key={i} className="ml-4 list-disc">{rendered}</li>;
       }
       if (line.trim() === "") return <br key={i} />;
       return <p key={i}>{rendered}</p>;
@@ -127,50 +121,43 @@ export default function AIChat() {
       <button
         onClick={() => setIsOpen((v) => !v)}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:bg-violet-700 transition-all duration-200 hover:scale-105"
-        aria-label="Buka chat AI"
+        aria-label={tr.chatTitle}
       >
         {isOpen ? (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
         ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
-            <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-            <circle cx="9" cy="13" r="1.2" fill="white" />
-            <circle cx="15" cy="13" r="1.2" fill="white" />
-            <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-            <path d="M12 2v2M12 2h0" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-            <circle cx="12" cy="2" r="1" fill="white" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </button>
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 overflow-hidden"
-          style={{ height: "520px" }}>
+        <div
+          className="fixed bottom-24 right-6 z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 overflow-hidden"
+          style={{ height: "520px" }}
+        >
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-gray-100 bg-violet-600 px-4 py-3 dark:border-gray-700">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8" />
-                <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="9" cy="13" r="1.2" fill="white" />
-                <circle cx="15" cy="13" r="1.2" fill="white" />
-                <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                <path d="M12 2v2M12 2h0" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="12" cy="2" r="1" fill="white" />
+                <rect x="3" y="8" width="18" height="12" rx="2" stroke="white" strokeWidth="1.8"/>
+                <path d="M8 8V6a4 4 0 018 0v2" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="9" cy="13" r="1.2" fill="white"/>
+                <circle cx="15" cy="13" r="1.2" fill="white"/>
+                <path d="M9 17h6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="12" cy="2" r="1" fill="white"/>
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white">Asisten Keuangan AI</p>
+              <p className="text-sm font-semibold text-white">{tr.chatTitle}</p>
+              <p className="text-xs text-violet-200">{tr.chatSubtitle}</p>
             </div>
             <button
-              onClick={() => {
-                setMessages([]);
-                setIsOpen(false);
-              }}
+              onClick={() => { setMessages([]); setIsOpen(false); }}
               className="text-white/70 hover:text-white transition-colors"
               title="Tutup & reset chat"
             >
@@ -181,24 +168,21 @@ export default function AIChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-hide"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div
+            className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed space-y-0.5 ${msg.role === "user"
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed space-y-0.5 ${
+                    msg.role === "user"
                       ? "bg-violet-600 text-white rounded-br-sm"
                       : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded-bl-sm"
-                    }`}
+                  }`}
                 >
                   {renderMessage(msg.parts)}
-                  <p
-                    className={`text-[10px] mt-1 ${msg.role === "user" ? "text-violet-200 text-right" : "text-gray-400"
-                      }`}
-                  >
+                  <p className={`text-[10px] mt-1 ${msg.role === "user" ? "text-violet-200 text-right" : "text-gray-400"}`}>
                     {formatTime(msg.timestamp)}
                   </p>
                 </div>
@@ -230,10 +214,10 @@ export default function AIChat() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Suggested questions — tampil hanya saat baru buka */}
+          {/* Suggested questions */}
           {messages.length <= 1 && !loading && (
             <div className="px-4 pb-2">
-              <p className="text-xs text-gray-400 mb-2">Pertanyaan populer:</p>
+              <p className="text-xs text-gray-400 mb-2">{tr.chatSuggestLabel}</p>
               <div className="flex flex-wrap gap-1.5">
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button
@@ -256,7 +240,7 @@ export default function AIChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Tanya tentang keuangan kamu..."
+                placeholder={tr.chatPlaceholder}
                 rows={1}
                 className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
                 style={{ maxHeight: "80px", scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -272,7 +256,7 @@ export default function AIChat() {
               </button>
             </div>
             <p className="mt-1.5 text-center text-[10px] text-gray-400">
-              Enter untuk kirim · Shift+Enter untuk baris baru
+              {tr.chatHint}
             </p>
           </div>
         </div>
