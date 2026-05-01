@@ -1,9 +1,5 @@
 import { FC } from "react";
-
-interface FileInputProps {
-  className?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-}
+import type { FileInputProps } from "@/lib/types/form";
 
 const FileInput: FC<FileInputProps> = ({ className, onChange }) => {
   return (

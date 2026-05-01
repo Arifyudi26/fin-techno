@@ -2,13 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
-
-interface Message {
-  id: string;
-  role: "user" | "model";
-  parts: string;
-  timestamp: Date;
-}
+import type { ChatMessage } from "@/lib/types/finance";
 
 export default function AIChat() {
   const { t, lang } = useI18n();
@@ -23,7 +17,7 @@ export default function AIChat() {
   ];
 
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +44,7 @@ export default function AIChat() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
 
-    const userMsg: Message = {
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
       parts: text.trim(),
@@ -73,7 +67,7 @@ export default function AIChat() {
         lang,
       });
 
-      const aiMsg: Message = {
+      const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "model",
         parts: res.data.reply,

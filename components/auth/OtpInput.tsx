@@ -1,13 +1,6 @@
 import { useRef, useState, KeyboardEvent, ClipboardEvent } from "react";
 import Button from "@components/ui/button/Button";
-
-interface OtpInputProps {
-  email: string;
-  purpose?: string;
-  onVerified: (code: string) => void;
-  onResend: () => void;
-  loading?: boolean;
-}
+import type { OtpInputProps } from "@/lib/types/components";
 
 export default function OtpInput({ email, onVerified, onResend, loading }: OtpInputProps) {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));

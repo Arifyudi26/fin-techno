@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import type { BankAccountBalance } from "@/lib/types/dashboard";
+import type { ReportFilterState } from "@/lib/types/finance";
 import DatePicker from "@components/form/DatePicker";
 
-export interface ReportFilterState {
-  dateFrom: string;
-  dateTo: string;
-  accountId: string | null;
-  accountType: "BANK" | "WALLET" | null;
-}
+export type { ReportFilterState };
 
 interface Props {
   filters: ReportFilterState;

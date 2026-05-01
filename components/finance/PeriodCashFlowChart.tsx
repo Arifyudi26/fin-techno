@@ -1,8 +1,7 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { multiSeriestooltip } from "@/lib/apexTooltip";
-
-interface DailyPoint { date: string; credit: number; debit: number; }
+import type { DailyPoint } from "@/lib/types/finance";
 
 interface Props { data: DailyPoint[]; }
 

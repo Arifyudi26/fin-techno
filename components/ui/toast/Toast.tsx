@@ -1,19 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
+import type { ToastType, ToastProps } from "@/lib/types/ui";
 
-export type ToastType = "success" | "error" | "warning" | "info";
-
-interface ToastProps {
-  isOpen: boolean;
-  type: ToastType;
-  title: string;
-  message?: string;
-  duration?: number; // ms, 0 = manual close
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm?: () => void;
-  onClose: () => void;
-}
+export type { ToastType };
 
 const icons: Record<ToastType, React.ReactNode> = {
   success: (

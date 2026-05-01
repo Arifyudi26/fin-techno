@@ -1,37 +1,4 @@
-import { ReactNode } from "react";
-
-// Props for Table
-interface TableProps {
-  children: ReactNode; // Table content (thead, tbody, etc.)
-  className?: string; // Optional className for styling
-}
-
-// Props for TableHeader
-interface TableHeaderProps {
-  children: ReactNode; // Header row(s)
-  className?: string; // Optional className for styling
-}
-
-// Props for TableBody
-interface TableBodyProps {
-  children: ReactNode; // Body row(s)
-  className?: string; // Optional className for styling
-}
-
-// Props for TableRow
-interface TableRowProps {
-  children: ReactNode; // Cells (th or td)
-  className?: string; // Optional className for styling
-  onClick?: () => void;
-}
-
-// Props for TableCell
-interface TableCellProps {
-  children?: ReactNode;
-  isHeader?: boolean;
-  className?: string;
-  colSpan?: number;
-}
+import type { TableProps, TableHeaderProps, TableBodyProps, TableRowProps, TableCellProps } from "@/lib/types/ui";
 
 // Table Component
 const Table: React.FC<TableProps> = ({ children, className }) => {

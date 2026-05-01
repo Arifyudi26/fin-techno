@@ -1,18 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-
-interface Option {
-  value: string;
-  text: string;
-}
-
-interface MultiSelectProps {
-  label: string;
-  options: Option[];
-  defaultSelected?: string[];
-  onChange?: (selected: string[]) => void;
-  disabled?: boolean;
-}
+import type { MultiSelectProps } from "@/lib/types/form";
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
   label,

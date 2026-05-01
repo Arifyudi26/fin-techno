@@ -1,13 +1,5 @@
 import clsx from "clsx"; // Install with: npm install clsx
-
-interface CheckboxProps {
-  label?: string;
-  checked: boolean;
-  className?: string;
-  id?: string;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}
+import type { CheckboxProps } from "@/lib/types/form";
 
 const Checkbox: React.FC<CheckboxProps> = ({
   label,

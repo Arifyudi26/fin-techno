@@ -1,8 +1,4 @@
-interface Props {
-  provider: string;
-  size?: number;
-  className?: string;
-}
+import type { BankIconProps } from "@/lib/types/components";
 
 // BCA — biru tua dengan tulisan BCA
 function BCA({ size }: { size: number }) {
@@ -114,7 +110,7 @@ const bankMap: Record<string, React.FC<{ size: number }>> = {
   BTN: BTN, BSI: BSI, OTHER: OTHER_BANK,
 };
 
-export default function BankProviderIcon({ provider, size = 40, className }: Props) {
+export default function BankProviderIcon({ provider, size = 40, className }: BankIconProps) {
   const Icon = bankMap[provider] ?? OTHER_BANK;
   return (
     <span className={className}>
