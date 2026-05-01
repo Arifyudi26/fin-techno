@@ -114,6 +114,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
     { href: "/docs/calendar", label: tr.navCalendar },
     { href: "/docs/notifications", label: tr.navNotifications },
     { href: "/docs/user", label: tr.navUser },
+    { href: "/docs/ai", label: tr.navAI },
   ];
 
   return (
