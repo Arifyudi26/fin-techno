@@ -17,6 +17,7 @@ export const docs = {
     navCalendar: "Calendar API",
     navNotifications: "Notifications API",
     navUser: "User API",
+    navAI: "AI API",
 
     // Common
     authNote: "Semua endpoint memerlukan",
@@ -32,12 +33,13 @@ export const docs = {
     authDesc: "Semua endpoint API (kecuali",
     authDesc2: ") memerlukan header:",
     features: [
-      { title: "Upload E-Statement", desc: "CSV, XLSX, PDF dari BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, DANA, ShopeePay" },
+      { title: "Upload E-Statement", desc: "CSV, XLSX, PDF dari BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, DANA, ShopeePay. PDF terenkripsi (password-protected) didukung." },
       { title: "Dashboard Keuangan", desc: "Metrik income, expense, net flow, cash flow trend, dan spending by category" },
       { title: "Kalender Transaksi", desc: "Lihat ringkasan harian, klik hari untuk detail transaksi" },
       { title: "Laporan Keuangan", desc: "Laporan pengeluaran & pemasukan per periode dengan breakdown kategori" },
       { title: "Manajemen Kategori", desc: "Buat kategori dengan auto-assign keyword ke transaksi yang cocok" },
       { title: "Multi-Rekening", desc: "Kelola beberapa rekening bank dan dompet digital sekaligus" },
+      { title: "AI Financial Assistant", desc: "Chat dengan AI tentang keuangan kamu, dan dapatkan analisis otomatis berbasis data transaksi (Gemini 2.5 Flash)" },
     ],
 
     // Flow
@@ -85,12 +87,14 @@ export const docs = {
           {
             label: null,
             steps: [
-              { title: "Pilih rekening & file", desc: "User memilih rekening/dompet tujuan, lalu upload file CSV, XLSX, atau PDF (maks 10MB)." },
+              { title: "Pilih rekening & file", desc: "User memilih rekening/dompet tujuan, lalu upload file CSV, XLSX, atau PDF (maks 10MB). Format yang didukung per provider: BNI hanya PDF; BRI mendukung CSV & PDF; BCA, Mandiri, CIMB, dll mendukung CSV/XLSX/XLS." },
+              { title: "Validasi format & provider", desc: "Sistem memvalidasi ekstensi file terhadap provider yang dipilih. Jika nama file mengandung keyword provider lain (misal file BRI diupload ke akun BCA), sistem menampilkan peringatan konflik." },
+              { title: "PDF password (opsional)", desc: "Jika file PDF terenkripsi, sistem mengembalikan HTTP 423 dengan kode PDF_PASSWORD_REQUIRED. Frontend menampilkan popup input password. Jika password salah, sistem mengembalikan HTTP 422 dengan kode PDF_PASSWORD_WRONG." },
               { title: "Cek duplikat", desc: "Sistem mengecek duplikat berdasarkan nama file dan hash konten file. Jika sudah ada, upload ditolak dengan kode DUPLICATE_FILENAME." },
-              { title: "Simpan ke storage", desc: "File disimpan ke Vercel Blob. Record upload dibuat di database dengan status PENDING." },
-              { title: "Parsing otomatis", desc: "Sistem mem-parsing file: deteksi kolom otomatis (tanggal, deskripsi, debit, kredit, saldo, referensi), konversi format tanggal, deteksi tipe transaksi (CREDIT/DEBIT)." },
+              { title: "Simpan ke storage", desc: "File disimpan ke Vercel Blob. Record upload dibuat di database dengan status PROCESSING." },
+              { title: "Parsing otomatis (async via QStash)", desc: "Sistem mem-parsing file: deteksi kolom otomatis (tanggal, deskripsi, debit, kredit, saldo, referensi), konversi format tanggal, deteksi tipe transaksi (CREDIT/DEBIT). Proses berjalan async via QStash." },
               { title: "Auto-kategorisasi", desc: "Setiap transaksi dicocokkan dengan keyword dari kategori yang sudah dibuat user. Transaksi yang cocok langsung dikategorikan." },
-              { title: "Notifikasi", desc: "Setelah selesai, notifikasi dikirim ke user via SSE (Server-Sent Events) dengan ringkasan: total baris, parsed, failed, total credit/debit." },
+              { title: "Notifikasi", desc: "Setelah selesai, notifikasi dikirim ke user via SSE (Server-Sent Events) dengan ringkasan: total baris, new, duplicate, failed, total credit/debit." },
             ],
           },
         ],
@@ -213,6 +217,9 @@ export const docs = {
       userGetDesc: "Ambil data profil user yang sedang login beserta statistik akun: jumlah rekening bank, dompet, upload, dan transaksi.",
       userUpdateDesc: "Update nama atau ganti password. Untuk ganti password, currentPassword wajib diisi dan divalidasi.",
       userAvatarDesc: "Upload foto profil. Request menggunakan multipart/form-data. File disimpan ke Vercel Blob.",
+
+      aiChatDesc: "Chat dengan AI tentang kondisi keuangan kamu. Backend menggunakan Gemini 2.5 Flash dengan konteks data keuangan 6 bulan terakhir (total income, expense, net flow, data per bulan, top kategori pengeluaran). Mendukung riwayat percakapan multi-turn.",
+      aiAnalyzeDesc: "Analisis otomatis kondisi keuangan berdasarkan SEMUA e-statement yang sudah diupload. Menghasilkan narasi analisis (kondisi keseluruhan, bulan pengeluaran terbesar, kategori boros, tren, rekomendasi) beserta data konteks mentah.",
     },
   },
 
@@ -232,6 +239,7 @@ export const docs = {
     navCalendar: "Calendar API",
     navNotifications: "Notifications API",
     navUser: "User API",
+    navAI: "AI API",
 
     authNote: "All endpoints require",
     publicNote: "All endpoints below are public — no token required.",
@@ -245,12 +253,13 @@ export const docs = {
     authDesc: "All API endpoints (except",
     authDesc2: ") require the header:",
     features: [
-      { title: "Upload E-Statement", desc: "CSV, XLSX, PDF from BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, DANA, ShopeePay" },
+      { title: "Upload E-Statement", desc: "CSV, XLSX, PDF from BRI, BCA, Mandiri, BNI, CIMB, GoPay, OVO, DANA, ShopeePay. Password-protected PDFs are supported." },
       { title: "Finance Dashboard", desc: "Income, expense, net flow, cash flow trend, and spending by category metrics" },
       { title: "Transaction Calendar", desc: "View daily summaries, click a day to see transaction details" },
       { title: "Financial Reports", desc: "Expense & income reports per period with category breakdown" },
       { title: "Category Management", desc: "Create categories with auto-assign keywords to matching transactions" },
       { title: "Multi-Account", desc: "Manage multiple bank accounts and digital wallets at once" },
+      { title: "AI Financial Assistant", desc: "Chat with AI about your finances and get automatic analysis based on your transaction data (Gemini 2.5 Flash)" },
     ],
 
     flowTitle: "App Flow (FRD)",
@@ -297,12 +306,14 @@ export const docs = {
           {
             label: null,
             steps: [
-              { title: "Select account & file", desc: "User selects target account/wallet, then uploads CSV, XLSX, or PDF file (max 10MB)." },
+              { title: "Select account & file", desc: "User selects target account/wallet, then uploads CSV, XLSX, or PDF file (max 10MB). Supported formats per provider: BNI accepts PDF only; BRI accepts CSV & PDF; BCA, Mandiri, CIMB, etc. accept CSV/XLSX/XLS." },
+              { title: "Format & provider validation", desc: "System validates file extension against the selected provider. If the filename contains keywords of a different provider (e.g., a BRI file uploaded to a BCA account), a conflict warning is shown." },
+              { title: "PDF password (optional)", desc: "If the PDF is encrypted, the system returns HTTP 423 with code PDF_PASSWORD_REQUIRED. The frontend shows a password input popup. If the password is wrong, the system returns HTTP 422 with code PDF_PASSWORD_WRONG." },
               { title: "Duplicate check", desc: "System checks for duplicates by filename and file content hash. If already exists, upload is rejected with DUPLICATE_FILENAME code." },
-              { title: "Save to storage", desc: "File is saved to Vercel Blob. Upload record is created in database with PENDING status." },
-              { title: "Auto parsing", desc: "System parses the file: auto-detects columns (date, description, debit, credit, balance, reference), converts date formats, detects transaction type (CREDIT/DEBIT)." },
+              { title: "Save to storage", desc: "File is saved to Vercel Blob. Upload record is created in database with PROCESSING status." },
+              { title: "Auto parsing (async via QStash)", desc: "System parses the file: auto-detects columns (date, description, debit, credit, balance, reference), converts date formats, detects transaction type (CREDIT/DEBIT). Process runs asynchronously via QStash." },
               { title: "Auto-categorization", desc: "Each transaction is matched against keywords from user-created categories. Matching transactions are immediately categorized." },
-              { title: "Notification", desc: "After completion, notification is sent to user via SSE (Server-Sent Events) with summary: total rows, parsed, failed, total credit/debit." },
+              { title: "Notification", desc: "After completion, notification is sent to user via SSE (Server-Sent Events) with summary: total rows, new, duplicate, failed, total credit/debit." },
             ],
           },
         ],
@@ -425,6 +436,9 @@ export const docs = {
       userGetDesc: "Get the logged-in user's profile data with account statistics: bank account count, wallet count, upload count, and transaction count.",
       userUpdateDesc: "Update name or change password. To change password, currentPassword is required and validated.",
       userAvatarDesc: "Upload profile photo. Request uses multipart/form-data. File is saved to Vercel Blob.",
+
+      aiChatDesc: "Chat with AI about your financial condition. Backend uses Gemini 2.5 Flash with financial context from the last 6 months (total income, expense, net flow, monthly data, top expense categories). Supports multi-turn conversation history.",
+      aiAnalyzeDesc: "Automatic financial analysis based on ALL uploaded e-statements. Generates a narrative analysis (overall health, highest expense month, overspending categories, trend, recommendations) along with raw context data.",
     },
   },
 } as const;

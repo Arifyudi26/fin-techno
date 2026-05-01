@@ -1,6 +1,6 @@
 # Fin-Techno
 
-Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital, parsing otomatis, kategorisasi, dan analitik keuangan.
+Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital, parsing otomatis, kategorisasi, analitik keuangan, dan AI financial assistant berbasis Gemini.
 
 ---
 
@@ -61,6 +61,9 @@ BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
 QSTASH_URL="..."
 QSTASH_TOKEN="..."
 
+# Opsional — Gemini AI (AI chat & analisis keuangan)
+GEMINI_API_KEY=""
+
 # Opsional — OAuth
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
@@ -83,7 +86,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ## Tech Stack
 
-Next.js 15 · TypeScript · PostgreSQL (Neon) · Prisma · JWT + NextAuth v4 · Zustand · ApexCharts · FullCalendar · Tailwind CSS · Vercel Blob · QStash
+Next.js 15 · TypeScript · PostgreSQL (Neon) · Prisma · JWT + NextAuth v4 · Zustand · ApexCharts · FullCalendar · Tailwind CSS · Vercel Blob · QStash · Gemini AI
 
 ---
 

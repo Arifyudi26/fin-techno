@@ -23,8 +23,8 @@ export default function DocsUpload() {
       />
 
       <Endpoint method="POST" path="/api/upload/submit" desc={tr.api.uploadSubmitDesc}
-        body={`// multipart/form-data\nfile: <binary file>\naccountId: "clxyz..."\nsourceType: "BANK"   // BANK | WALLET\nnotes: "..."         // optional`}
-        response={`// Success\n{\n  "message": "Upload berhasil diproses",\n  "uploadId": "clxyz...",\n  "status": "DONE",\n  "parsedRows": 118,\n  "failedRows": 2,\n  "totalCredit": 8500000,\n  "totalDebit": 6200000\n}\n\n// Duplicate\n{\n  "message": "File already uploaded.",\n  "code": "DUPLICATE_FILENAME"\n}`}
+        body={`// multipart/form-data\nfile: <binary file>\naccountId: "clxyz..."\nsourceType: "BANK"   // BANK | WALLET\nnotes: "..."         // optional\npdfPassword: "..."   // optional — required if PDF is password-protected`}
+        response={`// Success (async processing started)\n{\n  "message": "Upload berhasil diproses",\n  "uploadId": "clxyz...",\n  "status": "PROCESSING",\n  "parsedRows": 0,\n  "failedRows": 0,\n  "totalCredit": 0,\n  "totalDebit": 0\n}\n\n// Duplicate\n{\n  "message": "File already uploaded.",\n  "code": "DUPLICATE_FILENAME"\n}\n\n// PDF is password-protected (no password provided)\n// HTTP 423\n{\n  "message": "PDF ini dilindungi password.",\n  "code": "PDF_PASSWORD_REQUIRED"\n}\n\n// Wrong PDF password\n// HTTP 422\n{\n  "message": "Password PDF salah.",\n  "code": "PDF_PASSWORD_WRONG"\n}`}
       />
 
       <Endpoint method="GET" path="/api/upload/:id" desc={tr.api.uploadDetailDesc}
