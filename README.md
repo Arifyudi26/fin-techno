@@ -4,14 +4,15 @@ Aplikasi manajemen keuangan pribadi — upload e-statement bank & dompet digital
 
 ---
 
-## Demo & Dokumentasi
+## Demo & Dokumentasi API
 
 | | URL |
 |---|---|
 | **Demo (Production)** | [https://fin-techno.vercel.app](https://fin-techno.vercel.app) |
-| **Dokumentasi** | [https://fin-techno.vercel.app/docs](https://fin-techno.vercel.app/docs) |
+| **API Docs (Swagger)** | [https://fin-techno.vercel.app/docs](https://fin-techno.vercel.app/docs) |
 
-> Halaman `/docs` bisa dibuka **tanpa login** — berisi flow aplikasi (FRD), penjelasan fitur, dan API reference lengkap dengan payload & response.
+> Halaman `/docs` berisi **Swagger UI** — dokumentasi interaktif seluruh REST API.  
+> Bisa dibuka **tanpa login**, tapi untuk mencoba endpoint yang butuh auth, klik **Authorize** dan masukkan JWT token.
 >
 > Untuk akses docs di local, jalankan dev server lalu buka `http://localhost:3000/docs`.
 
@@ -87,6 +88,33 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ## Tech Stack
 
 Next.js 15 · TypeScript · PostgreSQL (Neon) · Prisma · JWT + NextAuth v4 · Zustand · ApexCharts · FullCalendar · Tailwind CSS · Vercel Blob · QStash · Gemini AI
+
+---
+
+## API Documentation
+
+Dokumentasi API menggunakan **Swagger UI** (OpenAPI 3.0).
+
+- Spec didefinisikan di `lib/openapi.ts`
+- UI tersedia di `/docs`
+- Untuk endpoint yang butuh auth: dapatkan token via `POST /api/auth/login`, lalu klik **Authorize** di Swagger UI dan masukkan token
+
+### Endpoint Groups
+
+| Tag | Deskripsi |
+|-----|-----------|
+| Auth | Register, login, OTP |
+| Transactions | List & filter transaksi (bank + wallet) |
+| Bank Accounts | CRUD rekening bank |
+| Wallets | CRUD dompet digital |
+| Categories | CRUD kategori transaksi |
+| Upload | Submit & proses e-statement |
+| Dashboard | Metrik, cashflow, ringkasan akun |
+| Reports | Laporan pengeluaran, pemasukan, periode |
+| Calendar | Data transaksi per tanggal/bulan |
+| Notifications | List & SSE stream notifikasi |
+| User | Profil & avatar |
+| AI | Chat & analisis keuangan |
 
 ---
 

@@ -38,6 +38,7 @@
     "react": "^18.3.1",
     "react-apexcharts": "^2.1.0",
     "react-dom": "^18.3.1",
+    "swagger-ui-react": "^5.32.5",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.3"
   },
@@ -53,6 +54,7 @@
     "@types/pdf-parse": "^1.1.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/swagger-ui-react": "^5.18.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "postcss": "^8",
