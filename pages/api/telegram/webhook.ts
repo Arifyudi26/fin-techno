@@ -303,39 +303,141 @@ async function getRecentTransactions(userId: string): Promise<string> {
   return `📋 *5 Transaksi Terakhir*\n\n` + rows.join("\n");
 }
 
+// Bangun konteks keuangan lengkap untuk dikirim ke AI
+async function buildFinancialContext(userId: string, monthsBack = 6): Promise<string> {
+  const db = prisma as any;
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth() - (monthsBack - 1), 1);
+
+  const [bankTx, walletTx] = await Promise.all([
+    prisma.bankTransaction.findMany({
+      where: { bankAccount: { ownerId: userId }, transactionDate: { gte: startDate } },
+      select: {
+        transactionDate: true,
+        description: true,
+        amount: true,
+        type: true,
+        categories: { select: { category: { select: { name: true } } } },
+        bankAccount: { select: { bankProvider: true, accountName: true } },
+      },
+      orderBy: { transactionDate: "desc" },
+    }),
+    db.walletTransaction.findMany({
+      where: { wallet: { ownerId: userId }, transactionDate: { gte: startDate } },
+      select: {
+        transactionDate: true,
+        description: true,
+        amount: true,
+        type: true,
+        categories: { select: { category: { select: { name: true } } } },
+        wallet: { select: { walletProvider: true, accountName: true } },
+      },
+      orderBy: { transactionDate: "desc" },
+    }),
+  ]);
+
+  // Gabungkan semua transaksi dengan label sumber
+  const allTx: Array<{
+    date: Date;
+    description: string;
+    amount: number;
+    type: string;
+    categoryNames: string[];
+    source: string;
+  }> = [
+    ...bankTx.map((t: any) => ({
+      date: new Date(t.transactionDate),
+      description: t.description,
+      amount: Number(t.amount),
+      type: t.type,
+      categoryNames: t.categories.map((c: any) => c.category.name) as string[],
+      source: `${t.bankAccount.bankProvider} (${t.bankAccount.accountName})`,
+    })),
+    ...walletTx.map((t: any) => ({
+      date: new Date(t.transactionDate),
+      description: t.description,
+      amount: Number(t.amount),
+      type: t.type,
+      categoryNames: t.categories.map((c: any) => c.category.name) as string[],
+      source: `${t.wallet.walletProvider} (${t.wallet.accountName})`,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  // Ringkasan per bulan
+  const monthlyMap: Record<string, { income: number; expense: number; count: number }> = {};
+  for (const tx of allTx) {
+    const key = tx.date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+    if (!monthlyMap[key]) monthlyMap[key] = { income: 0, expense: 0, count: 0 };
+    if (tx.type === "CREDIT") monthlyMap[key].income += tx.amount;
+    else monthlyMap[key].expense += tx.amount;
+    monthlyMap[key].count++;
+  }
+
+  // Ringkasan per kategori (pengeluaran)
+  const categoryMap: Record<string, number> = {};
+  for (const tx of allTx) {
+    if (tx.type !== "CREDIT") {
+      const cats = tx.categoryNames.length > 0 ? tx.categoryNames : ["Tidak Berkategori"];
+      for (const cat of cats) {
+        categoryMap[cat] = (categoryMap[cat] ?? 0) + tx.amount;
+      }
+    }
+  }
+
+  // Total keseluruhan
+  let totalIncome = 0, totalExpense = 0;
+  for (const tx of allTx) {
+    if (tx.type === "CREDIT") totalIncome += tx.amount;
+    else totalExpense += tx.amount;
+  }
+
+  // Format ringkasan bulanan
+  const monthlyLines = Object.entries(monthlyMap)
+    .map(([month, v]) => `  - ${month}: Masuk ${fmt(v.income)}, Keluar ${fmt(v.expense)}, Net ${fmt(v.income - v.expense)} (${v.count} transaksi)`)
+    .join("\n");
+
+  // Format ringkasan kategori
+  const categoryLines = Object.entries(categoryMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([cat, amt]) => `  - ${cat}: ${fmt(amt)}`)
+    .join("\n");
+
+  // 20 transaksi terakhir sebagai contoh detail
+  const recentLines = allTx.slice(0, 20).map((tx) => {
+    const date = tx.date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+    const sign = tx.type === "CREDIT" ? "+" : "-";
+    const cat = tx.categoryNames.length > 0 ? ` [${tx.categoryNames.join(", ")}]` : "";
+    return `  - ${date} | ${sign}${fmt(tx.amount)}${cat} | ${tx.description} | via ${tx.source}`;
+  }).join("\n");
+
+  return (
+    `=== DATA KEUANGAN PENGGUNA (${monthsBack} BULAN TERAKHIR) ===\n` +
+    `Tanggal hari ini: ${now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}\n\n` +
+    `RINGKASAN TOTAL:\n` +
+    `  Total Pemasukan : ${fmt(totalIncome)}\n` +
+    `  Total Pengeluaran: ${fmt(totalExpense)}\n` +
+    `  Net Flow         : ${fmt(totalIncome - totalExpense)}\n` +
+    `  Jumlah Transaksi : ${allTx.length}\n\n` +
+    `RINGKASAN PER BULAN:\n${monthlyLines || "  (tidak ada data)"}\n\n` +
+    (categoryLines ? `PENGELUARAN PER KATEGORI:\n${categoryLines}\n\n` : "") +
+    `20 TRANSAKSI TERAKHIR:\n${recentLines || "  (tidak ada transaksi)"}`
+  );
+}
+
 async function getAIChat(userId: string, question: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return "❌ Gemini AI belum dikonfigurasi\\.";
 
-  const db = prisma as any;
-  const now = new Date();
-  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-
-  const [bankTx, walletTx] = await Promise.all([
-    prisma.bankTransaction.findMany({
-      where: { bankAccount: { ownerId: userId }, transactionDate: { gte: sixMonthsAgo } },
-      select: { type: true, amount: true, transactionDate: true },
-    }),
-    db.walletTransaction.findMany({
-      where: { wallet: { ownerId: userId }, transactionDate: { gte: sixMonthsAgo } },
-      select: { type: true, amount: true, transactionDate: true },
-    }),
-  ]);
-
-  const allTx = [...bankTx, ...walletTx];
-  let totalIncome = 0, totalExpense = 0;
-  for (const tx of allTx) {
-    if (tx.type === "CREDIT") totalIncome += Number(tx.amount);
-    else totalExpense += Number(tx.amount);
-  }
+  const financialContext = await buildFinancialContext(userId, 6);
 
   const systemContext =
-    `Kamu adalah asisten keuangan pribadi yang cerdas dan ramah. ` +
-    `Jawab dalam Bahasa Indonesia yang singkat dan mudah dipahami. ` +
-    `Data keuangan pengguna (6 bulan terakhir): ` +
-    `Total Pemasukan: ${fmt(totalIncome)}, Total Pengeluaran: ${fmt(totalExpense)}, ` +
-    `Net Flow: ${fmt(totalIncome - totalExpense)}, Total Transaksi: ${allTx.length}. ` +
-    `Tanggal hari ini: ${now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.`;
+    `Kamu adalah asisten keuangan pribadi yang cerdas dan ramah bernama Fin-Techno Bot. ` +
+    `Jawab dalam Bahasa Indonesia yang jelas dan mudah dipahami. ` +
+    `Gunakan data keuangan di bawah ini untuk menjawab pertanyaan pengguna secara spesifik dan akurat. ` +
+    `Jika pertanyaan memerlukan perhitungan dari data transaksi, lakukan perhitungannya. ` +
+    `Sertakan angka, tanggal, dan detail yang relevan dari data yang tersedia.\n\n` +
+    financialContext;
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -343,7 +445,7 @@ async function getAIChat(userId: string, question: string): Promise<string> {
   const chat = model.startChat({
     history: [
       { role: "user", parts: [{ text: systemContext }] },
-      { role: "model", parts: [{ text: "Baik, saya siap membantu!" }] },
+      { role: "model", parts: [{ text: "Baik, saya sudah membaca semua data keuangan kamu. Saya siap menjawab pertanyaan secara detail!" }] },
     ],
   });
 
@@ -355,37 +457,21 @@ async function getAIAnalysis(userId: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return "❌ Gemini AI belum dikonfigurasi\\.";
 
-  const db = prisma as any;
-
-  const [bankTx, walletTx] = await Promise.all([
-    prisma.bankTransaction.findMany({
-      where: { bankAccount: { ownerId: userId } },
-      select: { type: true, amount: true, transactionDate: true },
-    }),
-    db.walletTransaction.findMany({
-      where: { wallet: { ownerId: userId } },
-      select: { type: true, amount: true, transactionDate: true },
-    }),
-  ]);
-
-  const allTx = [...bankTx, ...walletTx];
-  let totalIncome = 0, totalExpense = 0;
-  for (const tx of allTx) {
-    if (tx.type === "CREDIT") totalIncome += Number(tx.amount);
-    else totalExpense += Number(tx.amount);
-  }
+  const financialContext = await buildFinancialContext(userId, 6);
 
   const prompt =
-    `Kamu adalah analis keuangan pribadi. Berikan analisis singkat (maksimal 300 kata) dalam Bahasa Indonesia.\n\n` +
-    `Data keuangan pengguna:\n` +
-    `- Total Pemasukan: ${fmt(totalIncome)}\n` +
-    `- Total Pengeluaran: ${fmt(totalExpense)}\n` +
-    `- Net Flow: ${fmt(totalIncome - totalExpense)}\n` +
-    `- Total Transaksi: ${allTx.length}\n\n` +
-    `Format jawaban:\n` +
-    `1. Kondisi Keuangan\n` +
-    `2. Hal yang Perlu Diperhatikan\n` +
-    `3. Rekomendasi (2-3 poin singkat)`;
+    `Kamu adalah analis keuangan pribadi yang handal. ` +
+    `Berikan analisis mendalam dalam Bahasa Indonesia berdasarkan data keuangan berikut.\n\n` +
+    financialContext + `\n\n` +
+    `Berikan analisis dengan format berikut (boleh lebih dari 300 kata jika data cukup):\n\n` +
+    `1. KONDISI KEUANGAN\n` +
+    `   Jelaskan kondisi keuangan secara keseluruhan, tren pemasukan vs pengeluaran per bulan.\n\n` +
+    `2. ANALISIS PENGELUARAN\n` +
+    `   Kategori apa yang paling besar? Bulan mana yang paling boros?\n\n` +
+    `3. POLA & TREN\n` +
+    `   Apakah ada pola menarik dari data transaksi? (misal: pengeluaran naik tiap akhir bulan)\n\n` +
+    `4. REKOMENDASI\n` +
+    `   3-5 rekomendasi konkret berdasarkan data aktual yang ada.`;
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
