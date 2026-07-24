@@ -131,9 +131,10 @@ function embedImage(
   });
   // tl.row = 0-based → anchorRow.number - 1
   const tlRow = anchorRow.number - 1;
+  // ExcelJS accepts simple {col, row} format at runtime despite stricter type definition
   ws.addImage(imgId, {
-    tl: { col: colStart, row: tlRow },
-    br: { col: colEnd,   row: tlRow + imgHeightRows },
+    tl: { col: colStart, row: tlRow } as ExcelJS.Anchor,
+    br: { col: colEnd,   row: tlRow + imgHeightRows } as ExcelJS.Anchor,
   });
   // Reserve baris agar konten di bawah tidak overlap
   for (let i = 0; i < imgHeightRows; i++) ws.addRow([]).height = 18;
@@ -381,9 +382,10 @@ export async function exportDashboardExcel(payload: ExportPayload) {
         extension: "png",
       });
       const tlRow = donutLabelRow.number - 1;
+      // ExcelJS accepts simple {col, row} format at runtime despite stricter type definition
       ws.addImage(imgId, {
-        tl: { col: 4, row: tlRow },
-        br: { col: 8, row: tlRow + 16 },
+        tl: { col: 4, row: tlRow } as ExcelJS.Anchor,
+        br: { col: 8, row: tlRow + 16 } as ExcelJS.Anchor,
       });
     }
   }
