@@ -10,7 +10,7 @@ export async function sendMessage(chatId: number | string, text: string) {
     body: JSON.stringify({
       chat_id: chatId,
       text,
-      parse_mode: "Markdown",
+      parse_mode: "MarkdownV2",
     }),
   });
   if (!res.ok) {
@@ -21,11 +21,17 @@ export async function sendMessage(chatId: number | string, text: string) {
 }
 
 // Daftarkan URL webhook ke Telegram, dipanggil sekali setelah deploy
+// secret_token wajib disertakan agar Telegram mengirim header
+// x-telegram-bot-api-secret-token yang dicek di endpoint webhook
 export async function setWebhook(webhookUrl: string) {
+  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const body: Record<string, string> = { url: webhookUrl };
+  if (secretToken) body.secret_token = secretToken;
+
   const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: webhookUrl }),
+    body: JSON.stringify(body),
   });
   return res.json();
 }
