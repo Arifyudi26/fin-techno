@@ -87,14 +87,16 @@ enum NotifType {
 }
 
 model User {
-  id            String        @id @default(uuid())
-  name          String        @default("user")
-  email         String        @unique
-  password      String
-  role          Role          @default(user)
-  loginProvider LoginProvider @default(APP)
-  avatar        String?
-  createdAt     DateTime      @default(now())
+  id             String        @id @default(uuid())
+  name           String        @default("user")
+  email          String        @unique
+  password       String
+  role           Role          @default(user)
+  loginProvider  LoginProvider @default(APP)
+  avatar         String?
+  telegramChatId    String?   @unique  // Telegram chat ID untuk bot integration
+  telegramLinkToken String?   @unique  // Token sementara untuk link akun ke bot
+  createdAt         DateTime  @default(now())
 
   bankAccounts         BankAccount[]
   uploadedStatements   BankStatementUpload[]

@@ -1676,6 +1676,310 @@ export const openApiSpec = {
           }
         }
       }
+    },
+    "/api/telegram/link": {
+      "get": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Cek status koneksi Telegram",
+        "description": "Mengecek apakah akun user sudah terhubung ke Telegram bot.",
+        "responses": {
+          "200": {
+            "description": "Status koneksi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connected": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "chatId": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "hasPendingToken": {
+                      "type": "boolean",
+                      "example": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Generate link token untuk menghubungkan Telegram",
+        "description": "Membuat token sekali pakai. Gunakan deepLink yang dikembalikan untuk membuka bot di Telegram dan menghubungkan akun.",
+        "responses": {
+          "200": {
+            "description": "Token dan deep link berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "example": "a1b2c3d4e5f6..."
+                    },
+                    "deepLink": {
+                      "type": "string",
+                      "example": "https://t.me/fin_techno_bot?start=a1b2c3d4e5f6"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Putuskan koneksi Telegram",
+        "description": "Menghapus telegramChatId dari akun user sehingga bot tidak bisa lagi mengakses data.",
+        "responses": {
+          "200": {
+            "description": "Koneksi berhasil diputuskan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Telegram disconnected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/telegram/webhook": {
+      "post": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Webhook endpoint untuk Telegram Bot API",
+        "description": "Endpoint ini dipanggil otomatis oleh Telegram setiap kali ada pesan masuk ke bot. **Jangan dipanggil manual** — didaftarkan via register-webhook.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Telegram Update object",
+                "properties": {
+                  "update_id": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "object",
+                    "properties": {
+                      "message_id": { "type": "integer" },
+                      "from": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "first_name": { "type": "string" },
+                          "username": { "type": "string" }
+                        }
+                      },
+                      "chat": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "type": { "type": "string" }
+                        }
+                      },
+                      "text": { "type": "string", "example": "/ringkasan" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Update berhasil diproses"
+          },
+          "403": {
+            "description": "Secret token tidak valid"
+          }
+        }
+      }
+    },
+    "/api/telegram/webhook-status": {
+      "get": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Cek status webhook yang terdaftar (admin only)",
+        "description": "Mengecek webhook yang terdaftar di Telegram Bot API, termasuk URL, pending updates, dan error terakhir.",
+        "responses": {
+          "200": {
+            "description": "Status webhook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isRegistered": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "webhookUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": "https://fin-techno.vercel.app/api/telegram/webhook"
+                    },
+                    "pendingUpdateCount": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "lastErrorDate": {
+                      "type": "integer",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "lastErrorMessage": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "botToken": {
+                      "type": "string",
+                      "enum": ["configured", "missing"],
+                      "example": "configured"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — hanya admin"
+          },
+          "503": {
+            "description": "TELEGRAM_BOT_TOKEN belum dikonfigurasi"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Daftarkan atau re-register webhook (admin only)",
+        "description": "Mendaftarkan webhook URL ke Telegram Bot API. Bisa digunakan untuk registrasi awal atau update URL webhook.",
+        "responses": {
+          "200": {
+            "description": "Webhook berhasil didaftarkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhookUrl": {
+                      "type": "string",
+                      "example": "https://fin-techno.vercel.app/api/telegram/webhook"
+                    },
+                    "telegramResponse": {
+                      "type": "object",
+                      "properties": {
+                        "ok": { "type": "boolean", "example": true },
+                        "result": { "type": "boolean", "example": true },
+                        "description": { "type": "string", "example": "Webhook was set" }
+                      }
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — hanya bisa didaftarkan ke HTTPS production"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — hanya admin"
+          }
+        }
+      }
+    },
+    "/api/telegram/register-webhook": {
+      "post": {
+        "tags": [
+          "Telegram"
+        ],
+        "summary": "Daftarkan webhook URL ke Telegram (admin only)",
+        "description": "Panggil endpoint ini **sekali** setelah deploy ke Vercel untuk mendaftarkan URL webhook ke Telegram Bot API. Membutuhkan akun dengan role **admin**.",
+        "responses": {
+          "200": {
+            "description": "Webhook berhasil didaftarkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhookUrl": {
+                      "type": "string",
+                      "example": "https://fin-techno.vercel.app/api/telegram/webhook"
+                    },
+                    "telegramResponse": {
+                      "type": "object",
+                      "properties": {
+                        "ok": { "type": "boolean", "example": true },
+                        "result": { "type": "boolean", "example": true },
+                        "description": { "type": "string", "example": "Webhook was set" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden — hanya admin"
+          },
+          "503": {
+            "description": "TELEGRAM_BOT_TOKEN belum dikonfigurasi"
+          }
+        }
+      }
     }
   }
 };

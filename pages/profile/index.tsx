@@ -8,6 +8,7 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import useAuthStore from "@/store/authStore";
 import { useAvatarUrl, invalidateAvatarCache } from "@lib/hooks/useAvatarUrl";
 import { useI18n } from "@lib/i18n";
+import TelegramConnect from "@components/UserProfile/TelegramConnect";
 
 interface UserProfile { id: string; name: string; email: string; role: string; avatar?: string | null; createdAt: string; }
 interface UserStats { bankAccountCount: number; walletCount: number; uploadCount: number; transactionCount: number; }
@@ -102,8 +103,7 @@ export default function ProfilePage() {
       <PageBreadcrumb pageTitle={t.profile.pageTitle} />
 
       <div className="max-w-2xl space-y-6">
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {/* Stats cards */}        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             { label: t.profile.bankAccounts, value: stats?.bankAccountCount, icon: "M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" },
             { label: t.profile.wallets, value: stats?.walletCount, icon: "M2 6h20v14H2zM2 10h20" },
@@ -244,6 +244,9 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
+        {/* Telegram Bot */}
+        <TelegramConnect />
+
       </div>
 
       <Toast {...toastState} onClose={close} />
