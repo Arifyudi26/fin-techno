@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
-const defaultTheme = require("tailwindcss/defaultTheme");
+import defaultTheme from "tailwindcss/defaultTheme";
+import forms from "@tailwindcss/forms";
 
 export default {
   content: [
@@ -189,5 +190,5 @@ export default {
       },
     },
   },
-  plugins: [require("@tailwindcss/forms"), require("autoprefixer")],
+  plugins: [forms],
 } satisfies Config;
