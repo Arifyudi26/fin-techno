@@ -17,7 +17,8 @@ const PUBLIC_API_PATHS = [
   "/api/auth/csrf",        
   "/api/auth/providers",  
   "/api/auth/error",       
-  "/api/auth/_log",       
+  "/api/auth/_log",
+  "/api/telegram/webhook", 
 ];
 
 export function middleware(req: NextRequest) {
