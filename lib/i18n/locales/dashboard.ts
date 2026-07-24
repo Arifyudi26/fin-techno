@@ -98,6 +98,20 @@ export const dashboard = {
     chatSuggest3: "Kategori apa yang paling boros?",
     chatSuggest4: "Bagaimana cara menghemat pengeluaran saya?",
     chatSuggest5: "Bandingkan pemasukan dan pengeluaran saya",
+
+    // ExportButton
+    exportLabel: "Export",
+    exportTitle: "Export Laporan",
+    exportExcel: "Export Excel",
+    exportExcelDesc: "Data + sheet chart siap plot",
+    exportPdf: "Export PDF",
+    exportPdfDesc: "Laporan lengkap + chart",
+    exportingPdf: "Membuat PDF...",
+    exportingExcel: "Membuat Excel...",
+    exportTooltip: "Export laporan",
+    exportDevTitle: "Fitur Sedang Dalam Pengembangan",
+    exportDevDesc: "Export Excel sedang kami kerjakan dan akan segera tersedia. Sementara itu, kamu bisa menggunakan Export PDF.",
+    exportDevClose: "Mengerti",
   },
   en: {
     title: "Finance Dashboard",
@@ -192,5 +206,19 @@ export const dashboard = {
     chatSuggest3: "Which category am I spending the most on?",
     chatSuggest4: "How can I reduce my expenses?",
     chatSuggest5: "Compare my income and expenses",
+
+    // ExportButton
+    exportLabel: "Export",
+    exportTitle: "Export Report",
+    exportExcel: "Export Excel",
+    exportExcelDesc: "Data + chart sheet ready to plot",
+    exportPdf: "Export PDF",
+    exportPdfDesc: "Full report + chart",
+    exportingPdf: "Generating PDF...",
+    exportingExcel: "Generating Excel...",
+    exportTooltip: "Export report",
+    exportDevTitle: "Feature Under Development",
+    exportDevDesc: "Excel export is currently being worked on and will be available soon. In the meantime, you can use Export PDF.",
+    exportDevClose: "Got it",
   },
 } as const;
