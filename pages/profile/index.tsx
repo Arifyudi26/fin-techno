@@ -102,8 +102,9 @@ export default function ProfilePage() {
       <PageMeta title={`${t.profile.title} | Fin-Techno`} description={t.profile.description} />
       <PageBreadcrumb pageTitle={t.profile.pageTitle} />
 
-      <div className="max-w-2xl space-y-6">
-        {/* Stats cards */}        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="space-y-6">
+        {/* Stats cards */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[
             { label: t.profile.bankAccounts, value: stats?.bankAccountCount, icon: "M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" },
             { label: t.profile.wallets, value: stats?.walletCount, icon: "M2 6h20v14H2zM2 10h20" },
@@ -124,8 +125,10 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Profile card */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
+        {/* Profile card & Telegram - Side by side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Profile card */}
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
           {loading ? (
             <div className="space-y-4 animate-pulse">
               <div className="flex items-center gap-4">
@@ -243,10 +246,11 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
-        </div>
-        {/* Telegram Bot */}
-        <TelegramConnect />
+          </div>
 
+          {/* Telegram Bot */}
+          <TelegramConnect />
+        </div>
       </div>
 
       <Toast {...toastState} onClose={close} />
