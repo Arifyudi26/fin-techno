@@ -4,8 +4,7 @@
 //  Tempatkan di halaman /profile di bawah kartu profil lainnya.
  
 import { useEffect, useState } from "react";
-import axios from "axios";
-import Cookies from "js-cookie";
+import axiosGlobal from "@/services/AxiosGlobal";
 import useAuthStore from "@/store/authStore";
 
 interface LinkStatus {
@@ -23,7 +22,6 @@ interface WebhookStatus {
 export default function TelegramConnect() {
   const { role } = useAuthStore();
   const isAdmin = role === "admin";
-
   const [status, setStatus] = useState<LinkStatus | null>(null);
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
   const [deepLink, setDeepLink] = useState<string | null>(null);
@@ -31,34 +29,29 @@ export default function TelegramConnect() {
   const [registering, setRegistering] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
 
-  const token = Cookies.get("token");
-  const headers = { Authorization: `Bearer ${token}` };
-
   // Ambil status koneksi saat mount
   useEffect(() => {
     const fetchStatusOnce = async () => {
       try {
-        const res = await axios.get("/api/telegram/link", { headers });
+        const res = await axiosGlobal.get("/telegram/link");
         setStatus(res.data);
       } catch { /* ignore */ }
     };
 
     const fetchWebhookOnce = async () => {
       try {
-        const res = await axios.get("/api/telegram/webhook-status", { headers });
+        const res = await axiosGlobal.get("/telegram/webhook-status");
         setWebhookStatus(res.data);
       } catch { /* ignore */ }
     };
 
     fetchStatusOnce();
     if (isAdmin) fetchWebhookOnce();
-  // token tidak berubah selama sesi, disable warning ini aman
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   async function fetchStatus() {
     try {
-      const res = await axios.get("/api/telegram/link", { headers });
+      const res = await axiosGlobal.get("/telegram/link");
       setStatus(res.data);
     } catch {
       // ignore
@@ -67,7 +60,7 @@ export default function TelegramConnect() {
 
   async function fetchWebhookStatus() {
     try {
-      const res = await axios.get("/api/telegram/webhook-status", { headers });
+      const res = await axiosGlobal.get("/telegram/webhook-status");
       setWebhookStatus(res.data);
     } catch {
       // ignore
@@ -79,7 +72,7 @@ export default function TelegramConnect() {
     setRegistering(true);
     setMessage(null);
     try {
-      const res = await axios.post("/api/telegram/webhook-status", {}, { headers });
+      const res = await axiosGlobal.post("/telegram/webhook-status", {});
       if (res.data.success) {
         setMessage({ type: "success", text: "✅ Webhook berhasil didaftarkan ke Telegram!" });
         fetchWebhookStatus();
@@ -104,7 +97,7 @@ export default function TelegramConnect() {
     setMessage(null);
     setDeepLink(null);
     try {
-      const res = await axios.post("/api/telegram/link", {}, { headers });
+      const res = await axiosGlobal.post("/telegram/link", {});
       setDeepLink(res.data.deepLink);
     } catch {
       setMessage({ type: "error", text: "Gagal membuat link. Coba lagi." });
@@ -118,7 +111,7 @@ export default function TelegramConnect() {
     setLoading(true);
     setMessage(null);
     try {
-      await axios.delete("/api/telegram/link", { headers });
+      await axiosGlobal.delete("/telegram/link");
       setStatus({ connected: false, chatId: null });
       setDeepLink(null);
       setMessage({ type: "success", text: "Telegram berhasil diputuskan." });
