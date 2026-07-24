@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import type { BankAccountBalance, DashboardFilters } from "@/lib/types/dashboard";
 import { useI18n } from "@lib/i18n";
 import DatePicker from "@components/form/DatePicker";
@@ -12,6 +12,7 @@ interface Props {
   onReset: () => void;
   defaultDateFrom?: string;
   defaultDateTo?: string;
+  exportSlot?: ReactNode;
 }
 
 const selectClass =
@@ -26,6 +27,7 @@ export default function DashboardFilters({
   onReset,
   defaultDateFrom = "",
   defaultDateTo = "",
+  exportSlot,
 }: Props) {
   const { t } = useI18n();
   const tr = t.dashboard;
@@ -148,6 +150,7 @@ export default function DashboardFilters({
               {tr.reset}
             </button>
           )}
+          {exportSlot}
         </div>
       </div>
 

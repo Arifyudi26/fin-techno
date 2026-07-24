@@ -8,6 +8,7 @@ import RecentTransactions from "@components/finance/RecentTransactions";
 import BankAccountSummary from "@components/finance/BankAccountSummary";
 import DashboardFilters from "@components/finance/DashboardFilters";
 import AIInsights from "@components/finance/AIInsights";
+import ExportButton from "@components/finance/ExportButton";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
 import {
@@ -74,6 +75,7 @@ function buildParams(
 
 export default function Home() {
   const { t } = useI18n();
+
   const [data, setData] = useState<DashboardState>({
     metrics: null,
     cashFlow: [],
@@ -259,6 +261,20 @@ export default function Home() {
           onReset={handleReset}
           defaultDateFrom={DEFAULT_FILTERS.dateFrom ?? ""}
           defaultDateTo={DEFAULT_FILTERS.dateTo ?? ""}
+          exportSlot={
+            <ExportButton
+              payload={{
+                filters,
+                metrics: data.metrics,
+                cashFlow: data.cashFlow,
+                netFlowTrend: data.netFlowTrend,
+                spendingByCategory: data.spendingByCategory,
+                incomeByCategory: data.incomeByCategory,
+                recentTransactions: data.recentTransactions,
+                bankAccounts: data.bankAccounts,
+              }}
+            />
+          }
         />
       </div>
 
