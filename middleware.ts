@@ -54,9 +54,27 @@ export function middleware(req: NextRequest) {
   // Page routes 
   const token = req.cookies.get("token")?.value;
 
+  // Helper: decode JWT payload and check expiry (no external lib needed in Edge runtime)
+  function isTokenExpired(jwt: string): boolean {
+    try {
+      const payloadBase64 = jwt.split(".")[1];
+      const payload = JSON.parse(atob(payloadBase64));
+      return typeof payload.exp === "number" && payload.exp * 1000 < Date.now();
+    } catch {
+      return true; // treat malformed token as expired
+    }
+  }
+
   if (!token) {
     if (!PUBLIC_PAGE_PATHS.includes(pathname) && !pathname.startsWith("/docs")) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
+    }
+  } else if (isTokenExpired(token)) {
+    // Token exists but has expired — clear cookie and redirect to login
+    if (!PUBLIC_PAGE_PATHS.includes(pathname) && !pathname.startsWith("/docs")) {
+      const res = NextResponse.redirect(new URL("/auth/login", req.url));
+      res.cookies.delete("token");
+      return res;
     }
   } else {
     // oauth-callback dan docs selalu boleh diakses meski ada token

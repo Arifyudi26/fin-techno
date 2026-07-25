@@ -390,7 +390,7 @@ model Notification {
   @@index([createdAt])
 }
 
-// Catatan transaksi manual — input bebas via Telegram Bot atau fitur lain,
+// Catatan transaksi manual — input bebas via Telegram, WhatsApp, atau channel lain,
 // tidak terikat ke rekening bank atau dompet digital manapun.
 model ManualTransaction {
   id              String          @id @default(uuid())
@@ -399,8 +399,7 @@ model ManualTransaction {
   description     String
   amount          Decimal         @db.Decimal(20, 2)
   type            TransactionType
-  note            String?         // Catatan tambahan opsional
-  source          String          @default("BOT") // "BOT" | "WEB" | dll
+  source          String          @default("TELEGRAM") // "TELEGRAM" | "WHATSAPP" | "WEB" | dll
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

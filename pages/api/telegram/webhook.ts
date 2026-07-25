@@ -369,22 +369,35 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
     // Langkah 6: Input tanggal 
     case "INPUT_DATE": {
       let date: Date;
-      if (text.toLowerCase() === "sekarang" || text.toLowerCase() === "today") {
+      const lower = text.toLowerCase().trim();
+
+      if (lower === "sekarang" || lower === "today" || lower === "hari ini") {
         date = new Date();
+        date.setHours(0, 0, 0, 0);
       } else {
-        const parts = text.split(/[-/]/);
+        const parts = text.trim().split(/[-/]/);
         if (parts.length !== 3) {
-          await sendMessage(chatId, "⚠️ Format tanggal salah\\. Gunakan DD\\-MM\\-YYYY atau ketik *sekarang*\\.");
+          await sendMessage(chatId,
+            "⚠️ Format tanggal salah\\.\n\n" +
+            "Gunakan format *DD\\-MM\\-YYYY*\n" +
+            "Contoh: `25\\-07\\-2026`\n\n" +
+            "Atau ketik *sekarang* untuk tanggal hari ini\\."
+          );
           return;
         }
         const [d, m, y] = parts.map(Number);
+        if (isNaN(d) || isNaN(m) || isNaN(y) || m < 1 || m > 12 || d < 1 || d > 31) {
+          await sendMessage(chatId, "⚠️ Tanggal tidak valid\\. Gunakan format *DD\\-MM\\-YYYY*\\.");
+          return;
+        }
         date = new Date(y, m - 1, d);
-        if (isNaN(date.getTime()) || date.getFullYear() < 2000 || date.getFullYear() > 2100) {
-          await sendMessage(chatId, "⚠️ Tanggal tidak valid\\. Gunakan format DD\\-MM\\-YYYY\\.");
+        if (isNaN(date.getTime()) || y < 2000 || y > 2100) {
+          await sendMessage(chatId, "⚠️ Tanggal tidak valid\\. Tahun harus antara 2000\\-2100\\.");
           return;
         }
       }
-      const updatedSession = { ...session, step: "CONFIRM" as InputStep, date };
+
+      const updatedSession: ConvState = { ...session, step: "CONFIRM", date };
       setSession(chatId, updatedSession);
       await showConfirmation(chatId, updatedSession);
       break;
@@ -549,7 +562,7 @@ async function saveTransaction(chatId: number, userId: string, s: ConvState) {
           description,
           amount,
           type,
-          source: "BOT",
+          source: "TELEGRAM",
         },
       });
     }
