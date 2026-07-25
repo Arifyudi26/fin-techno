@@ -19,7 +19,7 @@ export default async function handler(
   const { id, type } = req.query;
   const sourceType = (type as string)?.toUpperCase() ?? "BANK";
 
-  // ── DELETE ────────────────────────────────────────────────────────────────
+  // DELETE 
   if (req.method === "DELETE") {
     try {
       if (sourceType === "WALLET") {
@@ -64,7 +64,7 @@ export default async function handler(
     }
   }
 
-  // ── GET ───────────────────────────────────────────────────────────────────
+  // GET 
   try {
     if (sourceType === "WALLET") {
       const upload = await (prisma as any).walletStatementUpload.findFirst({

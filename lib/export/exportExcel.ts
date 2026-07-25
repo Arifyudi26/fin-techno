@@ -18,7 +18,7 @@ import {
   renderDonutChartPng,
 } from "./exportHelpers";
 
-// ─── Color palette (ARGB) ─────────────────────────────────────────────────────
+// Color palette (ARGB) 
 const P = {
   brand:   "FF465FFF",
   success: "FF12B76A",
@@ -35,7 +35,7 @@ const P = {
 const colorOf = (key: string) =>
   ({ success: P.success, danger: P.danger, brand: P.brand, warn: P.warn, purple: P.purple }[key] ?? P.brand);
 
-// ─── Style factories ──────────────────────────────────────────────────────────
+// Style factories 
 
 type Fill = ExcelJS.Fill;
 type Font = Partial<ExcelJS.Font>;
@@ -77,7 +77,7 @@ const pctStyle = (even: boolean): Partial<ExcelJS.Style> => ({
   alignment: { vertical: "middle", horizontal: "right" },
 });
 
-// ─── Worksheet helpers ────────────────────────────────────────────────────────
+// Worksheet helpers 
 
 function addTitle(ws: ExcelJS.Worksheet, text: string, span: number, row = 1) {
   ws.mergeCells(row, 1, row, span);
@@ -140,7 +140,7 @@ function embedImage(
   for (let i = 0; i < imgHeightRows; i++) ws.addRow([]).height = 18;
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// Main export 
 
 export async function exportDashboardExcel(payload: ExportPayload) {
   const d  = buildCanonicalData(payload);
@@ -148,9 +148,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
   wb.creator = "Fin-Techno";
   wb.created = new Date();
 
-  // ══════════════════════════════════════════════════════════════════════════
   // SHEET 1 — Ringkasan
-  // ══════════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Ringkasan");
     ws.columns = [
@@ -198,9 +196,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
     totRow.getCell(2).style = numStyle(false, P.brand);
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // SHEET 2 — Cash Flow
-  // ══════════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Cash Flow");
     ws.columns = [
@@ -251,9 +247,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // SHEET 3 — Net Flow Trend
-  // ══════════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Net Flow Trend");
     ws.columns = [
@@ -295,9 +289,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // SHEET 4 — Kategori
-  // ══════════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Kategori");
     ws.columns = [
@@ -390,9 +382,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // SHEET 5 — Transaksi
-  // ══════════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Transaksi");
     ws.columns = [
@@ -454,7 +444,7 @@ export async function exportDashboardExcel(payload: ExportPayload) {
     };
   }
 
-  // ── Download ──────────────────────────────────────────────────────────────
+  // Download 
   const buf  = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

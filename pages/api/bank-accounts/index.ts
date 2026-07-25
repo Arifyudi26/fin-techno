@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try { userId = verifyToken(req).id; }
   catch { return res.status(401).json({ message: "Unauthorized" }); }
 
-  // ── GET ──────────────────────────────────────────────────────────────────────
+  // GET 
   if (req.method === "GET") {
     try {
       const rows = await prisma.$queryRaw<AccountRow[]>`
@@ -104,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── POST ─────────────────────────────────────────────────────────────────────
+  // POST 
   if (req.method === "POST") {
     const { bankProvider, accountNumber, accountName, description } = req.body;
     if (!bankProvider || !accountNumber || !accountName) {

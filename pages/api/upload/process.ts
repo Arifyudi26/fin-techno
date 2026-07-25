@@ -20,7 +20,7 @@ export const config = {
   maxDuration: 60,
 };
 
-// ─── Routing parser berdasarkan provider & format ────────────────────────────
+// Routing parser berdasarkan provider & format 
 async function parseFile(
   fileBuffer: Buffer,
   fileContent: string,
@@ -31,7 +31,7 @@ async function parseFile(
   const provider = bankProvider.toUpperCase();
   const format   = fileFormat.toUpperCase();
 
-  // ── BNI ──────────────────────────────────────────────────────────────────
+  // BNI 
   if (provider === "BNI") {
     if (format === "PDF") {
       if (!pdfPassword) {
@@ -43,13 +43,13 @@ async function parseFile(
     return parseRows(parseCSV(fileContent));
   }
 
-  // ── BRI ──────────────────────────────────────────────────────────────────
+  // BRI 
   if (provider === "BRI") {
     if (format === "PDF") return parseBriPDF(fileBuffer);
     return parseBriCSV(fileContent);
   }
 
-  // ── Provider lain (BCA, Mandiri, CIMB, dll.) — parser generik ────────────
+  // Provider lain (BCA, Mandiri, CIMB, dll.) — parser generik 
   if (format === "PDF") {
     // Gunakan parser BRI PDF sebagai fallback generik
     return parseBriPDF(fileBuffer);
@@ -57,7 +57,7 @@ async function parseFile(
   return parseRows(parseCSV(fileContent));
 }
 
-// ─── Core processing logic ───────────────────────────────────────────────────
+// Core processing logic 
 export type ProcessLog = { ts: string; step: string; detail?: string };
 
 export async function processUpload(payload: {
@@ -351,7 +351,7 @@ export async function processUpload(payload: {
   }
 }
 
-// ─── HTTP handler (dipanggil oleh QStash) ────────────────────────────────────
+// HTTP handler (dipanggil oleh QStash) 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 

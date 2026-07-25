@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(categoryId               ? { categories: { some: { categoryId } } } : {}),
     };
 
-    // ── Recent transactions + category aggregation — all parallel ─────────────
+    // Recent transactions + category aggregation — all parallel 
     const [recentBankTx, recentWalletTx] = await Promise.all([
         // Recent tx — use select (not include) to avoid N+1
         skipBank ? [] : prisma.bankTransaction.findMany({
@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       ]);
 
-    // ── Map recent transactions ───────────────────────────────────────────────
+    // Map recent transactions 
     const recentTransactions = [
       ...recentBankTx.map((t: any) => ({
         id: t.id,
@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, limit);
 
-    // ── Category aggregation — fetch amounts via raw SQL (2 simple queries) ───
+    // Category aggregation — fetch amounts via raw SQL (2 simple queries) 
     // groupBy only gives count, not sum — use raw for amounts
     const buildCatAmounts = async (type: "DEBIT" | "CREDIT") => {
       const params: unknown[] = [userId, dateStart, dateEnd];
