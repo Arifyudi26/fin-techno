@@ -49,6 +49,18 @@ const useAuthStore = create<AuthState>()(
       name: "auth-store",
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        // Auto-logout jika token sudah expired saat halaman di-refresh
+        if (state?.token) {
+          try {
+            const payload = JSON.parse(atob(state.token.split(".")[1]));
+            const isExpired = typeof payload.exp === "number" && payload.exp * 1000 < Date.now();
+            if (isExpired) {
+              state.logout();
+            }
+          } catch {
+            state.logout();
+          }
+        }
       },
     }
   )
