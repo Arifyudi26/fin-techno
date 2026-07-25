@@ -234,12 +234,15 @@ async function startInputFlow(chatId: number, userId: string) {
   const hasBanks = banks.length > 0;
   const hasWallets = wallets.length > 0;
 
+  // Nomor pilihan dinamis berdasarkan akun yang tersedia
+  let optionNum = 1;
   let msg = `➕ *Input Transaksi Baru*\n\nPilih sumber transaksi:\n\n`;
-  if (hasBanks)   msg += `🏦 Ketik *1* — Rekening Bank\n`;
-  if (hasWallets) msg += `💳 Ketik *2* — Dompet Digital \\(e\\-wallet\\)\n`;
-  msg += `📝 Ketik *3* — Catatan Cepat \\(tanpa akun\\)\n\n`;
+  if (hasBanks)   msg += `🏦 Ketik *${optionNum++}* — Rekening Bank\n`;
+  if (hasWallets) msg += `💳 Ketik *${optionNum++}* — Dompet Digital \\(e\\-wallet\\)\n`;
+  msg += `📝 Ketik *${optionNum}* — Catatan Cepat \\(tanpa akun\\)\n\n`;
   msg += `_Ketik /batal untuk membatalkan_`;
 
+  // Simpan session
   setSession(chatId, { step: "CHOOSE_SOURCE", lastActivity: Date.now() });
   await sendMessage(chatId, msg);
 }
@@ -264,26 +267,27 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
       const hasBanks = banks.length > 0;
       const hasWallets = wallets.length > 0;
 
-      if (text === "1" && hasBanks) {
+      // Hitung nomor pilihan dinamis — sama persis dengan yang ditampilkan di startInputFlow
+      const bankOption   = hasBanks   ? 1                        : undefined;
+      const walletOption = hasWallets ? (hasBanks ? 2 : 1)       : undefined;
+      const manualOption = (hasBanks ? 1 : 0) + (hasWallets ? 1 : 0) + 1;
+
+      const num = parseInt(text);
+
+      if (bankOption !== undefined && num === bankOption) {
         if (banks.length === 1) {
-          // Hanya 1 akun bank, langsung pilih
           const b = banks[0];
           setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "BANK", accountId: b.id, accountLabel: `${b.bankProvider} — ${b.accountName}` });
           await askType(chatId, `${b.bankProvider} — ${b.accountName}`);
         } else {
-          // Tampilkan daftar akun bank
           let msg = `🏦 *Pilih Rekening Bank:*\n\n`;
           banks.forEach((b: any, i: number) => { msg += `Ketik *${i + 1}* — ${b.bankProvider} \\| ${escMd(b.accountName)}\n`; });
           msg += `\n_Ketik /batal untuk membatalkan_`;
-          setSession(chatId, { ...session, step: "CHOOSE_ACCOUNT", source: "BANK", lastActivity: Date.now() });
-          // Simpan list akun di session via sessionData trick
-          (session as any)._accounts = banks;
           setSession(chatId, { ...session, step: "CHOOSE_ACCOUNT", source: "BANK" });
-          // Simpan temporary di Map khusus
           accountCache.set(chatId, banks);
           await sendMessage(chatId, msg);
         }
-      } else if (text === "2" && hasWallets) {
+      } else if (walletOption !== undefined && num === walletOption) {
         if (wallets.length === 1) {
           const w = wallets[0];
           setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "WALLET", accountId: w.id, accountLabel: `${w.walletProvider} — ${w.accountName}` });
@@ -296,7 +300,7 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
           accountCache.set(chatId, wallets);
           await sendMessage(chatId, msg);
         }
-      } else if (text === "3") {
+      } else if (num === manualOption) {
         setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "MANUAL", accountId: undefined, accountLabel: "Catatan Cepat" });
         await askType(chatId, "Catatan Cepat");
       } else {
