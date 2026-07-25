@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try { userId = verifyToken(req).id; }
   catch { return res.status(401).json({ message: "Unauthorized" }); }
 
-  // ── GET /categories ──────────────────────────────────────────────────────────
+  // GET /categories 
   if (req.method === "GET") {
     try {
       // Single query: fetch categories + count junction rows in one round-trip
@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── POST /categories ─────────────────────────────────────────────────────────
+  // POST /categories 
   if (req.method === "POST") {
     const { name, code, description } = req.body;
     if (!name || !code)

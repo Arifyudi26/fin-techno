@@ -107,6 +107,7 @@ model User {
   verifiedWalletTx     WalletTransaction[]   @relation("WalletVerifiedBy")
   notifications        Notification[]
   transactionCategories TransactionCategory[]
+  manualTransactions   ManualTransaction[]
 }
 
 model BankAccount {
@@ -387,4 +388,25 @@ model Notification {
   @@index([userId])
   @@index([userId, read])
   @@index([createdAt])
+}
+
+// Catatan transaksi manual — input bebas via Telegram Bot atau fitur lain,
+// tidak terikat ke rekening bank atau dompet digital manapun.
+model ManualTransaction {
+  id              String          @id @default(uuid())
+  userId          String
+  transactionDate DateTime
+  description     String
+  amount          Decimal         @db.Decimal(20, 2)
+  type            TransactionType
+  note            String?         // Catatan tambahan opsional
+  source          String          @default("BOT") // "BOT" | "WEB" | dll
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, transactionDate])
+  @@index([type])
 }

@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const skipBank   = accountType === "WALLET";
     const skipWallet = accountType === "BANK";
 
-    // ── Determine active period ───────────────────────────────────────────────
+    // Determine active period 
     let thisStart: Date, thisEnd: Date;
 
     if (qDateFrom || qDateTo) {
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const prevEnd    = new Date(thisStart.getTime() - 1);
     const prevStart  = new Date(prevEnd.getTime() - durationMs);
 
-    // ── Build where clauses ───────────────────────────────────────────────────
+    // Build where clauses 
     const bankBase: any   = { bankAccount: { ownerId: userId } };
     const walletBase: any = { wallet: { ownerId: userId } };
     if (accountId) {
@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!skipWallet) walletBase.walletId    = accountId;
     }
 
-    // ── Aggregates: groupBy type for current + previous period (4 parallel) ──
+    // Aggregates: groupBy type for current + previous period (4 parallel) 
     const [curBankAgg, prevBankAgg, curWalletAgg, prevWalletAgg] = await Promise.all([
       skipBank ? [] : prisma.bankTransaction.groupBy({
         by: ["type"],
@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const prevExpense = sumAgg(prevAll, "DEBIT");
     const prevCount   = countAgg(prevAll);
 
-    // ── Balance: latest balance per account via raw SQL (safe, simple) ────────
+    // Balance: latest balance per account via raw SQL (safe, simple) 
     // Two separate queries — no UNION, no DISTINCT ON complexity
     const [bankBalRows, walletBalRows] = await Promise.all([
       skipBank ? [{ balance: null }] : prisma.bankTransaction.findMany({

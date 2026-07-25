@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       providerName = wallet.walletProvider;
     }
 
-    // ── Khusus BNI PDF: cek password ─────────────────────────────────────────
+    // Khusus BNI PDF: cek password 
     if (sourceType === "BANK" && providerName === "BNI" && fileFormat === "PDF") {
       if (!pdfPassword) {
         // Belum ada password — cek apakah file memang butuh password

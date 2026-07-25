@@ -13,7 +13,7 @@ import {
   DashboardFilters,
 } from "@/lib/types/dashboard";
 
-// ─── Payload ──────────────────────────────────────────────────────────────────
+// Payload 
 
 export interface ExportPayload {
   filters: DashboardFilters;
@@ -26,7 +26,7 @@ export interface ExportPayload {
   bankAccounts: BankAccountBalance[];
 }
 
-// ─── Canonical data sections ──────────────────────────────────────────────────
+// Canonical data sections 
 // These are the exact same sections used by BOTH Excel and PDF.
 // Adding/removing a field here automatically keeps both formats in sync.
 
@@ -199,7 +199,7 @@ export function buildCanonicalData(p: ExportPayload): CanonicalData {
   };
 }
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
+// Formatters 
 
 export const IDR = (v: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -230,7 +230,7 @@ export const CHART_COLORS = [
   "#7A5AF8", "#0BA5EC", "#EE46BC", "#16B364",
 ];
 
-// ─── Chart renderers ──────────────────────────────────────────────────────────
+// Chart renderers 
 // Menggunakan ApexCharts (sudah ada di project) karena dataURI() dijamin render.
 
 async function apexDataURI(options: object): Promise<string> {
