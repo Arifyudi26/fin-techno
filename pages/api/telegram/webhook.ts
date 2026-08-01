@@ -445,16 +445,16 @@ async function showConfirmation(chatId: number, s: ConvState) {
     ? s.date.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
     : "Hari ini";
   const sourceLabel = s.source === "MANUAL" ? "📝 Catatan Cepat" : s.source === "BANK" ? "🏦 Bank" : "💳 Wallet";
+  const accountLabel = s.source === "MANUAL" ? "" : ` — ${escMd(s.accountLabel ?? "")}`;
 
   await sendMessage(chatId,
     `📋 *Konfirmasi Transaksi*\n\n` +
-    `${sourceLabel}: ${escMd(s.accountLabel ?? "\\-")}\n` +
-    `Jenis   : ${typeLabel}\n` +
-    `Nominal : *${fmt(s.amount ?? 0)}*\n` +
-    `Deskripsi: ${escMd(s.description ?? "\\-")}\n` +
-    `Tanggal : ${escMd(dateStr)}\n\n` +
-    `Simpan transaksi ini\\?\n` +
-    `Ketik *ya* untuk simpan atau *tidak* untuk batal`
+    `${sourceLabel}${accountLabel}\n` +
+    `Jenis: ${typeLabel}\n` +
+    `Nominal: *${escMd(fmt(s.amount ?? 0))}*\n` +
+    `Deskripsi: ${escMd(s.description ?? "")}\n` +
+    `Tanggal: ${escMd(dateStr)}\n\n` +
+    `Ketik *ya* untuk simpan atau *tidak* untuk batal\\.`
   );
 }
 
@@ -573,11 +573,14 @@ async function saveTransaction(chatId: number, userId: string, s: ConvState) {
 
     const typeLabel = type === "CREDIT" ? "Pemasukan" : "Pengeluaran";
     const dateStr = txDate.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+    const amountStr = escMd(fmt(amount));
+    const descStr = escMd(description);
+    const dateEsc = escMd(dateStr);
     await sendMessage(chatId,
       `✅ *Transaksi berhasil disimpan\\!*\n\n` +
-      `${type === "CREDIT" ? "💰" : "💸"} ${typeLabel}: *${fmt(amount)}*\n` +
-      `📝 ${escMd(description)}\n` +
-      `📅 ${escMd(dateStr)}\n\n` +
+      `${type === "CREDIT" ? "💰" : "💸"} ${escMd(typeLabel)}: *${amountStr}*\n` +
+      `📝 ${descStr}\n` +
+      `📅 ${dateEsc}\n\n` +
       `_Ketik /ringkasan untuk melihat ringkasan keuangan_`
     );
   } catch (err: any) {
@@ -617,9 +620,9 @@ async function getFinancialSummary(userId: string): Promise<string> {
 
   return (
     `📊 *Ringkasan Keuangan — ${escMd(monthName)}*\n\n` +
-    `💰 Pemasukan: *${fmt(curr.income)}*` + (incomeChange ? ` _(${Number(incomeChange) >= 0 ? "\\+" : ""}${incomeChange}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
-    `💸 Pengeluaran: *${fmt(curr.expense)}*` + (expenseChange ? ` _(${Number(expenseChange) >= 0 ? "\\+" : ""}${expenseChange}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
-    `${netEmoji} Net Flow: *${fmt(curr.net)}*\n\n` +
+    `💰 Pemasukan: *${escMd(fmt(curr.income))}*` + (incomeChange ? ` _(${Number(incomeChange) >= 0 ? "\\+" : ""}${escMd(incomeChange)}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
+    `💸 Pengeluaran: *${escMd(fmt(curr.expense))}*` + (expenseChange ? ` _(${Number(expenseChange) >= 0 ? "\\+" : ""}${escMd(expenseChange)}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
+    `${netEmoji} Net Flow: *${escMd(fmt(curr.net))}*\n\n` +
     `_Ketik /transaksi untuk melihat transaksi terakhir_`
   );
 }
@@ -643,7 +646,7 @@ async function getRecentTransactions(userId: string): Promise<string> {
     const emoji = tx.type === "CREDIT" ? "🟢" : "🔴";
     const sign = tx.type === "CREDIT" ? "\\+" : "\\-";
     const desc = tx.description.length > 25 ? tx.description.substring(0, 25) + "\\.\\.\\." : escMd(tx.description);
-    return `${emoji} ${date} \\| ${sign}${fmt(Number(tx.amount))} \\| ${desc}`;
+    return `${emoji} ${date} \\| ${sign}${escMd(fmt(Number(tx.amount)))} \\| ${desc}`;
   });
 
   return `📋 *5 Transaksi Terakhir*\n\n` + rows.join("\n");
