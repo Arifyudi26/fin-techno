@@ -200,11 +200,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).end();
     }
 
-    // Pesan bebas → AI
+    // Pesan bebas → coba parse sebagai transaksi dulu, kalau bukan → AI chat
     if (!text.startsWith("/")) {
       await sendMessage(chatId, "💭 Sedang memproses\\.\\.\\.");
-      const answer = await getAIChat(userId, text);
-      for (const chunk of splitText(answer, 4000)) await sendMessage(chatId, escapeMarkdown(chunk));
+      const parsed = await tryParseTransactions(text);
+      if (parsed && parsed.length > 0) {
+        await saveAndConfirmTransactions(chatId, userId, parsed);
+      } else {
+        const answer = await getAIChat(userId, text);
+        for (const chunk of splitText(answer, 4000)) await sendMessage(chatId, escapeMarkdown(chunk));
+      }
       return res.status(200).end();
     }
 
@@ -587,6 +592,113 @@ async function saveTransaction(chatId: number, userId: string, s: ConvState) {
     console.error("saveTransaction error:", err?.message);
     await sendMessage(chatId, `❌ Gagal menyimpan transaksi: ${escMd(err?.message ?? "Unknown error")}`);
   }
+}
+
+// ─── AI Parse Transaksi dari Teks Bebas ──────────────────────────────────────
+
+interface ParsedTx {
+  description: string;
+  amount: number;
+  type: "CREDIT" | "DEBIT";
+  date: string; // ISO date string YYYY-MM-DD
+}
+
+// Kirim teks ke Gemini, minta ekstrak transaksi dalam JSON.
+// Return null jika teks bukan input transaksi (pertanyaan, obrolan, dll).
+async function tryParseTransactions(text: string): Promise<ParsedTx[] | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const today = new Date().toISOString().split("T")[0];
+  const prompt =
+    `Kamu adalah parser transaksi keuangan. Tugasmu HANYA mengekstrak transaksi dari teks.\n\n` +
+    `Hari ini: ${today}\n\n` +
+    `Teks dari user:\n"${text}"\n\n` +
+    `INSTRUKSI:\n` +
+    `1. Jika teks berisi satu atau lebih transaksi keuangan (ada nominal uang + deskripsi), ` +
+    `ekstrak dan kembalikan JSON array dengan format:\n` +
+    `[{"description":"...","amount":50000,"type":"DEBIT","date":"YYYY-MM-DD"}]\n` +
+    `2. type: "CREDIT" untuk uang masuk (gaji, transfer masuk, terima, dapat), ` +
+    `"DEBIT" untuk uang keluar (beli, bayar, makan, belanja, transfer keluar, dll)\n` +
+    `3. Untuk tanggal relatif: "hari ini"="${today}", "kemarin"=kemarin, "tadi"="${today}", ` +
+    `"minggu lalu"=7 hari lalu. Jika tidak ada tanggal, gunakan "${today}".\n` +
+    `4. Nominal: "5jt"=5000000, "50rb"=50000, "1.5jt"=1500000, "25k"=25000\n` +
+    `5. Jika teks adalah pertanyaan, obrolan, atau TIDAK mengandung transaksi → kembalikan: []\n` +
+    `6. Kembalikan HANYA JSON array, tanpa penjelasan, tanpa markdown code block.`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text().trim();
+
+    // Bersihkan jika ada code block
+    const cleaned = raw.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
+    const arr = JSON.parse(cleaned);
+
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+
+    // Validasi setiap item
+    const valid: ParsedTx[] = arr.filter((item: any) =>
+      typeof item.description === "string" &&
+      typeof item.amount === "number" && item.amount > 0 &&
+      (item.type === "CREDIT" || item.type === "DEBIT") &&
+      typeof item.date === "string"
+    );
+
+    return valid.length > 0 ? valid : null;
+  } catch {
+    return null;
+  }
+}
+
+// Simpan array transaksi hasil parse AI dan kirim konfirmasi ke user
+async function saveAndConfirmTransactions(chatId: number, userId: string, txs: ParsedTx[]) {
+  const db = prisma as any;
+  const saved: ParsedTx[] = [];
+  const failed: string[] = [];
+
+  for (const tx of txs) {
+    try {
+      const txDate = new Date(tx.date);
+      if (isNaN(txDate.getTime())) txDate.setTime(Date.now());
+
+      await db.manualTransaction.create({
+        data: {
+          userId,
+          transactionDate: txDate,
+          description: tx.description,
+          amount: tx.amount,
+          type: tx.type as TransactionType,
+          source: "TELEGRAM",
+        },
+      });
+      saved.push(tx);
+    } catch {
+      failed.push(tx.description);
+    }
+  }
+
+  if (saved.length === 0) {
+    await sendMessage(chatId, "❌ Gagal menyimpan transaksi\\. Coba lagi atau gunakan /input\\.");
+    return;
+  }
+
+  // Buat pesan konfirmasi ringkasan
+  const lines = saved.map((tx) => {
+    const emoji = tx.type === "CREDIT" ? "🟢" : "🔴";
+    const sign = tx.type === "CREDIT" ? "\\+" : "\\-";
+    const dateStr = new Date(tx.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    return `${emoji} ${escMd(dateStr)} \\| ${sign}${escMd(fmt(tx.amount))} \\| ${escMd(tx.description)}`;
+  });
+
+  let msg = `✅ *${saved.length} transaksi berhasil disimpan\\!*\n\n` + lines.join("\n");
+  if (failed.length > 0) {
+    msg += `\n\n⚠️ Gagal: ${failed.map(escMd).join(", ")}`;
+  }
+  msg += `\n\n_Ketik /ringkasan untuk melihat ringkasan keuangan_`;
+
+  await sendMessage(chatId, msg);
 }
 
 // Fungsi data keuangan 
