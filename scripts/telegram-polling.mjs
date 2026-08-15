@@ -1,19 +1,47 @@
 // Script polling untuk development lokal.
 // Telegram tidak bisa kirim update ke localhost, jadi script ini
 // polling ke Telegram API setiap detik dan forward ke webhook handler lokal.
-// Jalankan dengan: yarn telegram (atau node scripts/telegram-polling.mjs)
+//
+// Jalankan dengan: npm run telegram
+// Pastikan .env sudah ada TELEGRAM_BOT_TOKEN sebelum menjalankan.
 
 import https from 'https';
 import http from 'http';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8449428179:AAFsUTCWIfX4B62v-iMJyXh7SFlhWKvFkD4';
+// Baca .env manual (tanpa dotenv dependency)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+try {
+  const envPath = resolve(__dirname, '../.env');
+  const envContent = readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+    if (!process.env[key]) process.env[key] = value;
+  }
+} catch {
+  // .env tidak ditemukan, lanjut pakai env dari sistem
+}
+
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (!BOT_TOKEN) {
+  console.error('❌ TELEGRAM_BOT_TOKEN tidak ditemukan di .env');
+  process.exit(1);
+}
+
 const WEBHOOK_URL = 'http://localhost:3000/api/telegram/webhook';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 let offset = 0;
 let isPolling = false;
 
-console.log('🤖 Starting Telegram Bot Polling...');
+console.log('🤖 Starting Telegram Bot Polling (local dev)...');
 console.log(`📡 Forwarding updates to: ${WEBHOOK_URL}`);
 console.log(`⏰ Polling interval: 1 second\n`);
 
@@ -47,8 +75,24 @@ function deleteWebhook() {
 
 function getUpdates() {
   return new Promise((resolve, reject) => {
-    const url = `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=30`;
-    https.get(url, (res) => {
+    // allowed_updates mencakup message DAN callback_query (untuk inline button)
+    const body = JSON.stringify({
+      offset,
+      timeout: 10,
+      allowed_updates: ['message', 'callback_query'],
+    });
+
+    const options = {
+      hostname: 'api.telegram.org',
+      path: `/bot${BOT_TOKEN}/getUpdates`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
@@ -59,7 +103,10 @@ function getUpdates() {
           reject(e);
         }
       });
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
   });
 }
 
@@ -99,14 +146,25 @@ async function poll() {
     for (const update of updates) {
       offset = update.update_id + 1;
 
-      const msg = update.message;
-      if (msg?.text) {
-        const from = msg.from.first_name || 'User';
-        console.log(`📨 [${new Date().toLocaleTimeString()}] ${from}: ${msg.text}`);
-
+      // Handle pesan teks biasa
+      if (update.message?.text) {
+        const from = update.message.from.first_name || 'User';
+        console.log(`� [${new Date().toLocaleTimeString()}] ${from}: ${update.message.text}`);
         try {
           await forwardUpdate(update);
-          console.log(`   ✅ Forwarded to webhook\n`);
+          console.log(`   ✅ Forwarded\n`);
+        } catch (err) {
+          console.error(`   ❌ Failed to forward:`, err.message, '\n');
+        }
+      }
+
+      // Handle inline button click (callback_query)
+      else if (update.callback_query) {
+        const from = update.callback_query.from.first_name || 'User';
+        console.log(`🔘 [${new Date().toLocaleTimeString()}] ${from} clicked: [${update.callback_query.data}]`);
+        try {
+          await forwardUpdate(update);
+          console.log(`   ✅ Forwarded\n`);
         } catch (err) {
           console.error(`   ❌ Failed to forward:`, err.message, '\n');
         }

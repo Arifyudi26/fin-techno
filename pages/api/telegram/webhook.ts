@@ -6,7 +6,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fmtIDR as fmt } from "@lib/formatters";
-import { sendMessage, TelegramUpdate } from "@lib/telegram";
+import { sendMessage, answerCallbackQuery, removeKeyboard, TelegramUpdate } from "@lib/telegram";
 import crypto from "crypto";
 import {
   BankProvider,
@@ -39,6 +39,7 @@ interface ConvState {
   amount?: number;
   description?: string;
   date?: Date;
+  dupWarningShown?: boolean; // true setelah user lihat warning duplikat
   lastActivity: number;
 }
 
@@ -74,6 +75,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const update: TelegramUpdate = req.body;
   const msg = update.message;
+  const cbq = update.callback_query;
+
+  // Handle inline button click
+  if (cbq) {
+    const chatId = cbq.message.chat.id;
+    const text = cbq.data;
+
+    // Hapus tombol dari pesan sebelumnya supaya tidak bisa diklik ulang
+    await removeKeyboard(chatId, cbq.message.message_id);
+    // Hilangkan loading spinner di Telegram
+    await answerCallbackQuery(cbq.id);
+
+    try {
+      const user = await (prisma as any).user.findUnique({ where: { telegramChatId: String(chatId) } });
+      if (!user) {
+        await sendMessage(chatId, "🔒 Akun belum terhubung\\. Buka halaman *Profil* di web dan klik *Hubungkan Telegram*\\.");
+        return res.status(200).end();
+      }
+
+      if (text === "CANCEL") {
+        clearSession(chatId);
+        accountCache.delete(chatId);
+        await sendMessage(chatId, "❌ Input dibatalkan\\. Ketik /help untuk melihat perintah\\.");
+        return res.status(200).end();
+      }
+
+      const session = getSession(chatId);
+      if (session) {
+        await handleInputFlow(chatId, user.id, text, session);
+      }
+    } catch (error: any) {
+      console.error("Telegram callback_query error:", error?.message || error);
+    }
+    return res.status(200).end();
+  }
+
   if (!msg?.text) return res.status(200).end();
 
   const chatId = msg.chat.id;
@@ -196,6 +233,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (text === "/input") {
+      await sendMessage(chatId,
+        `📝 *Perhatian sebelum input transaksi*\n\n` +
+        `Fitur ini hanya untuk mencatat transaksi *yang tidak ada di mutasi rekening*, seperti:\n\n` +
+        `• 💵 Dapat atau keluar uang *cash*\n` +
+        `• 🤝 Terima atau beri uang *tanpa transfer bank*\n` +
+        `• 🧾 Pengeluaran harian yang *tidak terekam di rekening manapun*\n\n` +
+        `⚠️ Jika transaksi sudah tercatat di mutasi rekening bank atau e\\-wallet kamu, *tidak perlu input di sini* karena akan terhitung dua kali\\.\n\n` +
+        `Lanjut input transaksi\\?`
+      );
       await startInputFlow(chatId, userId);
       return res.status(200).end();
     }
@@ -224,7 +270,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 // Input Flow: Mulai 
 async function startInputFlow(chatId: number, userId: string) {
-  // Cek apakah user punya akun bank/wallet
   const [banks, wallets] = await Promise.all([
     prisma.bankAccount.findMany({
       where: { ownerId: userId, isActive: true },
@@ -239,17 +284,18 @@ async function startInputFlow(chatId: number, userId: string) {
   const hasBanks = banks.length > 0;
   const hasWallets = wallets.length > 0;
 
-  // Nomor pilihan dinamis berdasarkan akun yang tersedia
-  let optionNum = 1;
-  let msg = `➕ *Input Transaksi Baru*\n\nPilih sumber transaksi:\n\n`;
-  if (hasBanks)   msg += `🏦 Ketik *${optionNum++}* — Rekening Bank\n`;
-  if (hasWallets) msg += `💳 Ketik *${optionNum++}* — Dompet Digital \\(e\\-wallet\\)\n`;
-  msg += `📝 Ketik *${optionNum}* — Catatan Cepat \\(tanpa akun\\)\n\n`;
-  msg += `_Ketik /batal untuk membatalkan_`;
+  // Buat baris tombol sumber
+  const buttons: { text: string; callback_data: string }[][] = [];
+  if (hasBanks)   buttons.push([{ text: "🏦 Rekening Bank", callback_data: "SRC_BANK" }]);
+  if (hasWallets) buttons.push([{ text: "💳 Dompet Digital (e-wallet)", callback_data: "SRC_WALLET" }]);
+  buttons.push([{ text: "📝 Catatan Cepat (cash / tanpa rekening)", callback_data: "SRC_MANUAL" }]);
+  buttons.push([{ text: "❌ Batal", callback_data: "CANCEL" }]);
 
-  // Simpan session
   setSession(chatId, { step: "CHOOSE_SOURCE", lastActivity: Date.now() });
-  await sendMessage(chatId, msg);
+  await sendMessage(chatId,
+    `➕ *Input Transaksi Baru*\n\nPilih sumber transaksi:`,
+    buttons
+  );
 }
 
 // Input Flow: Handler setiap langkah 
@@ -269,47 +315,49 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
         }),
       ]);
 
-      const hasBanks = banks.length > 0;
-      const hasWallets = wallets.length > 0;
-
-      // Hitung nomor pilihan dinamis — sama persis dengan yang ditampilkan di startInputFlow
-      const bankOption   = hasBanks   ? 1                        : undefined;
-      const walletOption = hasWallets ? (hasBanks ? 2 : 1)       : undefined;
-      const manualOption = (hasBanks ? 1 : 0) + (hasWallets ? 1 : 0) + 1;
-
-      const num = parseInt(text);
-
-      if (bankOption !== undefined && num === bankOption) {
+      if (text === "SRC_BANK") {
+        if (banks.length === 0) {
+          await sendMessage(chatId, "⚠️ Tidak ada rekening bank aktif\\.");
+          return;
+        }
         if (banks.length === 1) {
           const b = banks[0];
           setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "BANK", accountId: b.id, accountLabel: `${b.bankProvider} — ${b.accountName}` });
           await askType(chatId, `${b.bankProvider} — ${b.accountName}`);
         } else {
-          let msg = `🏦 *Pilih Rekening Bank:*\n\n`;
-          banks.forEach((b: any, i: number) => { msg += `Ketik *${i + 1}* — ${b.bankProvider} \\| ${escMd(b.accountName)}\n`; });
-          msg += `\n_Ketik /batal untuk membatalkan_`;
+          const buttons = banks.map((b: any) => ([{
+            text: `🏦 ${b.bankProvider} | ${b.accountName}`,
+            callback_data: `ACC_${b.id}`,
+          }]));
+          buttons.push([{ text: "❌ Batal", callback_data: "CANCEL" }]);
           setSession(chatId, { ...session, step: "CHOOSE_ACCOUNT", source: "BANK" });
           accountCache.set(chatId, banks);
-          await sendMessage(chatId, msg);
+          await sendMessage(chatId, `🏦 *Pilih Rekening Bank:*`, buttons);
         }
-      } else if (walletOption !== undefined && num === walletOption) {
+      } else if (text === "SRC_WALLET") {
+        if (wallets.length === 0) {
+          await sendMessage(chatId, "⚠️ Tidak ada dompet digital aktif\\.");
+          return;
+        }
         if (wallets.length === 1) {
           const w = wallets[0];
           setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "WALLET", accountId: w.id, accountLabel: `${w.walletProvider} — ${w.accountName}` });
           await askType(chatId, `${w.walletProvider} — ${w.accountName}`);
         } else {
-          let msg = `💳 *Pilih Dompet Digital:*\n\n`;
-          wallets.forEach((w: any, i: number) => { msg += `Ketik *${i + 1}* — ${w.walletProvider} \\| ${escMd(w.accountName)}\n`; });
-          msg += `\n_Ketik /batal untuk membatalkan_`;
+          const buttons = wallets.map((w: any) => ([{
+            text: `💳 ${w.walletProvider} | ${w.accountName}`,
+            callback_data: `ACC_${w.id}`,
+          }]));
+          buttons.push([{ text: "❌ Batal", callback_data: "CANCEL" }]);
           setSession(chatId, { ...session, step: "CHOOSE_ACCOUNT", source: "WALLET" });
           accountCache.set(chatId, wallets);
-          await sendMessage(chatId, msg);
+          await sendMessage(chatId, `💳 *Pilih Dompet Digital:*`, buttons);
         }
-      } else if (num === manualOption) {
+      } else if (text === "SRC_MANUAL") {
         setSession(chatId, { ...session, step: "CHOOSE_TYPE", source: "MANUAL", accountId: undefined, accountLabel: "Catatan Cepat" });
         await askType(chatId, "Catatan Cepat");
       } else {
-        await sendMessage(chatId, "⚠️ Pilihan tidak valid\\. Ketik angka yang tersedia atau /batal\\.");
+        await sendMessage(chatId, "⚠️ Pilihan tidak valid\\. Ketik /input untuk mulai lagi\\.");
       }
       break;
     }
@@ -317,12 +365,16 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
     // Langkah 2: Pilih akun dari daftar 
     case "CHOOSE_ACCOUNT": {
       const accounts = accountCache.get(chatId) ?? [];
-      const idx = parseInt(text) - 1;
-      if (isNaN(idx) || idx < 0 || idx >= accounts.length) {
-        await sendMessage(chatId, `⚠️ Pilih nomor 1 sampai ${accounts.length} atau /batal\\.`);
+      if (!text.startsWith("ACC_")) {
+        await sendMessage(chatId, `⚠️ Pilih salah satu rekening dari tombol di atas atau ketik /batal\\.`);
         return;
       }
-      const acc = accounts[idx];
+      const accId = text.replace("ACC_", "");
+      const acc = accounts.find((a: any) => a.id === accId);
+      if (!acc) {
+        await sendMessage(chatId, `⚠️ Rekening tidak ditemukan\\. Ketik /input untuk mulai lagi\\.`);
+        return;
+      }
       const label = session.source === "BANK"
         ? `${acc.bankProvider} — ${acc.accountName}`
         : `${acc.walletProvider} — ${acc.accountName}`;
@@ -334,14 +386,14 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 3: Pilih tipe 
     case "CHOOSE_TYPE": {
-      if (text === "1" || text.toUpperCase() === "MASUK" || text.toUpperCase() === "CREDIT") {
+      if (text === "TYPE_CREDIT" || text.toUpperCase() === "MASUK" || text.toUpperCase() === "CREDIT") {
         setSession(chatId, { ...session, step: "INPUT_AMOUNT", type: "CREDIT" });
         await sendMessage(chatId, `💰 Berapa jumlah *pemasukan*\\?\n\nContoh: \`150000\` atau \`1500000\`\n\n_Ketik /batal untuk membatalkan_`);
-      } else if (text === "2" || text.toUpperCase() === "KELUAR" || text.toUpperCase() === "DEBIT") {
+      } else if (text === "TYPE_DEBIT" || text.toUpperCase() === "KELUAR" || text.toUpperCase() === "DEBIT") {
         setSession(chatId, { ...session, step: "INPUT_AMOUNT", type: "DEBIT" });
         await sendMessage(chatId, `💸 Berapa jumlah *pengeluaran*\\?\n\nContoh: \`50000\` atau \`250000\`\n\n_Ketik /batal untuk membatalkan_`);
       } else {
-        await sendMessage(chatId, "⚠️ Ketik *1* untuk Masuk atau *2* untuk Keluar\\.");
+        await sendMessage(chatId, "⚠️ Pilih jenis transaksi dari tombol di atas\\.");
       }
       break;
     }
@@ -408,23 +460,66 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
       const updatedSession: ConvState = { ...session, step: "CONFIRM", date };
       setSession(chatId, updatedSession);
+
+      // Cek duplikat sebelum tampilkan konfirmasi
+      const dupCheck = await checkDuplicate(
+        userId,
+        updatedSession.source!,
+        updatedSession.accountId,
+        updatedSession.amount!,
+        updatedSession.type!,
+        date
+      );
+
+      if (dupCheck.isDuplicate) {
+        // Tandai warning sudah ditampilkan, tapi tetap lanjutkan ke CONFIRM
+        setSession(chatId, { ...updatedSession, dupWarningShown: true });
+        const matchLines = dupCheck.matches.map(
+          (m) => `• ${escMd(m.date)} \\| *${escMd(fmt(m.amount))}* \\| ${escMd(m.description)}`
+        ).join("\n");
+        const typeLabel = updatedSession.type === "CREDIT" ? "💰 Pemasukan" : "💸 Pengeluaran";
+        const dateStr = date.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+        await sendMessage(chatId,
+          `⚠️ *Kemungkinan Transaksi Duplikat*\n\n` +
+          `Ditemukan transaksi serupa di *${escMd(updatedSession.accountLabel ?? "")}*:\n\n` +
+          `${matchLines}\n\n` +
+          `─────────────────────\n` +
+          `Transaksi yang mau kamu simpan:\n` +
+          `${typeLabel}: *${escMd(fmt(updatedSession.amount!))}*\n` +
+          `📝 ${escMd(updatedSession.description ?? "")}\n` +
+          `📅 ${escMd(dateStr)}\n\n` +
+          `Jika ini transaksi berbeda \\(misalnya beli sesuatu 2x di hari yang sama\\), pilih *Tetap Simpan*\\.\n` +
+          `Jika sudah tercatat dari mutasi rekening, pilih *Batalkan*\\.`,
+          [
+            [
+              { text: "✅ Tetap Simpan", callback_data: "CONFIRM_YES" },
+              { text: "❌ Batalkan", callback_data: "CONFIRM_NO" },
+            ],
+          ]
+        );
+        return;
+      }
+
       await showConfirmation(chatId, updatedSession);
       break;
     }
 
     // Langkah 7: Konfirmasi 
     case "CONFIRM": {
-      if (text.toLowerCase() === "ya" || text === "1" || text.toLowerCase() === "yes") {
+      if (text === "CONFIRM_YES" || text.toLowerCase() === "ya" || text.toLowerCase() === "yes") {
         clearSession(chatId);
         accountCache.delete(chatId);
         await sendMessage(chatId, "⏳ Menyimpan transaksi\\.\\.\\.");
         await saveTransaction(chatId, userId, session);
-      } else if (text.toLowerCase() === "tidak" || text === "2" || text.toLowerCase() === "no") {
+      } else if (text === "CONFIRM_NO" || text.toLowerCase() === "tidak" || text.toLowerCase() === "no") {
         clearSession(chatId);
         accountCache.delete(chatId);
         await sendMessage(chatId, "❌ Input dibatalkan\\. Ketik /input untuk mulai lagi\\.");
       } else {
-        await sendMessage(chatId, "⚠️ Ketik *ya* untuk simpan atau *tidak* untuk batal\\.");
+        const hint = session.dupWarningShown
+          ? "⚠️ Pilih *Tetap Simpan* atau *Batalkan* dari tombol di atas\\."
+          : "⚠️ Pilih *Ya, Simpan* atau *Batal* dari tombol di atas\\.";
+        await sendMessage(chatId, hint);
       }
       break;
     }
@@ -434,13 +529,96 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 // Cache sementara daftar akun saat user memilih dari list
 const accountCache = new Map<number, any[]>();
 
+//  Cek Duplikat Transaksi
+// Cek apakah transaksi dengan nominal + tanggal yang sama (±3 hari) sudah ada
+// di rekening bank atau wallet yang dipilih user.
+// Untuk sumber MANUAL/Catatan Cepat tidak dicek karena memang di luar mutasi.
+async function checkDuplicate(
+  _userId: string,
+  source: "BANK" | "WALLET" | "MANUAL",
+  accountId: string | undefined,
+  amount: number,
+  type: "CREDIT" | "DEBIT",
+  date: Date
+): Promise<{ isDuplicate: boolean; matches: { date: string; description: string; amount: number }[] }> {
+  // Transaksi cash/manual tidak perlu dicek
+  if (source === "MANUAL" || !accountId) return { isDuplicate: false, matches: [] };
+
+  // Window ±3 hari untuk toleransi perbedaan tanggal pencatatan
+  const dayStart = new Date(date);
+  dayStart.setDate(dayStart.getDate() - 3);
+  dayStart.setHours(0, 0, 0, 0);
+
+  const dayEnd = new Date(date);
+  dayEnd.setDate(dayEnd.getDate() + 3);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  // Toleransi nominal ±1% untuk antisipasi perbedaan kecil (misal fee, pembulatan)
+  const amountMin = Math.floor(amount * 0.99);
+  const amountMax = Math.ceil(amount * 1.01);
+
+  if (source === "BANK") {
+    const existing = await prisma.bankTransaction.findMany({
+      where: {
+        bankAccountId: accountId,
+        type: type as TransactionType,
+        transactionDate: { gte: dayStart, lte: dayEnd },
+        amount: { gte: amountMin, lte: amountMax },
+      },
+      select: { transactionDate: true, description: true, amount: true },
+      take: 3,
+    });
+
+    if (existing.length > 0) {
+      return {
+        isDuplicate: true,
+        matches: existing.map((t) => ({
+          date: new Date(t.transactionDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }),
+          description: t.description,
+          amount: Number(t.amount),
+        })),
+      };
+    }
+  } else if (source === "WALLET") {
+    const db = prisma as any;
+    const existing = await db.walletTransaction.findMany({
+      where: {
+        walletId: accountId,
+        type,
+        transactionDate: { gte: dayStart, lte: dayEnd },
+        amount: { gte: amountMin, lte: amountMax },
+      },
+      select: { transactionDate: true, description: true, amount: true },
+      take: 3,
+    });
+
+    if (existing.length > 0) {
+      return {
+        isDuplicate: true,
+        matches: existing.map((t: any) => ({
+          date: new Date(t.transactionDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }),
+          description: t.description,
+          amount: Number(t.amount),
+        })),
+      };
+    }
+  }
+
+  return { isDuplicate: false, matches: [] };
+}
+
 async function askType(chatId: number, accountLabel: string) {
   await sendMessage(chatId,
-    `✅ Akun: *${escMd(accountLabel)}*\n\n` +
-    `Jenis transaksi:\n\n` +
-    `Ketik *1* — 💰 Pemasukan \\(uang masuk\\)\n` +
-    `Ketik *2* — 💸 Pengeluaran \\(uang keluar\\)\n\n` +
-    `_Ketik /batal untuk membatalkan_`
+    `✅ Akun: *${escMd(accountLabel)}*\n\nJenis transaksi:`,
+    [
+      [
+        { text: "💰 Pemasukan (uang masuk)", callback_data: "TYPE_CREDIT" },
+      ],
+      [
+        { text: "💸 Pengeluaran (uang keluar)", callback_data: "TYPE_DEBIT" },
+      ],
+      [{ text: "❌ Batal", callback_data: "CANCEL" }],
+    ]
   );
 }
 
@@ -459,7 +637,13 @@ async function showConfirmation(chatId: number, s: ConvState) {
     `Nominal: *${escMd(fmt(s.amount ?? 0))}*\n` +
     `Deskripsi: ${escMd(s.description ?? "")}\n` +
     `Tanggal: ${escMd(dateStr)}\n\n` +
-    `Ketik *ya* untuk simpan atau *tidak* untuk batal\\.`
+    `Simpan transaksi ini\\?`,
+    [
+      [
+        { text: "✅ Ya, Simpan", callback_data: "CONFIRM_YES" },
+        { text: "❌ Batal", callback_data: "CONFIRM_NO" },
+      ],
+    ]
   );
 }
 
@@ -594,7 +778,7 @@ async function saveTransaction(chatId: number, userId: string, s: ConvState) {
   }
 }
 
-// ─── AI Parse Transaksi dari Teks Bebas ──────────────────────────────────────
+//  AI Parse Transaksi dari Teks Bebas ──────────────────────────────────────
 
 interface ParsedTx {
   description: string;
