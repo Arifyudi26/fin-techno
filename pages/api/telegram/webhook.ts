@@ -813,13 +813,14 @@ async function saveTransaction(chatId: number, userId: string, s: ConvState) {
   }
 }
 
-//  AI Parse Transaksi dari Teks Bebas ──────────────────────────────────────
+//  AI Parse Transaksi dari Teks Bebas 
 
 interface ParsedTx {
   description: string;
   amount: number;
   type: "CREDIT" | "DEBIT";
-  date: string; // ISO date string YYYY-MM-DD
+  date?: string; // ISO date string YYYY-MM-DD, opsional — jika tidak ada pakai waktu saat ini
+  time?: string; // HH:MM:SS format, opsional — jika tidak ada pakai jam saat ini
 }
 
 // Kirim teks ke Gemini, minta ekstrak transaksi dalam JSON.
@@ -836,14 +837,19 @@ async function tryParseTransactions(text: string): Promise<ParsedTx[] | null> {
     `INSTRUKSI:\n` +
     `1. Jika teks berisi satu atau lebih transaksi keuangan (ada nominal uang + deskripsi), ` +
     `ekstrak dan kembalikan JSON array dengan format:\n` +
-    `[{"description":"...","amount":50000,"type":"DEBIT","date":"YYYY-MM-DD"}]\n` +
+    `[{"description":"...","amount":50000,"type":"DEBIT","date":"YYYY-MM-DD","time":"HH:MM"}]\n` +
     `2. type: "CREDIT" untuk uang masuk (gaji, transfer masuk, terima, dapat), ` +
     `"DEBIT" untuk uang keluar (beli, bayar, makan, belanja, transfer keluar, dll)\n` +
     `3. Untuk tanggal relatif: "hari ini"="${today}", "kemarin"=kemarin, "tadi"="${today}", ` +
-    `"minggu lalu"=7 hari lalu. Jika tidak ada tanggal, gunakan "${today}".\n` +
+    `"minggu lalu"=7 hari lalu. Jika tidak ada info tanggal sama sekali, hilangkan field "date" dari objek JSON.\n` +
     `4. Nominal: "5jt"=5000000, "50rb"=50000, "1.5jt"=1500000, "25k"=25000\n` +
-    `5. Jika teks adalah pertanyaan, obrolan, atau TIDAK mengandung transaksi → kembalikan: []\n` +
-    `6. Kembalikan HANYA JSON array, tanpa penjelasan, tanpa markdown code block.`;
+    `5. Untuk field "time": ekstrak jam jika ada. Format output: "H" jika hanya ada jam (contoh: "jam 8"="8"), ` +
+    `"H:MM" jika ada jam+menit (contoh: "jam 8:30"="8:30"), ` +
+    `"H:MM:SS" jika ada jam+menit+detik (contoh: "08:30:45"="8:30:45"). ` +
+    `Konversi waktu: "jam 3 sore"="15", "jam 8 pagi"="8", "jam 9 malam"="21", "siang"="12", "tengah malam"="0". ` +
+    `Jika tidak ada info jam sama sekali, hilangkan field "time" dari objek JSON.\n` +
+    `6. Jika teks adalah pertanyaan, obrolan, atau TIDAK mengandung transaksi → kembalikan: []\n` +
+    `7. Kembalikan HANYA JSON array, tanpa penjelasan, tanpa markdown code block.`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -879,8 +885,29 @@ async function saveAndConfirmTransactions(chatId: number, userId: string, txs: P
 
   for (const tx of txs) {
     try {
-      const txDate = new Date(tx.date);
-      if (isNaN(txDate.getTime())) txDate.setTime(Date.now());
+      // Jika date tidak ada/kosong → gunakan tanggal hari ini
+      // Jika time tidak ada → gunakan jam saat ini
+      const now = new Date();
+      const txDate = (tx.date && tx.date !== "null")
+        ? new Date(tx.date as string)
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (isNaN(txDate.getTime())) txDate.setTime(now.getTime());
+
+      // Terapkan jam jika ada — mendukung format: "H", "H:MM", "H:MM:SS"
+      // Jika tidak ada info jam → pakai jam:menit:detik saat ini
+      if (tx.time && tx.time !== "null") {
+        const parts = tx.time.split(":").map(Number);
+        const h = parts[0] ?? 0;
+        const m = parts[1] ?? 0;
+        const s = parts[2] ?? 0;
+        if (!isNaN(h) && h >= 0 && h <= 23 &&
+            !isNaN(m) && m >= 0 && m <= 59 &&
+            !isNaN(s) && s >= 0 && s <= 59) {
+          txDate.setHours(h, m, s, 0);
+        }
+      } else {
+        txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+      }
 
       await db.manualTransaction.create({
         data: {
@@ -907,7 +934,7 @@ async function saveAndConfirmTransactions(chatId: number, userId: string, txs: P
   const lines = saved.map((tx) => {
     const emoji = tx.type === "CREDIT" ? "🟢" : "🔴";
     const sign = tx.type === "CREDIT" ? "\\+" : "\\-";
-    const dateStr = new Date(tx.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    const dateStr = new Date(tx.date ?? new Date()).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
     return `${emoji} ${escMd(dateStr)} \\| ${sign}${escMd(fmt(tx.amount))} \\| ${escMd(tx.description)}`;
   });
 
@@ -928,11 +955,13 @@ async function getFinancialSummary(userId: string): Promise<string> {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  const [bankTx, walletTx, bankTxLast, walletTxLast] = await Promise.all([
+  const [bankTx, walletTx, manualTx, bankTxLast, walletTxLast, manualTxLast] = await Promise.all([
     prisma.bankTransaction.findMany({ where: { bankAccount: { ownerId: userId }, transactionDate: { gte: startOfMonth } }, select: { type: true, amount: true } }),
     db.walletTransaction.findMany({ where: { wallet: { ownerId: userId }, transactionDate: { gte: startOfMonth } }, select: { type: true, amount: true } }),
+    db.manualTransaction.findMany({ where: { userId, transactionDate: { gte: startOfMonth } }, select: { type: true, amount: true } }),
     prisma.bankTransaction.findMany({ where: { bankAccount: { ownerId: userId }, transactionDate: { gte: startOfLastMonth, lte: endOfLastMonth } }, select: { type: true, amount: true } }),
     db.walletTransaction.findMany({ where: { wallet: { ownerId: userId }, transactionDate: { gte: startOfLastMonth, lte: endOfLastMonth } }, select: { type: true, amount: true } }),
+    db.manualTransaction.findMany({ where: { userId, transactionDate: { gte: startOfLastMonth, lte: endOfLastMonth } }, select: { type: true, amount: true } }),
   ]);
 
   const calc = (txs: { type: string; amount: any }[]) => {
@@ -941,8 +970,8 @@ async function getFinancialSummary(userId: string): Promise<string> {
     return { income, expense, net: income - expense };
   };
 
-  const curr = calc([...bankTx, ...walletTx]);
-  const last = calc([...bankTxLast, ...walletTxLast]);
+  const curr = calc([...bankTx, ...walletTx, ...manualTx]);
+  const last = calc([...bankTxLast, ...walletTxLast, ...manualTxLast]);
   const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const lastMonthName = startOfLastMonth.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const netEmoji = curr.net >= 0 ? "✅" : "⚠️";
