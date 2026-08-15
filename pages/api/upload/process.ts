@@ -93,7 +93,18 @@ export async function processUpload(payload: {
     if (!response.ok) throw new Error(`Gagal download file: ${response.status} ${response.statusText}`);
     const arrayBuffer = await response.arrayBuffer();
     const fileBuffer  = Buffer.from(arrayBuffer);
-    const fileContent = fileFormat !== "PDF" ? fileBuffer.toString("utf-8") : "";
+
+    // Konversi XLSX/XLS => CSV agar bisa diproses parser yang sama dengan CSV
+    let fileContent = "";
+    if (fileFormat === "XLSX" || fileFormat === "XLS") {
+      const XLSX = await import("xlsx");
+      const wb   = XLSX.read(fileBuffer, { type: "buffer", cellDates: true, dateNF: "yyyy-mm-dd HH:MM:SS" });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      // header: 1 => array of arrays, raw: false => format pakai dateNF di atas
+      fileContent = XLSX.utils.sheet_to_csv(ws, { rawNumbers: false });
+    } else if (fileFormat !== "PDF") {
+      fileContent = fileBuffer.toString("utf-8");
+    }
     log("DOWNLOAD_OK", `size=${fileBuffer.length} bytes`);
 
     // Parse file — routing ke parser yang sesuai

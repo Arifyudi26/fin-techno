@@ -27,37 +27,51 @@ export function dayRangeUTC(dateStr: string): { gte: Date; lte: Date } {
   };
 }
 
-/** Parse berbagai format tanggal ke Date object, return null jika gagal */
+/** Parse berbagai format tanggal ke Date object, return null jika gagal.
+ *  Semua tanggal disimpan sebagai UTC midnight (jam 00:00:00 UTC) agar
+ *  nilai di DB sama persis dengan tanggal di CSV — tanpa shift timezone.
+ */
 export function parseDate(val: string): Date | null {
   if (!val) return null;
   const clean = val.trim();
 
-  const isoMatch = clean.match(/^(\d{4}-\d{2}-\d{2})[T ][\d:]+/);
-  if (isoMatch) {
-    const d = new Date(isoMatch[1]);
-    return isNaN(d.getTime()) ? null : d;
-  }
+  // Helper: buat UTC Date dari komponen tanggal — TANPA konversi timezone.
+  // Tanggal bank statement adalah "tanggal kalender", bukan timestamp.
+  const utc = (y: number, m: number, d: number, H = 0, M = 0, S = 0): Date =>
+    new Date(Date.UTC(y, m - 1, d, H, M, S));
 
-  const briPdfMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{2})\s+\d{2}:\d{2}:\d{2}/);
-  if (briPdfMatch) {
-    const [, dd, mm, yy] = briPdfMatch;
-    const d = new Date(`20${yy}-${mm}-${dd}`);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
-    [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, m, d]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\/(\d{2})\/(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})-(\d{2})-(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\.(\d{2})\.(\d{4})$/, ([, d, m, y]) => `${y}-${m}-${d}`],
-    [/^(\d{2})\/(\d{2})\/(\d{2})$/, ([, d, m, y]) => `20${y}-${m}-${d}`],
+  type DatePattern = [RegExp, (m: RegExpMatchArray) => Date | null];
+  const patterns: DatePattern[] = [
+    // ISO: YYYY-MM-DDTHH:MM:SS atau YYYY-MM-DD HH:MM:SS
+    [/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/, ([, y, mo, d, H, M, S]) => utc(+y, +mo, +d, +H, +M, +S)],
+    // BRI PDF: "dd/mm/yy HH:MM:SS"
+    [/^(\d{2})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})/, ([, d, mo, y, H, M, S]) => utc(2000 + +y, +mo, +d, +H, +M, +S)],
+    // YYYY-MM-DD
+    [/^(\d{4})-(\d{2})-(\d{2})$/, ([, y, mo, d]) => utc(+y, +mo, +d)],
+    // M/D/YYYY atau D/M/YYYY — format Excel/CSV BRI: "4/11/2026"
+    [/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, ([, d, mo, y]) => utc(+y, +mo, +d)],
+    // DD-MM-YYYY
+    [/^(\d{1,2})-(\d{1,2})-(\d{4})$/, ([, d, mo, y]) => utc(+y, +mo, +d)],
+    // DD.MM.YYYY
+    [/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, ([, d, mo, y]) => utc(+y, +mo, +d)],
+    // DD/MM/YY
+    [/^(\d{2})\/(\d{2})\/(\d{2})$/, ([, d, mo, y]) => utc(2000 + +y, +mo, +d)],
+    // DD/MM/YYYY HH:MM:SS
+    [/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/, ([, d, mo, y, H, M, S]) => utc(+y, +mo, +d, +H, +M, +S)],
+    // M/D/YYYY H:MM:SS AM/PM — format Excel BRI: "4/11/2026 12:00:00 AM"
+    [/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)$/i, ([, d, mo, y, H, M, S, ampm]) => {
+      let h = +H;
+      if (ampm.toUpperCase() === "AM" && h === 12) h = 0;
+      if (ampm.toUpperCase() === "PM" && h !== 12) h += 12;
+      return utc(+y, +mo, +d, h, +M, +S);
+    }],
   ];
 
   for (const [regex, builder] of patterns) {
     const match = clean.match(regex);
     if (match) {
-      const d = new Date(builder(match));
-      if (!isNaN(d.getTime())) return d;
+      const result = builder(match);
+      if (result && !isNaN(result.getTime())) return result;
     }
   }
 
