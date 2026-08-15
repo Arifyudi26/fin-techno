@@ -1021,23 +1021,27 @@ async function getFinancialSummary(userId: string): Promise<string> {
 
 async function getRecentTransactions(userId: string): Promise<string> {
   const db = prisma as any;
-  const [bankTx, walletTx] = await Promise.all([
+  const [bankTx, walletTx, manualTx] = await Promise.all([
     prisma.bankTransaction.findMany({ where: { bankAccount: { ownerId: userId } }, select: { transactionDate: true, description: true, amount: true, type: true, bankAccount: { select: { bankProvider: true } } }, orderBy: { transactionDate: "desc" }, take: 5 }),
     db.walletTransaction.findMany({ where: { wallet: { ownerId: userId } }, select: { transactionDate: true, description: true, amount: true, type: true, wallet: { select: { walletProvider: true } } }, orderBy: { transactionDate: "desc" }, take: 5 }),
+    db.manualTransaction.findMany({ where: { userId }, select: { transactionDate: true, description: true, amount: true, type: true }, orderBy: { transactionDate: "desc" }, take: 5 }),
   ]);
 
   const all = [
     ...bankTx.map((t: any) => ({ ...t, source: t.bankAccount.bankProvider })),
     ...walletTx.map((t: any) => ({ ...t, source: t.wallet.walletProvider })),
+    ...manualTx.map((t: any) => ({ ...t, source: "Manual" })),
   ].sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()).slice(0, 5);
 
   if (all.length === 0) return "📋 Belum ada transaksi yang tercatat\\.";
 
   const rows = all.map((tx: any) => {
-    const date = new Date(tx.transactionDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    const date = escMd(new Date(tx.transactionDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }));
     const emoji = tx.type === "CREDIT" ? "🟢" : "🔴";
-    const sign = tx.type === "CREDIT" ? "\\+" : "\\-";
-    const desc = tx.description.length > 25 ? tx.description.substring(0, 25) + "\\.\\.\\." : escMd(tx.description);
+    const sign  = tx.type === "CREDIT" ? "\\+" : "\\-";
+    // Potong dulu, baru escape — agar karakter reserved di deskripsi ikut ter-escape
+    const rawDesc = tx.description.length > 25 ? tx.description.substring(0, 25) + "..." : tx.description;
+    const desc = escMd(rawDesc);
     return `${emoji} ${date} \\| ${sign}${escMd(fmt(Number(tx.amount)))} \\| ${desc}`;
   });
 
