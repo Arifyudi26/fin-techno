@@ -300,10 +300,37 @@ async function startInputFlow(chatId: number, userId: string) {
 
 // Input Flow: Handler setiap langkah 
 async function handleInputFlow(chatId: number, userId: string, text: string, session: ConvState) {
+
+  // Helper: deteksi dan proses multi-transaksi dari step manapun
+  async function tryHandleMultiTx(): Promise<boolean> {
+    const looksLikeMultiple =
+      text.includes("\n") ||
+      /\b\w.+\b\d{3,}\b.*\b\w.+\b\d{3,}/.test(text);
+    if (!looksLikeMultiple) return false;
+
+    clearSession(chatId);
+    accountCache.delete(chatId);
+    await sendMessage(chatId, "🤖 Mendeteksi beberapa transaksi, memproses otomatis\\.\\.\\.");
+    const parsed = await tryParseTransactions(text);
+    if (parsed && parsed.length > 0) {
+      await saveAndConfirmTransactions(chatId, userId, parsed);
+    } else {
+      await sendMessage(chatId,
+        "⚠️ Tidak bisa mengenali transaksi dari teks tersebut\\.\n\n" +
+        "Gunakan format: `deskripsi nominal` per baris\\.\n" +
+        "Contoh:\n`makan siang 25000`\n`bensin 50000`\n\n" +
+        "Atau ketik /input untuk input satu per satu\\."
+      );
+    }
+    return true;
+  }
+
   switch (session.step) {
 
     // Langkah 1: Pilih sumber 
     case "CHOOSE_SOURCE": {
+      if (await tryHandleMultiTx()) return;
+
       const [banks, wallets] = await Promise.all([
         prisma.bankAccount.findMany({
           where: { ownerId: userId, isActive: true },
@@ -364,6 +391,7 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 2: Pilih akun dari daftar 
     case "CHOOSE_ACCOUNT": {
+      if (await tryHandleMultiTx()) return;
       const accounts = accountCache.get(chatId) ?? [];
       if (!text.startsWith("ACC_")) {
         await sendMessage(chatId, `⚠️ Pilih salah satu rekening dari tombol di atas atau ketik /batal\\.`);
@@ -386,6 +414,7 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 3: Pilih tipe 
     case "CHOOSE_TYPE": {
+      if (await tryHandleMultiTx()) return;
       if (text === "TYPE_CREDIT" || text.toUpperCase() === "MASUK" || text.toUpperCase() === "CREDIT") {
         setSession(chatId, { ...session, step: "INPUT_AMOUNT", type: "CREDIT" });
         await sendMessage(chatId, `💰 Berapa jumlah *pemasukan*\\?\n\nContoh: \`150000\` atau \`1500000\`\n\n_Ketik /batal untuk membatalkan_`);
@@ -400,6 +429,8 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 4: Input nominal 
     case "INPUT_AMOUNT": {
+      if (await tryHandleMultiTx()) return;
+
       const raw = text.replace(/[.,\s]/g, "").replace(/[^0-9]/g, "");
       const amount = parseInt(raw);
       if (isNaN(amount) || amount <= 0) {
@@ -413,6 +444,8 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 5: Input deskripsi 
     case "INPUT_DESCRIPTION": {
+      if (await tryHandleMultiTx()) return;
+
       if (text.length < 2) {
         await sendMessage(chatId, "⚠️ Deskripsi terlalu pendek\\. Minimal 2 karakter\\.");
         return;
@@ -429,6 +462,8 @@ async function handleInputFlow(chatId: number, userId: string, text: string, ses
 
     // Langkah 6: Input tanggal 
     case "INPUT_DATE": {
+      if (await tryHandleMultiTx()) return;
+
       let date: Date;
       const lower = text.toLowerCase().trim();
 
