@@ -1012,8 +1012,8 @@ async function getFinancialSummary(userId: string): Promise<string> {
 
   return (
     `📊 *Ringkasan Keuangan — ${escMd(monthName)}*\n\n` +
-    `💰 Pemasukan: *${escMd(fmt(curr.income))}*` + (incomeChange ? ` _(${Number(incomeChange) >= 0 ? "\\+" : ""}${escMd(incomeChange)}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
-    `💸 Pengeluaran: *${escMd(fmt(curr.expense))}*` + (expenseChange ? ` _(${Number(expenseChange) >= 0 ? "\\+" : ""}${escMd(expenseChange)}% vs ${escMd(lastMonthName)})_` : "") + "\n" +
+    `💰 Pemasukan: *${escMd(fmt(curr.income))}*` + (incomeChange ? ` _\\(${Number(incomeChange) >= 0 ? "\\+" : ""}${escMd(incomeChange)}% vs ${escMd(lastMonthName)}\\)_` : "") + "\n" +
+    `💸 Pengeluaran: *${escMd(fmt(curr.expense))}*` + (expenseChange ? ` _\\(${Number(expenseChange) >= 0 ? "\\+" : ""}${escMd(expenseChange)}% vs ${escMd(lastMonthName)}\\)_` : "") + "\n" +
     `${netEmoji} Net Flow: *${escMd(fmt(curr.net))}*\n\n` +
     `_Ketik /transaksi untuk melihat transaksi terakhir_`
   );
