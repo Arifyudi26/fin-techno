@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TransactionType } from "@prisma/client";
 
 // Tipe baris hasil parse

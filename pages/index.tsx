@@ -115,7 +115,7 @@ export default function Home() {
     } finally {
       setLoading((prev) => ({ ...prev, metrics: false }));
     }
-  }, []);
+  }, [t]);
 
   const fetchCashflow = useCallback(async (f: IFilters) => {
     setLoading((prev) => ({ ...prev, cashflow: true }));
@@ -134,7 +134,7 @@ export default function Home() {
     } finally {
       setLoading((prev) => ({ ...prev, cashflow: false }));
     }
-  }, []);
+  }, [t]);
 
   const fetchAccounts = useCallback(async () => {
     setLoading((prev) => ({ ...prev, accounts: true }));
@@ -147,7 +147,7 @@ export default function Home() {
     } finally {
       setLoading((prev) => ({ ...prev, accounts: false }));
     }
-  }, []);
+  }, [t]);
 
   const fetchAllCategories = useCallback(async () => {
     try {
@@ -184,7 +184,7 @@ export default function Home() {
     } finally {
       setLoading((prev) => ({ ...prev, transactions: false }));
     }
-  }, []);
+  }, [t]);
 
   // Initial load
   useEffect(() => {
