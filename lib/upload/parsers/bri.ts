@@ -13,7 +13,35 @@
 import { ParsedRow, parseCSV, parseRows } from "./shared";
 
 export function parseBriCSV(content: string): ParsedRow[] {
-  return parseRows(parseCSV(content));
+  // BRI CSV kadang pakai ; sebagai separator — deteksi otomatis
+  const firstLine = content.split(/\r?\n/).find((l) => l.trim());
+  const separator = firstLine && firstLine.includes(";") && !firstLine.includes(",") ? ";" : ",";
+
+  let normalizedContent = content;
+  if (separator === ";") {
+    // Ganti ; dengan , agar parseCSV bisa baca
+    normalizedContent = content
+      .split(/\r?\n/)
+      .map((line) => line.replace(/;/g, ","))
+      .join("\n");
+  }
+
+  const rows = parseCSV(normalizedContent);
+
+  // Lewati baris-baris awal yang bukan header transaksi (info rekening, dll.)
+  // Header transaksi BRI biasanya mengandung kata "Tanggal" atau "Keterangan"
+  const headerKeywords = ["tanggal", "keterangan", "debet", "kredit", "saldo", "date", "description"];
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const lower = rows[i].map((c) => c.toLowerCase().trim());
+    const matches = lower.filter((c) => headerKeywords.some((kw) => c.includes(kw)));
+    if (matches.length >= 2) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  return parseRows(rows.slice(headerIdx));
 }
 
 export async function parseBriPDF(buffer: Buffer): Promise<ParsedRow[]> {

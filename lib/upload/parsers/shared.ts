@@ -35,8 +35,8 @@ export function parseCSV(content: string): string[][] {
 
 // Column mapping (kandidat nama kolom yang dikenali)
 export const COLUMN_CANDIDATES = {
-  date:           ["tgl_tran", "tanggal transaksi", "tanggal", "transaction date", "date", "tgl"],
-  valueDate:      ["tgl_efektif", "tanggal efektif", "value date", "tgl valuta"],
+  date:           ["tgl_tran", "tanggal transaksi", "tanggal", "transaction date", "date", "tgl", "tgl."],
+  valueDate:      ["tgl_efektif", "tanggal efektif", "value date", "tgl valuta", "tgl. efektif", "tgl efektif"],
   description:    ["remark_custom", "desk_tran", "keterangan", "description", "deskripsi", "ket", "narasi", "detail transaksi"],
   debit:          ["mutasi_debet", "debet", "debit", "pengeluaran", "keluar", "db"],
   credit:         ["mutasi_kredit", "kredit", "credit", "pemasukan", "masuk", "cr"],
@@ -47,10 +47,17 @@ export const COLUMN_CANDIDATES = {
 } as const;
 
 export function findColIdx(header: string[], candidates: readonly string[]): number {
+  // Normalisasi: hapus titik dan spasi ganda untuk matching yang lebih toleran
+  const normalize = (s: string) => s.replace(/\./g, "").replace(/\s+/g, " ").trim();
+  const normalizedHeader = header.map(normalize);
+
   for (const candidate of candidates) {
-    const exact = header.indexOf(candidate);
+    const normCandidate = normalize(candidate);
+    // Exact match dulu
+    const exact = normalizedHeader.indexOf(normCandidate);
     if (exact >= 0) return exact;
-    const partial = header.findIndex((h) => h.includes(candidate));
+    // Partial match
+    const partial = normalizedHeader.findIndex((h) => h.includes(normCandidate));
     if (partial >= 0) return partial;
   }
   return -1;
