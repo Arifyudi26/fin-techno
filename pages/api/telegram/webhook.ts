@@ -880,8 +880,9 @@ async function tryParseTransactions(text: string): Promise<ParsedTx[] | null> {
 // Simpan array transaksi hasil parse AI dan kirim konfirmasi ke user
 async function saveAndConfirmTransactions(chatId: number, userId: string, txs: ParsedTx[]) {
   const db = prisma as any;
-  const saved: ParsedTx[] = [];
+  const saved: { tx: ParsedTx; txDate: Date }[] = [];
   const failed: string[] = [];
+  const duplicates: string[] = [];
 
   for (const tx of txs) {
     try {
@@ -909,6 +910,24 @@ async function saveAndConfirmTransactions(chatId: number, userId: string, txs: P
         txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
       }
 
+      // Validasi duplikat: cek apakah sudah ada transaksi dengan deskripsi + nominal + waktu yang sama (±1 menit)
+      const dupWindowStart = new Date(txDate.getTime() - 60 * 1000);
+      const dupWindowEnd   = new Date(txDate.getTime() + 60 * 1000);
+      const existing = await db.manualTransaction.findFirst({
+        where: {
+          userId,
+          description: tx.description,
+          amount: tx.amount,
+          type: tx.type,
+          transactionDate: { gte: dupWindowStart, lte: dupWindowEnd },
+        },
+      });
+
+      if (existing) {
+        duplicates.push(tx.description);
+        continue;
+      }
+
       await db.manualTransaction.create({
         data: {
           userId,
@@ -919,28 +938,41 @@ async function saveAndConfirmTransactions(chatId: number, userId: string, txs: P
           source: "TELEGRAM",
         },
       });
-      saved.push(tx);
+      saved.push({ tx, txDate });
     } catch {
       failed.push(tx.description);
     }
   }
 
-  if (saved.length === 0) {
+  if (saved.length === 0 && duplicates.length === 0) {
     await sendMessage(chatId, "❌ Gagal menyimpan transaksi\\. Coba lagi atau gunakan /input\\.");
     return;
   }
 
   // Buat pesan konfirmasi ringkasan
-  const lines = saved.map((tx) => {
+  const lines = saved.map(({ tx, txDate }) => {
     const emoji = tx.type === "CREDIT" ? "🟢" : "🔴";
-    const sign = tx.type === "CREDIT" ? "\\+" : "\\-";
-    const dateStr = new Date(tx.date ?? new Date()).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-    return `${emoji} ${escMd(dateStr)} \\| ${sign}${escMd(fmt(tx.amount))} \\| ${escMd(tx.description)}`;
+    const sign  = tx.type === "CREDIT" ? "\\+" : "\\-";
+    const dateStr = txDate.toLocaleDateString("id-ID", {
+      day: "2-digit", month: "short", year: "numeric",
+    });
+    const timeStr = txDate.toLocaleTimeString("id-ID", {
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
+    return `${emoji} ${escMd(dateStr)} ${escMd(timeStr)} \\| ${sign}${escMd(fmt(tx.amount))} \\| ${escMd(tx.description)}`;
   });
 
-  let msg = `✅ *${saved.length} transaksi berhasil disimpan\\!*\n\n` + lines.join("\n");
+  let msg = "";
+  if (saved.length > 0) {
+    msg += `✅ *${saved.length} transaksi berhasil disimpan\\!*\n\n` + lines.join("\n");
+  }
+  if (duplicates.length > 0) {
+    msg += (msg ? "\n\n" : "") +
+      `⚠️ *${duplicates.length} transaksi dilewati karena sudah ada data yang sama:*\n` +
+      duplicates.map((d) => `• ${escMd(d)}`).join("\n");
+  }
   if (failed.length > 0) {
-    msg += `\n\n⚠️ Gagal: ${failed.map(escMd).join(", ")}`;
+    msg += `\n\n❌ Gagal disimpan: ${failed.map(escMd).join(", ")}`;
   }
   msg += `\n\n_Ketik /ringkasan untuk melihat ringkasan keuangan_`;
 
