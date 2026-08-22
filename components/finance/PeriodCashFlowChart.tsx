@@ -2,10 +2,14 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { multiSeriestooltip } from "@/lib/apexTooltip";
 import type { DailyPoint } from "@/lib/types/finance";
+import { useI18n } from "@lib/i18n";
 
 interface Props { data: DailyPoint[]; }
 
 export default function PeriodCashFlowChart({ data }: Props) {
+  const { t } = useI18n();
+  const tr = t.dashboard;
+
   const options: ApexOptions = {
     colors: ["#22c55e", "#ef4444"],
     chart: { fontFamily: "Outfit, sans-serif", type: "bar", height: 240, toolbar: { show: false } },
@@ -29,7 +33,7 @@ export default function PeriodCashFlowChart({ data }: Props) {
       shared: true, intersect: false, style: { fontFamily: "Outfit, sans-serif" },
       marker: { show: false },
       custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number; w: Record<string, unknown> }) =>
-        multiSeriestooltip(series, dataPointIndex, ["Pemasukan", "Pengeluaran"], ["#22c55e", "#ef4444"], true, 220),
+        multiSeriestooltip(series, dataPointIndex, [tr.periodIncome, tr.periodExpense], ["#22c55e", "#ef4444"], true, 220),
     },
   };
 
@@ -38,8 +42,8 @@ export default function PeriodCashFlowChart({ data }: Props) {
       type="bar"
       height={240}
       series={[
-        { name: "Pemasukan", data: data.map((d) => d.credit) },
-        { name: "Pengeluaran", data: data.map((d) => d.debit) },
+        { name: tr.periodIncome, data: data.map((d) => d.credit) },
+        { name: tr.periodExpense, data: data.map((d) => d.debit) },
       ]}
       options={options}
     />

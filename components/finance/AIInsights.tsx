@@ -25,7 +25,7 @@ export default function AIInsights() {
       setContext(res.data.context);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message || "Gagal menganalisis. Coba lagi.");
+      setError(e?.response?.data?.message || tr.aiAnalyzeError);
     } finally {
       setLoading(false);
     }

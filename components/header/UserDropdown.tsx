@@ -7,6 +7,7 @@ import useAuthStore from "@/store/authStore";
 import { useAvatarUrl } from "@lib/hooks/useAvatarUrl";
 import { ThemeToggleButton } from "@components/common/ThemeToggleButton";
 import LanguageSwitcher from "@components/common/LanguageSwitcher";
+import { useI18n } from "@lib/i18n";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +15,7 @@ export default function UserDropdown() {
   const router = useRouter();
   const { logout, role, name } = useAuthStore();
   const avatarObjectUrl = useAvatarUrl();
+  const { t } = useI18n();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -106,7 +108,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              Edit profile
+              {t.common.editProfile}
             </DropdownItem>
           </li>
 
@@ -132,7 +134,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              <span className="flex-1 text-left">Settings</span>
+              <span className="flex-1 text-left">{t.common.settings}</span>
               {/* Chevron */}
               <svg
                 className={`w-4 h-4 fill-gray-400 transition-transform duration-200 ${isSettingsOpen ? "rotate-180" : ""}`}
@@ -152,13 +154,13 @@ export default function UserDropdown() {
               <div className="mx-3 mt-1 mb-1 rounded-lg border border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 px-3 py-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Theme
+                    {t.common.theme}
                   </span>
                   <ThemeToggleButton />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Language
+                    {t.common.language}
                   </span>
                   <LanguageSwitcher />
                 </div>
@@ -186,7 +188,7 @@ export default function UserDropdown() {
               fill=""
             />
           </svg>
-          Sign out
+          {t.common.signOut}
         </button>
       </Dropdown>
     </div>
