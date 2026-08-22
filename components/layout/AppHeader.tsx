@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useSidebar } from "@lib/context/SidebarContext";
+import { useI18n } from "@lib/i18n";
 import NotificationDropdown from "@components/header/NotificationDropdown";
 import UserDropdown from "@components/header/UserDropdown";
 import { ALL_MENUS } from "@lib/config/menuConfig";
@@ -15,6 +16,7 @@ const AppHeader: React.FC = () => {
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const router = useRouter();
+  const { t } = useI18n();
 
   const filteredMenus = searchQuery.trim()
     ? ALL_MENUS.filter(
@@ -100,7 +102,7 @@ const AppHeader: React.FC = () => {
           <button
             className="items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
             onClick={handleToggle}
-            aria-label="Toggle Sidebar"
+            aria-label={t.common.toggleSidebar}
           >
             {isMobileOpen ? (
               <svg
@@ -199,7 +201,7 @@ const AppHeader: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchOpen(true)}
-                  placeholder="Cari menu..."
+                  placeholder={t.common.searchMenuPlaceholder}
                   className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
                 />
                 <button
@@ -218,7 +220,7 @@ const AppHeader: React.FC = () => {
                 >
                   {filteredMenus.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
-                      Menu tidak ditemukan
+                      {t.common.searchMenuNotFound}
                     </p>
                   ) : (
                     <ul className="max-h-72 overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -234,9 +236,9 @@ const AppHeader: React.FC = () => {
                                 : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                             }`}
                           >
-                            <span>{menu.name}</span>
+                            <span>{t.sidebar[menu.key as keyof typeof t.sidebar] ?? menu.name}</span>
                             <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {menu.group}
+                              {t.sidebar[menu.groupKey as keyof typeof t.sidebar] ?? menu.group}
                             </span>
                           </button>
                         </li>

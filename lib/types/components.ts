@@ -6,10 +6,11 @@ export interface LayoutProps {
 }
 
 export type NavItem = {
+  key: string;
   name: string;
   icon: ReactNode;
   path?: string;
-  subItems?: { name: string; path: string }[];
+  subItems?: { key: string; name: string; path: string }[];
 };
 
 // Auth

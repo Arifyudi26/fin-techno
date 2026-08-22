@@ -1,10 +1,12 @@
 import { useRef, useState, KeyboardEvent, ClipboardEvent } from "react";
 import Button from "@components/ui/button/Button";
+import { useI18n } from "@lib/i18n";
 import type { OtpInputProps } from "@/lib/types/components";
 
 export default function OtpInput({ email, onVerified, onResend, loading }: OtpInputProps) {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const { t } = useI18n();
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -40,7 +42,7 @@ export default function OtpInput({ email, onVerified, onResend, loading }: OtpIn
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Kode OTP telah dikirim ke
+          {t.auth.otpSentTo}
         </p>
         <p className="font-medium text-gray-800 dark:text-white">{maskedEmail}</p>
       </div>
@@ -68,17 +70,17 @@ export default function OtpInput({ email, onVerified, onResend, loading }: OtpIn
         onClick={handleSubmit}
         disabled={loading || otp.join("").length < 6}
       >
-        {loading ? "Memverifikasi..." : "Verifikasi OTP"}
+        {loading ? t.auth.verifying : t.auth.verifyOtp}
       </Button>
 
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Tidak menerima kode?{" "}
+        {t.auth.noCode}{" "}
         <button
           type="button"
           onClick={onResend}
           className="text-brand-500 hover:text-brand-600 dark:text-brand-400 font-medium"
         >
-          Kirim ulang
+          {t.auth.resend}
         </button>
       </p>
     </div>

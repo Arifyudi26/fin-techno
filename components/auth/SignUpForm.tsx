@@ -8,6 +8,7 @@ import Button from "@components/ui/button/Button";
 import Toast from "@components/ui/toast/Toast";
 import OtpInput from "@components/auth/OtpInput";
 import { useToast } from "@lib/hooks/useToast";
+import { useI18n } from "@lib/i18n";
 import axiosGlobal from "@/services/AxiosGlobal";
 import useAuthStore from "@/store/authStore";
 
@@ -22,6 +23,7 @@ export default function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>("form");
   const { toastState, fire, close } = useToast();
+  const { t } = useI18n();
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -91,10 +93,10 @@ export default function SignUpForm() {
           <div>
             <div className="mb-5 sm:mb-8">
               <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-                {step === "otp" ? "Verifikasi OTP" : "Sign Up"}
+                {step === "otp" ? t.auth.otpTitle : t.auth.signUpTitle}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {step === "otp" ? "Masukkan kode OTP yang dikirim ke email kamu." : "Enter your email and password to sign up!"}
+                {step === "otp" ? t.auth.otpSubtitle : t.auth.signUpSubtitle}
               </p>
             </div>
 
@@ -111,17 +113,17 @@ export default function SignUpForm() {
                 <form onSubmit={onSubmit}>
                   <div className="space-y-5">
                     <div>
-                      <Label>Nama <span className="text-error-500">*</span></Label>
-                      <Input type="text" placeholder="Masukkan nama lengkap" value={name} onChange={(e) => setName(e.target.value)} required />
+                      <Label>{t.auth.nameLabel} <span className="text-error-500">*</span></Label>
+                      <Input type="text" placeholder={t.auth.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
                     <div>
-                      <Label>Email <span className="text-error-500">*</span></Label>
-                      <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      <Label>{t.auth.emailLabel} <span className="text-error-500">*</span></Label>
+                      <Input type="email" placeholder={t.auth.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                     <div>
-                      <Label>Password <span className="text-error-500">*</span></Label>
+                      <Label>{t.auth.passwordLabel} <span className="text-error-500">*</span></Label>
                       <div className="relative">
-                        <Input placeholder="Min. 8 karakter" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <Input placeholder={t.auth.passwordMinPlaceholder} type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
                         <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                           {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                         </span>
@@ -130,22 +132,22 @@ export default function SignUpForm() {
                     <div className="flex items-center gap-3">
                       <Checkbox className="w-5 h-5" checked={isChecked} onChange={setIsChecked} />
                       <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
-                        By creating an account means you agree to the{" "}
-                        <span className="text-gray-800 dark:text-white/90">Terms and Conditions,</span>{" "}
-                        and our <span className="text-gray-800 dark:text-white">Privacy Policy</span>
+                        {t.auth.termsText}{" "}
+                        <span className="text-gray-800 dark:text-white/90">{t.auth.termsLink}</span>{" "}
+                        and our <span className="text-gray-800 dark:text-white">{t.auth.privacyLink}</span>
                       </p>
                     </div>
                     <div>
                       <Button className="w-full" size="sm" disabled={loading || !name.trim() || !email.trim() || !password.trim() || !isChecked}>
-                        {loading ? "Memproses..." : "Sign Up"}
+                        {loading ? t.auth.processing : t.auth.signUp}
                       </Button>
                     </div>
                   </div>
                 </form>
                 <div className="mt-5">
                   <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                    Already have an account?{" "}
-                    <Link href="/auth/login" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">Sign In</Link>
+                    {t.auth.alreadyHaveAccount}{" "}
+                    <Link href="/auth/login" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">{t.auth.signIn}</Link>
                   </p>
                 </div>
               </div>

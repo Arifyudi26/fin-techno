@@ -1,6 +1,7 @@
-export type NavSubItem = { name: string; path: string };
+export type NavSubItem = { key: string; name: string; path: string };
 
 export type NavItemConfig = {
+  key: string;
   name: string;
   path?: string;
   subItems?: NavSubItem[];
@@ -8,28 +9,33 @@ export type NavItemConfig = {
 
 export const navItems: NavItemConfig[] = [
   {
+    key: "dashboard",
     name: "Dashboard",
     path: "/",
   },
   {
+    key: "transactions",
     name: "Transaksi",
     path: "/transactions",
   },
   {
+    key: "uploadStatement",
     name: "Upload e-Statement",
     subItems: [
-      { name: "Upload Baru", path: "/upload" },
-      { name: "Riwayat Upload", path: "/upload/riwayat" },
+      { key: "uploadNew", name: "Upload Baru", path: "/upload" },
+      { key: "uploadHistory", name: "Riwayat Upload", path: "/upload/riwayat" },
     ],
   },
   {
+    key: "accounts",
     name: "Rekening",
     subItems: [
-      { name: "Rekening Bank", path: "/bank-accounts" },
-      { name: "Dompet Digital", path: "/wallets" },
+      { key: "bankAccounts", name: "Rekening Bank", path: "/bank-accounts" },
+      { key: "digitalWallet", name: "Dompet Digital", path: "/wallets" },
     ],
   },
   {
+    key: "categories",
     name: "Kategori",
     path: "/categories",
   },
@@ -37,6 +43,7 @@ export const navItems: NavItemConfig[] = [
 
 export const othersItems: NavItemConfig[] = [
   {
+    key: "calendar",
     name: "Kalender",
     path: "/calendar",
   },
@@ -46,12 +53,14 @@ export const othersItems: NavItemConfig[] = [
 export const ALL_MENUS = [...navItems, ...othersItems].flatMap((item) => {
   if (item.subItems) {
     return item.subItems.map((sub) => ({
+      key: sub.key,
       name: sub.name,
       path: sub.path,
+      groupKey: item.key,
       group: item.name,
     }));
   }
   return item.path
-    ? [{ name: item.name, path: item.path, group: item.name }]
+    ? [{ key: item.key, name: item.name, path: item.path, groupKey: item.key, group: item.name }]
     : [];
 });

@@ -9,6 +9,7 @@ import {
   HorizontaLDots,
 } from "@components/icons";
 import { useSidebar } from "@lib/context/SidebarContext";
+import { useI18n } from "@lib/i18n";
 import SidebarWidget from "./SidebarWidget";
 import type { NavItem } from "@/lib/types/components";
 
@@ -52,23 +53,6 @@ const WalletIcon = () => (
       strokeLinejoin="round"
     />
     <circle cx="16" cy="13" r="1.5" fill="currentColor" />
-  </svg>
-);
-const MergeIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M8 7h8"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
   </svg>
 );
 const TagIcon = () => (
@@ -129,29 +113,29 @@ import {
 } from "@lib/config/menuConfig";
 
 const iconMap: Record<string, React.ReactNode> = {
-  Dashboard: <GridIcon />,
-  Transaksi: <WalletIcon />,
-  "Upload e-Statement": <UploadIcon />,
-  Rekonsiliasi: <MergeIcon />,
-  Rekening: <CardIcon />,
-  Kategori: <TagIcon />,
-  Kalender: <CalenderIcon />,
+  dashboard: <GridIcon />,
+  transactions: <WalletIcon />,
+  uploadStatement: <UploadIcon />,
+  accounts: <CardIcon />,
+  categories: <TagIcon />,
+  calendar: <CalenderIcon />,
 };
 
 const navItems: NavItem[] = navItemsConfig.map((item) => ({
   ...item,
-  icon: iconMap[item.name],
+  icon: iconMap[item.key],
 }));
 
 const othersItems: NavItem[] = othersItemsConfig.map((item) => ({
   ...item,
-  icon: iconMap[item.name],
+  icon: iconMap[item.key],
 }));
 
 // Component
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const router = useRouter();
+  const { t } = useI18n();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -238,7 +222,7 @@ const AppSidebar: React.FC = () => {
   const renderMenuItems = (items: NavItem[], menuType: "main" | "others") => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
-        <li key={nav.name}>
+        <li key={nav.key}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
@@ -250,7 +234,9 @@ const AppSidebar: React.FC = () => {
                 {nav.icon}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <span className="menu-item-text">{nav.name}</span>
+                <span className="menu-item-text">
+                  {t.sidebar[nav.key as keyof typeof t.sidebar] ?? nav.name}
+                </span>
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
@@ -270,7 +256,9 @@ const AppSidebar: React.FC = () => {
                   {nav.icon}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="menu-item-text">{nav.name}</span>
+                  <span className="menu-item-text">
+                    {t.sidebar[nav.key as keyof typeof t.sidebar] ?? nav.name}
+                  </span>
                 )}
               </Link>
             )
@@ -292,12 +280,12 @@ const AppSidebar: React.FC = () => {
                 {nav.subItems.map((sub) => {
                   const allSubPaths = nav.subItems!.map((s) => s.path);
                   return (
-                    <li key={sub.name}>
+                    <li key={sub.key}>
                       <Link
                         href={sub.path}
                         className={`menu-dropdown-item ${isSubItemActive(sub.path, allSubPaths) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}
                       >
-                        {sub.name}
+                        {t.sidebar[sub.key as keyof typeof t.sidebar] ?? sub.name}
                       </Link>
                     </li>
                   );
@@ -359,7 +347,7 @@ const AppSidebar: React.FC = () => {
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Keuangan"
+                  t.sidebar.groupFinance
                 ) : (
                   <HorizontaLDots className="size-6" />
                 )}
@@ -371,7 +359,7 @@ const AppSidebar: React.FC = () => {
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Lainnya"
+                  t.sidebar.groupOthers
                 ) : (
                   <HorizontaLDots />
                 )}

@@ -8,6 +8,7 @@ import Button from "@components/ui/button/Button";
 import Toast from "@components/ui/toast/Toast";
 import OtpInput from "@components/auth/OtpInput";
 import { useToast } from "@lib/hooks/useToast";
+import { useI18n } from "@lib/i18n";
 import useAuthStore from "@/store/authStore";
 import axiosGlobal from "@/services/AxiosGlobal";
 
@@ -20,6 +21,7 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>("credentials");
   const { toastState, fire, close } = useToast();
+  const { t } = useI18n();
 
   const handleOAuth = (provider: "google" | "facebook") => {
     signIn(provider, { callbackUrl: "/auth/oauth-callback" });
@@ -88,10 +90,10 @@ export default function SignInForm() {
           <div>
             <div className="mb-5 sm:mb-8">
               <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-                {step === "otp" ? "Verifikasi OTP" : "Sign In"}
+                {step === "otp" ? t.auth.otpTitle : t.auth.signInTitle}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {step === "otp" ? "Masukkan kode OTP yang dikirim ke email kamu." : "Enter your email and password to sign in!"}
+                {step === "otp" ? t.auth.otpSubtitle : t.auth.signInSubtitle}
               </p>
             </div>
 
@@ -113,13 +115,13 @@ export default function SignInForm() {
                       <path d="M5.10014 11.7305C4.91165 11.186 4.80257 10.6027 4.80257 9.99992C4.80257 9.3971 4.91165 8.81379 5.09022 8.26935L5.08523 8.1534L2.29464 6.02954L2.20333 6.0721C1.5982 7.25823 1.25098 8.5902 1.25098 9.99992C1.25098 11.4096 1.5982 12.7415 2.20333 13.9277L5.10014 11.7305Z" fill="#FBBC05" />
                       <path d="M10.1789 4.63331C11.8554 4.63331 12.9864 5.34303 13.6312 5.93612L16.1511 3.525C14.6035 2.11528 12.5895 1.25 10.1789 1.25C6.68676 1.25 3.67088 3.21387 2.20264 6.07218L5.08953 8.26943C5.81381 6.15972 7.81776 4.63331 10.1789 4.63331Z" fill="#EB4335" />
                     </svg>
-                    Sign in with Google
+                    {t.auth.signInWithGoogle}
                   </button>
                   <button type="button" onClick={() => handleOAuth("facebook")} className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" fill="#1877F2" />
                     </svg>
-                    Sign in with Facebook
+                    {t.auth.signInWithFacebook}
                   </button>
                 </div>
                 <div className="relative py-3 sm:py-5">
@@ -127,19 +129,19 @@ export default function SignInForm() {
                     <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">Or</span>
+                    <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">{t.auth.orDivider}</span>
                   </div>
                 </div>
                 <form onSubmit={onSubmit}>
                   <div className="space-y-6">
                     <div>
-                      <Label>Email <span className="text-error-500">*</span></Label>
-                      <Input type="email" placeholder="info@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      <Label>{t.auth.emailLabel} <span className="text-error-500">*</span></Label>
+                      <Input type="email" placeholder={t.auth.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                     <div>
-                      <Label>Password <span className="text-error-500">*</span></Label>
+                      <Label>{t.auth.passwordLabel} <span className="text-error-500">*</span></Label>
                       <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <Input type={showPassword ? "text" : "password"} placeholder={t.auth.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} required />
                         <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                           {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                         </span>
@@ -147,18 +149,18 @@ export default function SignInForm() {
                     </div>
                     <div>
                       <Button className="w-full" size="sm" disabled={loading || !email.trim() || !password.trim()}>
-                        {loading ? "Memproses..." : "Sign in"}
+                        {loading ? t.auth.processing : t.auth.signIn}
                       </Button>
                     </div>
                   </div>
                 </form>
                 <div className="mt-5">
                   <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/auth/register" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">Sign Up</Link>
+                    {t.auth.noAccount}{" "}
+                    <Link href="/auth/register" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">{t.auth.signUp}</Link>
                   </p>
                   <p className="mt-2 text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                    <Link href="/auth/change-password" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">Lupa password?</Link>
+                    <Link href="/auth/change-password" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">{t.auth.forgotPassword}</Link>
                   </p>
                 </div>
               </div>
