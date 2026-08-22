@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import { useI18n } from "@lib/i18n";
-import type { ChatMessage } from "@/lib/types/finance";
+import { fmtIDR as fmt } from "@lib/formatters";
+import type { ChatMessage, AnalysisContext } from "@/lib/types/finance";
 
 export default function AIChat() {
   const { t, lang } = useI18n();
@@ -23,6 +24,9 @@ export default function AIChat() {
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Analyze state
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -86,6 +90,51 @@ export default function AIChat() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage(input);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (analyzing || loading) return;
+    setAnalyzing(true);
+    setError("");
+
+    // Tambahkan pesan user sebagai trigger
+    const userMsg: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      parts: tr.aiAnalyze,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    try {
+      const res = await axiosGlobal.get("/ai/analyze", { params: { lang } });
+      const ctx: AnalysisContext = res.data.context;
+      const analysis: string = res.data.analysis;
+
+      // Format context summary sebagai bagian dari pesan AI
+      const contextLines = ctx
+        ? [
+            `📊 **${tr.aiTotalIncome}:** ${fmt(ctx.totalIncome)}`,
+            `📉 **${tr.aiTotalExpense}:** ${fmt(ctx.totalExpense)}`,
+            `💹 **${tr.aiNetFlow}:** ${fmt(ctx.netFlow)}`,
+            `📅 **${tr.aiMaxExpense}:** ${ctx.maxExpenseMonth?.label ?? "-"}`,
+            "",
+          ].join("\n")
+        : "";
+
+      const aiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "model",
+        parts: contextLines + analysis,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e?.response?.data?.message || "Gagal menganalisis. Coba lagi.");
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -155,6 +204,29 @@ export default function AIChat() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{tr.chatTitle}</p>
             </div>
+            <button
+              onClick={handleAnalyze}
+              disabled={analyzing || loading}
+              title={analyzing ? tr.aiAnalyzing : tr.aiAnalyze}
+              className="flex items-center gap-1.5 rounded-lg bg-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {analyzing ? (
+                <>
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  {tr.aiAnalyzing}
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {tr.aiAnalyze}
+                </>
+              )}
+            </button>
             <button
               onClick={() => { setMessages([]); setIsOpen(false); }}
               className="text-white/70 hover:text-white transition-colors"
