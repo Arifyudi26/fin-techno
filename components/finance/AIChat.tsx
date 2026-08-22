@@ -80,7 +80,7 @@ export default function AIChat() {
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message || "Gagal mendapatkan respons. Coba lagi.");
+      setError(e?.response?.data?.message || tr.aiErrorFallback);
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ export default function AIChat() {
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e?.response?.data?.message || "Gagal menganalisis. Coba lagi.");
+      setError(e?.response?.data?.message || tr.aiAnalyzeError);
     } finally {
       setAnalyzing(false);
     }
@@ -230,7 +230,7 @@ export default function AIChat() {
             <button
               onClick={() => { setMessages([]); setIsOpen(false); }}
               className="text-white/70 hover:text-white transition-colors"
-              title="Tutup & reset chat"
+              title={tr.chatCloseReset}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

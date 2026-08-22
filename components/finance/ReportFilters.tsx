@@ -3,6 +3,7 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import type { BankAccountBalance } from "@/lib/types/dashboard";
 import type { ReportFilterState } from "@/lib/types/finance";
 import DatePicker from "@components/form/DatePicker";
+import { useI18n } from "@lib/i18n";
 
 export type { ReportFilterState };
 
@@ -15,19 +16,22 @@ interface Props {
 const selectCls =
   "h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
-function formatDateLabel(dateFrom: string, dateTo: string): string {
-  if (!dateFrom && !dateTo) return "Semua Periode";
+function formatDateLabel(dateFrom: string, dateTo: string, labels: { allPeriods: string; from: string; until: string }): string {
+  if (!dateFrom && !dateTo) return labels.allPeriods;
   const fmt = (d: string) => {
     if (!d) return "";
     const [y, m, day] = d.split("-");
     return `${day}/${m}/${y}`;
   };
   if (dateFrom && dateTo) return `${fmt(dateFrom)} – ${fmt(dateTo)}`;
-  if (dateFrom) return `Dari ${fmt(dateFrom)}`;
-  return `Sampai ${fmt(dateTo)}`;
+  if (dateFrom) return `${labels.from} ${fmt(dateFrom)}`;
+  return `${labels.until} ${fmt(dateTo)}`;
 }
 
 export default function ReportFilters({ filters, onChange, onReset }: Props) {
+  const { t } = useI18n();
+  const tc = t.common;
+
   const [accounts, setAccounts] = useState<BankAccountBalance[]>([]);
   const [local, setLocal] = useState({
     dateFrom: filters.dateFrom,
@@ -76,14 +80,14 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
     filters.dateFrom !== getDefaultFrom() ||
     filters.dateTo !== getDefaultTo();
 
-  const activePeriodLabel = formatDateLabel(filters.dateFrom, filters.dateTo);
+  const activePeriodLabel = formatDateLabel(filters.dateFrom, filters.dateTo, { allPeriods: tc.allPeriods, from: tc.from, until: tc.until });
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-white/[0.03] mb-6">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter</span>
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{tc.filter}</span>
           <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
             {activePeriodLabel}
           </span>
@@ -93,7 +97,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
             onClick={handleReset}
             className="rounded-lg border border-error-200 px-3 py-1.5 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
           >
-            Reset Filter
+            {tc.resetFilter}
           </button>
         )}
       </div>
@@ -101,7 +105,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
       {/* Filter grid */}
       <div className={`grid gap-3 grid-cols-2 ${accounts.length > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <div className="flex h-[52px] flex-col justify-end gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Dari Tanggal</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tc.dateFrom}</label>
           <DatePicker
             id="report-filter-from"
             placeholder="dd/mm/yyyy"
@@ -111,7 +115,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
         </div>
 
         <div className="flex h-[52px] flex-col justify-end gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tc.dateTo}</label>
           <DatePicker
             id="report-filter-to"
             placeholder="dd/mm/yyyy"
@@ -123,9 +127,9 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
         {/* Rekening */}
         {accounts.length > 0 && (
           <div className="flex h-[52px] flex-col justify-end gap-1">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Rekening</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{tc.account}</label>
             <select value={local.accountId} onChange={(e) => set("accountId", e.target.value)} className={selectCls}>
-              <option value="">Semua Rekening</option>
+              <option value="">{tc.allAccounts}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.bankProvider} {a.source === "WALLET" ? "(Wallet)" : ""} ***{a.accountNumber.slice(-4)}
@@ -146,7 +150,7 @@ export default function ReportFilters({ filters, onChange, onReset }: Props) {
               <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
               <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Terapkan
+            {tc.apply}
           </button>
         </div>
       </div>

@@ -58,6 +58,26 @@ export const common = {
     searchMenuNotFound: "Menu tidak ditemukan",
     toggleSidebar: "Toggle Sidebar",
     authTagline: "Kelola keuangan pribadi Anda dengan mudah dan terorganisir",
+    home: "Home",
+    // Notification
+    notifications: "Notifikasi",
+    clearAll: "Hapus semua",
+    noNotifications: "Belum ada notifikasi",
+    notificationHint: "Hasil upload akan muncul di sini",
+    // UserDropdown
+    editProfile: "Edit profile",
+    settings: "Pengaturan",
+    theme: "Tema",
+    language: "Bahasa",
+    signOut: "Keluar",
+    // 404
+    errorTitle: "ERROR",
+    pageNotFound: "Halaman yang kamu cari tidak ditemukan.",
+    backToDashboard: "Kembali ke Dashboard",
+    // ReportFilters
+    allPeriods: "Semua Periode",
+    from: "Dari",
+    until: "Sampai",
   },
   en: {
     filter: "Filter",
@@ -118,5 +138,25 @@ export const common = {
     searchMenuNotFound: "Menu not found",
     toggleSidebar: "Toggle Sidebar",
     authTagline: "Manage your personal finances easily and organized",
+    home: "Home",
+    // Notification
+    notifications: "Notifications",
+    clearAll: "Clear all",
+    noNotifications: "No notifications yet",
+    notificationHint: "Upload results will appear here",
+    // UserDropdown
+    editProfile: "Edit profile",
+    settings: "Settings",
+    theme: "Theme",
+    language: "Language",
+    signOut: "Sign out",
+    // 404
+    errorTitle: "ERROR",
+    pageNotFound: "The page you are looking for was not found.",
+    backToDashboard: "Back to Dashboard",
+    // ReportFilters
+    allPeriods: "All Periods",
+    from: "From",
+    until: "To",
   },
 } as const;

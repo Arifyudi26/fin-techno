@@ -28,26 +28,26 @@ export default function SignUpForm() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password.trim()) {
-      fire("warning", "Form tidak lengkap", { message: "Nama, email, dan password wajib diisi." });
+      fire("warning", t.auth.formIncomplete, { message: t.auth.nameEmailPasswordRequired });
       return;
     }
     if (password.length < 8) {
-      fire("warning", "Password terlalu pendek", { message: "Password minimal 8 karakter." });
+      fire("warning", t.auth.passwordTooShort, { message: t.auth.passwordMinChars });
       return;
     }
     if (!isChecked) {
-      fire("warning", "Syarat & Ketentuan", { message: "Harap setujui syarat dan ketentuan terlebih dahulu." });
+      fire("warning", t.auth.termsRequired, { message: t.auth.termsRequiredMsg });
       return;
     }
     setLoading(true);
     try {
       await axiosGlobal.post("/auth/send-otp", { email, purpose: "register" });
       setStep("otp");
-      fire("success", "OTP Terkirim", { message: "Cek email kamu untuk kode OTP.", duration: 2000 });
+      fire("success", t.auth.otpSent, { message: t.auth.otpSentMsg, duration: 2000 });
     } catch (error: unknown) {
-      fire("error", "Registrasi Gagal!", {
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Periksa kembali data kamu.",
-        confirmText: "Coba Lagi",
+      fire("error", t.auth.registerFailed, {
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || t.auth.registerFailedMsg,
+        confirmText: t.auth.tryAgain,
       });
     } finally {
       setLoading(false);
@@ -64,12 +64,12 @@ export default function SignUpForm() {
       useAuthStore.getState().setRole(role);
       useAuthStore.getState().setName(userName);
       useAuthStore.getState().setAvatar(null); // user baru belum punya avatar
-      fire("success", "Registrasi Berhasil!", { message: `Selamat datang, ${userName}!`, duration: 1500 });
+      fire("success", t.auth.registerSuccess, { message: `${t.auth.welcomeUser} ${userName}!`, duration: 1500 });
       setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (error: unknown) {
-      fire("error", "Verifikasi Gagal!", {
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Kode OTP salah atau kadaluarsa.",
-        confirmText: "Coba Lagi",
+      fire("error", t.auth.verifyFailed, {
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || t.auth.verifyFailedMsg,
+        confirmText: t.auth.tryAgain,
       });
     } finally {
       setLoading(false);
@@ -79,9 +79,9 @@ export default function SignUpForm() {
   const handleResendOtp = async () => {
     try {
       await axiosGlobal.post("/auth/send-otp", { email, purpose: "register" });
-      fire("success", "OTP Dikirim Ulang", { message: "Cek email kamu.", duration: 2000 });
+      fire("success", t.auth.otpResent, { message: t.auth.otpResentMsg, duration: 2000 });
     } catch {
-      fire("error", "Gagal", { message: "Tidak bisa mengirim ulang OTP." });
+      fire("error", t.auth.failed, { message: t.auth.resendFailed });
     }
   };
 
@@ -134,7 +134,7 @@ export default function SignUpForm() {
                       <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
                         {t.auth.termsText}{" "}
                         <span className="text-gray-800 dark:text-white/90">{t.auth.termsLink}</span>{" "}
-                        and our <span className="text-gray-800 dark:text-white">{t.auth.privacyLink}</span>
+                        {t.auth.andOur} <span className="text-gray-800 dark:text-white">{t.auth.privacyLink}</span>
                       </p>
                     </div>
                     <div>

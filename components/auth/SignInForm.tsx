@@ -30,7 +30,7 @@ export default function SignInForm() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      fire("warning", "Form tidak lengkap", { message: "Email dan password wajib diisi." });
+      fire("warning", t.auth.formIncomplete, { message: t.auth.emailPasswordRequired });
       return;
     }
     setLoading(true);
@@ -40,11 +40,11 @@ export default function SignInForm() {
       // Kirim OTP
       await axiosGlobal.post("/auth/send-otp", { email, purpose: "login" });
       setStep("otp");
-      fire("success", "OTP Terkirim", { message: "Cek email kamu untuk kode OTP.", duration: 2000 });
+      fire("success", t.auth.otpSent, { message: t.auth.otpSentMsg, duration: 2000 });
     } catch (error: unknown) {
-      fire("error", "Login Gagal!", {
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Periksa email/password kamu.",
-        confirmText: "Coba Lagi",
+      fire("error", t.auth.loginFailed, {
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || t.auth.loginFailedMsg,
+        confirmText: t.auth.tryAgain,
       });
     } finally {
       setLoading(false);
@@ -61,12 +61,12 @@ export default function SignInForm() {
       useAuthStore.getState().setRole(role);
       useAuthStore.getState().setName(name);
       useAuthStore.getState().setAvatar(avatar ?? null);
-      fire("success", "Login Berhasil!", { duration: 1500 });
+      fire("success", t.auth.loginSuccess, { duration: 1500 });
       setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch (error: unknown) {
-      fire("error", "Verifikasi Gagal!", {
-        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Kode OTP salah atau kadaluarsa.",
-        confirmText: "Coba Lagi",
+      fire("error", t.auth.verifyFailed, {
+        message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || t.auth.verifyFailedMsg,
+        confirmText: t.auth.tryAgain,
       });
     } finally {
       setLoading(false);
@@ -76,9 +76,9 @@ export default function SignInForm() {
   const handleResendOtp = async () => {
     try {
       await axiosGlobal.post("/auth/send-otp", { email, purpose: "login" });
-      fire("success", "OTP Dikirim Ulang", { message: "Cek email kamu.", duration: 2000 });
+      fire("success", t.auth.otpResent, { message: t.auth.otpResentMsg, duration: 2000 });
     } catch {
-      fire("error", "Gagal", { message: "Tidak bisa mengirim ulang OTP." });
+      fire("error", t.auth.failed, { message: t.auth.resendFailed });
     }
   };
 

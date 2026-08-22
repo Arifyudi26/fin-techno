@@ -105,7 +105,7 @@ export default function RecentTransactions({ data = [], loading }: Props) {
                     {tx.type === "CREDIT" ? "+" : "-"}{fmt(tx.amount)}
                   </span>
                   <Badge size="sm" color={tx.status === "VERIFIED" ? "success" : "warning"}>
-                    {tx.status === "VERIFIED" ? "Verified" : "Pending"}
+                    {tx.status === "VERIFIED" ? tr.statusVerified : tr.statusPending}
                   </Badge>
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function RecentTransactions({ data = [], loading }: Props) {
                     </TableCell>
                     <TableCell className="py-3">
                       <Badge size="sm" color={tx.status === "VERIFIED" ? "success" : "warning"}>
-                        {tx.status === "VERIFIED" ? "Verified" : "Pending"}
+                        {tx.status === "VERIFIED" ? tr.statusVerified : tr.statusPending}
                       </Badge>
                     </TableCell>
                   </TableRow>

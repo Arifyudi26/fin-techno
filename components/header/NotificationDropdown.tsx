@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dropdown } from "@components/ui/dropdown/Dropdown";
 import { useNotifications, UploadNotification } from "@lib/context/NotificationContext";
 import { timeAgo } from "@lib/dateUtils";
+import { useI18n } from "@lib/i18n";
 
 const typeIcon: Record<UploadNotification["type"], React.ReactNode> = {
   success: (
@@ -37,6 +38,7 @@ const typeIcon: Record<UploadNotification["type"], React.ReactNode> = {
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, clearAll } = useNotifications();
+  const { t } = useI18n();
 
   const handleOpen = () => {
     setIsOpen((v) => !v);
@@ -68,7 +70,7 @@ export default function NotificationDropdown() {
         {/* Header */}
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
           <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            Notifikasi
+            {t.common.notifications}
             {unreadCount > 0 && (
               <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-orange-400 text-[10px] font-bold text-white">
                 {unreadCount}
@@ -81,7 +83,7 @@ export default function NotificationDropdown() {
                 onClick={clearAll}
                 className="text-xs text-gray-400 hover:text-error-500 dark:hover:text-error-400 transition-colors"
               >
-                Hapus semua
+                {t.common.clearAll}
               </button>
             )}
             <button
@@ -102,8 +104,8 @@ export default function NotificationDropdown() {
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="text-gray-300 dark:text-gray-600 mb-3">
                 <path fillRule="evenodd" clipRule="evenodd" d="M10.75 2.29248C10.75 1.87827 10.4143 1.54248 10 1.54248C9.58583 1.54248 9.25004 1.87827 9.25004 2.29248V2.83613C6.08266 3.20733 3.62504 5.9004 3.62504 9.16748V14.4591H3.33337C2.91916 14.4591 2.58337 14.7949 2.58337 15.2091C2.58337 15.6234 2.91916 15.9591 3.33337 15.9591H4.37504H15.625H16.6667C17.0809 15.9591 17.4167 15.6234 17.4167 15.2091C17.4167 14.7949 17.0809 14.4591 16.6667 14.4591H16.375V9.16748C16.375 5.9004 13.9174 3.20733 10.75 2.83613V2.29248ZM14.875 14.4591V9.16748C14.875 6.47509 12.6924 4.29248 10 4.29248C7.30765 4.29248 5.12504 6.47509 5.12504 9.16748V14.4591H14.875ZM8.00004 17.7085C8.00004 18.1228 8.33583 18.4585 8.75004 18.4585H11.25C11.6643 18.4585 12 18.1228 12 17.7085C12 17.2943 11.6643 16.9585 11.25 16.9585H8.75004C8.33583 16.9585 8.00004 17.2943 8.00004 17.7085Z" fill="currentColor" />
               </svg>
-              <p className="text-sm text-gray-400 dark:text-gray-500">Belum ada notifikasi</p>
-              <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Hasil upload akan muncul di sini</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">{t.common.noNotifications}</p>
+              <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">{t.common.notificationHint}</p>
             </li>
           ) : (
             notifications.map((n) => (

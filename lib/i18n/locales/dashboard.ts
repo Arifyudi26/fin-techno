@@ -112,6 +112,19 @@ export const dashboard = {
     exportDevTitle: "Fitur Sedang Dalam Pengembangan",
     exportDevDesc: "Export Excel sedang kami kerjakan dan akan segera tersedia. Sementara itu, kamu bisa menggunakan Export PDF.",
     exportDevClose: "Mengerti",
+
+    // RecentTransactions status
+    statusVerified: "Verified",
+    statusPending: "Pending",
+
+    // AIChat & AIInsights error fallback
+    aiErrorFallback: "Gagal mendapatkan respons. Coba lagi.",
+    aiAnalyzeError: "Gagal menganalisis. Coba lagi.",
+    chatCloseReset: "Tutup & reset chat",
+
+    // PeriodCashFlowChart
+    periodIncome: "Pemasukan",
+    periodExpense: "Pengeluaran",
   },
   en: {
     title: "Finance Dashboard",
@@ -220,5 +233,18 @@ export const dashboard = {
     exportDevTitle: "Feature Under Development",
     exportDevDesc: "Excel export is currently being worked on and will be available soon. In the meantime, you can use Export PDF.",
     exportDevClose: "Got it",
+
+    // RecentTransactions status
+    statusVerified: "Verified",
+    statusPending: "Pending",
+
+    // AIChat & AIInsights error fallback
+    aiErrorFallback: "Failed to get response. Try again.",
+    aiAnalyzeError: "Failed to analyze. Try again.",
+    chatCloseReset: "Close & reset chat",
+
+    // PeriodCashFlowChart
+    periodIncome: "Income",
+    periodExpense: "Expense",
   },
 } as const;
