@@ -54,6 +54,10 @@ export const common = {
     accountName: "Rekening",
     saveChanges: "Simpan Perubahan",
     sidebarTagline: "Kelola keuangan kamu dengan mudah dari satu dashboard.",
+    searchMenuPlaceholder: "Cari menu...",
+    searchMenuNotFound: "Menu tidak ditemukan",
+    toggleSidebar: "Toggle Sidebar",
+    authTagline: "Kelola keuangan pribadi Anda dengan mudah dan terorganisir",
   },
   en: {
     filter: "Filter",
@@ -110,5 +114,9 @@ export const common = {
     accountName: "Account",
     saveChanges: "Save Changes",
     sidebarTagline: "Manage your finances easily from one dashboard.",
+    searchMenuPlaceholder: "Search menu...",
+    searchMenuNotFound: "Menu not found",
+    toggleSidebar: "Toggle Sidebar",
+    authTagline: "Manage your personal finances easily and organized",
   },
 } as const;

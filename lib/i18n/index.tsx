@@ -8,6 +8,8 @@ import { categories } from "./locales/categories";
 import { upload } from "./locales/upload";
 import { calendar } from "./locales/calendar";
 import { profile } from "./locales/profile";
+import { sidebar } from "./locales/sidebar";
+import { auth } from "./locales/auth";
 
 export type Lang = "id" | "en";
 
@@ -23,6 +25,8 @@ export const locales = {
   upload,
   calendar,
   profile,
+  sidebar,
+  auth,
 } as const;
 
 type LocalesMap = typeof locales;

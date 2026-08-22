@@ -2,9 +2,11 @@ import React from "react";
 import Link from "next/link";
 import GridShape from "@components/common/GridShape";
 import ThemeTogglerTwo from "@components/common/ThemeTogglerTwo";
+import { useI18n } from "@lib/i18n";
 import AuthLogo from "/public/images/logo/auth-logo.svg";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <div className="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900 sm:p-0">
@@ -17,7 +19,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <AuthLogo alt="Logo" width={231} height={48} />
               </Link>
               <p className="text-center text-gray-400 dark:text-white/60">
-                Kelola keuangan pribadi Anda dengan mudah dan terorganisir
+                {t.common.authTagline}
               </p>
             </div>
           </div>
