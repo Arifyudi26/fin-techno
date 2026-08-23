@@ -70,7 +70,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const isLocalRequest = req.headers.host?.includes("localhost");
   if (WEBHOOK_SECRET && !isLocalRequest) {
     const secret = req.headers["x-telegram-bot-api-secret-token"];
-    if (secret !== WEBHOOK_SECRET) return res.status(403).json({ message: "Forbidden" });
+    if (secret !== WEBHOOK_SECRET) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
   }
 
   const update: TelegramUpdate = req.body;
@@ -138,10 +140,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).end();
       }
 
+
+      // Hapus chatId dari user lain jika sudah pernah ter-link (unique constraint)
+      const existingUser = await (prisma as any).user.findUnique({ where: { telegramChatId: String(chatId) } });
+      if (existingUser && existingUser.id !== user.id) {
+        await (prisma as any).user.update({
+          where: { id: existingUser.id },
+          data: { telegramChatId: null },
+        });
+        console.log(`[Telegram Webhook] /start — unlinked chatId ${chatId} from previous user ${existingUser.id}`);
+      }
+
       await (prisma as any).user.update({
         where: { id: user.id },
         data: { telegramChatId: String(chatId), telegramLinkToken: null },
       });
+
 
       await sendMessage(chatId,
         `✅ Akun *${escMd(user.name)}* berhasil terhubung\\!\n\n` +
@@ -264,6 +278,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error("Telegram webhook error:", error?.message || error);
+    // Kirim pesan error ke user supaya tidak silent fail
+    try {
+      const errorChatId = msg?.chat?.id;
+      if (errorChatId) {
+        await sendMessage(errorChatId, "⚠️ Terjadi kesalahan di server\\. Coba lagi nanti atau hubungi admin\\.");
+      }
+    } catch { /* ignore send error */ }
     return res.status(200).end();
   }
 }
