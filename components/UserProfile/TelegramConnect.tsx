@@ -92,6 +92,30 @@ export default function TelegramConnect() {
     }
   }
 
+  // Polling setelah deep link ditampilkan — otomatis cek apakah sudah terhubung
+  useEffect(() => {
+    if (!deepLink) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await axiosGlobal.get("/telegram/link");
+        if (res.data.connected) {
+          setStatus(res.data);
+          setDeepLink(null);
+          setMessage({ type: "success", text: "Telegram berhasil terhubung!" });
+          clearInterval(interval);
+        }
+      } catch { /* ignore */ }
+    }, 4000);
+
+    const timeout = setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [deepLink]);
+
   async function handleGenerate() {
     setLoading(true);
     setMessage(null);
