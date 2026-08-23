@@ -1,8 +1,11 @@
 import type { PaginationProps } from "@/lib/types/ui";
+import { useI18n } from "@lib/i18n";
 
 const LIMIT_OPTIONS = [10, 25, 50, 100];
 
 export default function Pagination({ page, totalPages, total, limit, onPageChange, onLimitChange }: PaginationProps) {
+  const { t, lang } = useI18n();
+  const tc = t.common;
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
 
@@ -27,10 +30,10 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
       {/* Left: info + rows per page */}
       <div className="flex items-center gap-3">
         <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-          {total === 0 ? "Tidak ada data" : `${from}–${to} dari ${total.toLocaleString("id-ID")}`}
+          {total === 0 ? tc.noData : `${from}–${to} ${tc.paginationOf} ${total.toLocaleString(lang === "id" ? "id-ID" : "en-US")}`}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">Baris per halaman:</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{tc.rowsPerPage}</span>
           <select
             value={limit}
             onChange={(e) => { onLimitChange(Number(e.target.value)); onPageChange(1); }}

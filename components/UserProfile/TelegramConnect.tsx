@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import axiosGlobal from "@/services/AxiosGlobal";
 import useAuthStore from "@/store/authStore";
+import { useI18n } from "@lib/i18n";
 
 interface LinkStatus {
   connected: boolean;
@@ -21,6 +22,8 @@ interface WebhookStatus {
 
 export default function TelegramConnect() {
   const { role } = useAuthStore();
+  const { t } = useI18n();
+  const tr = t.profile;
   const isAdmin = role === "admin";
   const [status, setStatus] = useState<LinkStatus | null>(null);
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
@@ -68,24 +71,24 @@ export default function TelegramConnect() {
   }
 
   async function handleRegisterWebhook() {
-    if (!confirm("Daftarkan webhook ke Telegram? Pastikan TELEGRAM_BOT_TOKEN dan NEXTAUTH_URL sudah benar.")) return;
+    if (!confirm(tr.telegramRegisterConfirm)) return;
     setRegistering(true);
     setMessage(null);
     try {
       const res = await axiosGlobal.post("/telegram/webhook-status", {});
       if (res.data.success) {
-        setMessage({ type: "success", text: "✅ Webhook berhasil didaftarkan ke Telegram!" });
+        setMessage({ type: "success", text: `✅ ${tr.telegramRegisterSuccess}` });
         fetchWebhookStatus();
       } else {
         setMessage({
           type: "error",
-          text: `❌ Gagal: ${res.data.telegramResponse?.description || "Unknown error"}`,
+          text: `❌ ${res.data.telegramResponse?.description || "Unknown error"}`,
         });
       }
     } catch (err: unknown) {
       setMessage({
         type: "error",
-        text: (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Gagal mendaftarkan webhook.",
+        text: (err as { response?: { data?: { message?: string } } })?.response?.data?.message || tr.telegramRegisterFailed,
       });
     } finally {
       setRegistering(false);
@@ -102,7 +105,7 @@ export default function TelegramConnect() {
         if (res.data.connected) {
           setStatus(res.data);
           setDeepLink(null);
-          setMessage({ type: "success", text: "Telegram berhasil terhubung!" });
+          setMessage({ type: "success", text: tr.telegramConnectSuccess });
           clearInterval(interval);
         }
       } catch { /* ignore */ }
@@ -114,7 +117,7 @@ export default function TelegramConnect() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [deepLink]);
+  }, [deepLink, tr]);
 
   async function handleGenerate() {
     setLoading(true);
@@ -124,23 +127,23 @@ export default function TelegramConnect() {
       const res = await axiosGlobal.post("/telegram/link", {});
       setDeepLink(res.data.deepLink);
     } catch {
-      setMessage({ type: "error", text: "Gagal membuat link. Coba lagi." });
+      setMessage({ type: "error", text: tr.telegramGenerateFailed });
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDisconnect() {
-    if (!confirm("Putuskan koneksi Telegram dari akun ini?")) return;
+    if (!confirm(tr.telegramDisconnectConfirm)) return;
     setLoading(true);
     setMessage(null);
     try {
       await axiosGlobal.delete("/telegram/link");
       setStatus({ connected: false, chatId: null });
       setDeepLink(null);
-      setMessage({ type: "success", text: "Telegram berhasil diputuskan." });
+      setMessage({ type: "success", text: tr.telegramDisconnectSuccess });
     } catch {
-      setMessage({ type: "error", text: "Gagal memutuskan koneksi." });
+      setMessage({ type: "error", text: tr.telegramDisconnectFailed });
     } finally {
       setLoading(false);
     }
@@ -159,10 +162,10 @@ export default function TelegramConnect() {
             </div>
             <div className="flex-1">
               <h4 className="text-base font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                Panel Administrator — Webhook Telegram
+                {tr.telegramAdminTitle}
               </h4>
               <p className="text-sm text-amber-700 dark:text-amber-300/80">
-                Webhook harus didaftarkan sekali sebelum bot bisa menerima pesan dari Telegram.
+                {tr.telegramAdminDesc}
               </p>
             </div>
           </div>
@@ -171,23 +174,23 @@ export default function TelegramConnect() {
           {webhookStatus ? (
             <div className="space-y-3 mb-4">
               <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900/50 rounded-xl">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status Webhook</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{tr.telegramWebhookStatus}</span>
                 {webhookStatus.isRegistered ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full dark:bg-emerald-900/30 dark:text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Terdaftar
+                    {tr.telegramRegistered}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    Belum terdaftar
+                    {tr.telegramNotRegistered}
                   </span>
                 )}
               </div>
 
               {webhookStatus.webhookUrl && (
                 <div className="p-3 bg-white dark:bg-gray-900/50 rounded-xl">
-                  <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Webhook URL</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{tr.telegramWebhookUrl}</span>
                   <code className="text-xs text-gray-700 dark:text-gray-300 break-all">
                     {webhookStatus.webhookUrl}
                   </code>
@@ -197,19 +200,19 @@ export default function TelegramConnect() {
               {webhookStatus.pendingUpdateCount > 0 && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                   <span className="text-xs text-blue-700 dark:text-blue-300">
-                    {webhookStatus.pendingUpdateCount} pesan tertunda
+                    {webhookStatus.pendingUpdateCount} {tr.telegramPendingMessages}
                   </span>
                 </div>
               )}
 
               <div className="p-3 bg-white dark:bg-gray-900/50 rounded-xl">
-                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Bot Token</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{tr.telegramBotToken}</span>
                 <span className={`text-xs font-medium ${
                   webhookStatus.botToken === "configured"
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-red-600 dark:text-red-400"
                 }`}>
-                  {webhookStatus.botToken === "configured" ? "✓ Configured" : "✗ Missing"}
+                  {webhookStatus.botToken === "configured" ? `✓ ${tr.telegramConfigured}` : `✗ ${tr.telegramMissing}`}
                 </span>
               </div>
             </div>
@@ -237,14 +240,14 @@ export default function TelegramConnect() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Mendaftarkan...
+                  {tr.telegramRegistering}
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  {webhookStatus?.isRegistered ? "Re-register Webhook" : "Daftarkan Webhook"}
+                  {webhookStatus?.isRegistered ? tr.telegramReRegister : tr.telegramRegister}
                 </>
               )}
             </button>
@@ -253,14 +256,14 @@ export default function TelegramConnect() {
               disabled={registering}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-700 bg-white border border-amber-300 rounded-xl hover:bg-amber-50 dark:bg-gray-800 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              Refresh
+              {tr.telegramRefresh}
             </button>
           </div>
 
           {webhookStatus?.botToken !== "configured" && (
             <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
               <p className="text-xs text-red-700 dark:text-red-300">
-                ⚠️ TELEGRAM_BOT_TOKEN belum dikonfigurasi di environment variables. Webhook tidak bisa didaftarkan.
+                ⚠️ {tr.telegramTokenMissing}
               </p>
             </div>
           )}
@@ -279,10 +282,10 @@ export default function TelegramConnect() {
         </div>
         <div>
           <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
-            Telegram Bot
+            {tr.telegramBotTitle}
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Akses data keuangan & AI asisten langsung dari Telegram
+            {tr.telegramBotDesc}
           </p>
         </div>
         {/* Badge status */}
@@ -290,12 +293,12 @@ export default function TelegramConnect() {
           {status?.connected ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full dark:bg-emerald-900/30 dark:text-emerald-400">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Terhubung
+              {tr.telegramConnected}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full dark:bg-gray-800 dark:text-gray-400">
               <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-              Belum terhubung
+              {tr.telegramNotConnected}
             </span>
           )}
         </div>
@@ -305,10 +308,10 @@ export default function TelegramConnect() {
       {!status?.connected && (
         <div className="grid grid-cols-2 gap-2 mb-5 sm:grid-cols-4">
           {[
-            { icon: "📊", label: "Ringkasan bulanan" },
-            { icon: "📋", label: "Transaksi terakhir" },
-            { icon: "💬", label: "Tanya ke AI" },
-            { icon: "🔍", label: "Analisis keuangan" },
+            { icon: "📊", label: tr.telegramFeatureSummary },
+            { icon: "📋", label: tr.telegramFeatureTransactions },
+            { icon: "💬", label: tr.telegramFeatureAI },
+            { icon: "🔍", label: tr.telegramFeatureAnalysis },
           ].map((f) => (
             <div
               key={f.label}
@@ -340,7 +343,7 @@ export default function TelegramConnect() {
       {deepLink && (
         <div className="mb-4 p-4 bg-sky-50 rounded-xl dark:bg-sky-900/20">
           <p className="mb-3 text-sm font-medium text-sky-800 dark:text-sky-300">
-            Klik tombol di bawah untuk membuka Telegram dan menghubungkan akun:
+            {tr.telegramDeepLinkInstruction}
           </p>
           <a
             href={deepLink}
@@ -351,10 +354,10 @@ export default function TelegramConnect() {
             <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg">
               <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
             </svg>
-            Buka di Telegram
+            {tr.telegramOpenApp}
           </a>
           <p className="mt-2 text-xs text-sky-600 dark:text-sky-400">
-            Link hanya berlaku sekali. Refresh halaman jika sudah terhubung.
+            {tr.telegramDeepLinkNote}
           </p>
         </div>
       )}
@@ -368,14 +371,14 @@ export default function TelegramConnect() {
               disabled={loading}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              Refresh Status
+              {tr.telegramRefreshStatus}
             </button>
             <button
               onClick={handleDisconnect}
               disabled={loading}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
             >
-              {loading ? "Memproses..." : "Putuskan Koneksi"}
+              {loading ? tr.telegramProcessing : tr.telegramDisconnect}
             </button>
           </>
         ) : (
@@ -385,13 +388,13 @@ export default function TelegramConnect() {
             className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-sky-500 rounded-xl hover:bg-sky-600 transition-colors disabled:opacity-50"
           >
             {loading ? (
-              "Membuat link..."
+              tr.telegramGenerating
             ) : (
               <>
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
                 </svg>
-                Hubungkan Telegram
+                {tr.telegramConnect}
               </>
             )}
           </button>

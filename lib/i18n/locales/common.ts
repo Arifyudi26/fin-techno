@@ -78,6 +78,9 @@ export const common = {
     allPeriods: "Semua Periode",
     from: "Dari",
     until: "Sampai",
+    // Pagination
+    rowsPerPage: "Baris per halaman:",
+    paginationOf: "dari",
   },
   en: {
     filter: "Filter",
@@ -158,5 +161,8 @@ export const common = {
     allPeriods: "All Periods",
     from: "From",
     until: "To",
+    // Pagination
+    rowsPerPage: "Rows per page:",
+    paginationOf: "of",
   },
 } as const;
