@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import db from "@/lib/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { checkOtpAttempt, recordOtpFailure, resetOtpAttempts } from "@/lib/rate-limit";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -12,14 +13,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: "Email, kode, dan purpose wajib diisi" });
   }
 
+  // Check OTP attempt lockout: max 5 failed attempts, lockout 5 minutes
+  const otpCheck = checkOtpAttempt(email, { maxAttempts: 5, lockoutDurationMs: 5 * 60 * 1000 });
+  if (!otpCheck.allowed) {
+    const retryAfterSec = Math.ceil((otpCheck.lockedUntilMs || 0) / 1000);
+    return res.status(429).json({
+      message: "Terlalu banyak percobaan OTP. Silakan coba lagi nanti.",
+      retryAfterSeconds: retryAfterSec,
+    });
+  }
+
   const otp = await db.otpCode.findFirst({
     where: { email, purpose, used: false },
     orderBy: { createdAt: "desc" },
   });
 
   if (!otp) return res.status(400).json({ message: "Kode OTP tidak valid" });
-  if (otp.code !== code) return res.status(400).json({ message: "Kode OTP salah" });
+
+  if (otp.code !== code) {
+    // Record failed attempt
+    const failResult = recordOtpFailure(email, { maxAttempts: 5, lockoutDurationMs: 5 * 60 * 1000 });
+    if (!failResult.allowed) {
+      return res.status(429).json({
+        message: "Terlalu banyak percobaan OTP salah. Akun terkunci sementara.",
+        retryAfterSeconds: Math.ceil((failResult.lockedUntilMs || 0) / 1000),
+      });
+    }
+    return res.status(400).json({
+      message: "Kode OTP salah",
+      attemptsRemaining: failResult.attemptsRemaining,
+    });
+  }
+
   if (new Date() > otp.expiresAt) return res.status(400).json({ message: "Kode OTP sudah kadaluarsa" });
+
+  // OTP valid — reset attempt counter
+  resetOtpAttempts(email);
 
   // Tandai OTP sebagai used
   await db.otpCode.update({ where: { id: otp.id }, data: { used: true } });

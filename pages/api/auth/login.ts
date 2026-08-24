@@ -3,6 +3,7 @@ import db from "@/lib/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginRequestBody, LoginResponse } from "@/lib/types";
+import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,6 +17,24 @@ export default async function handler(
     return res.status(400).json({ message: "Email and password are required" });
   }
 
+  // Rate limiting: max 10 failed attempts per IP+email in 15 minutes
+  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+  const rateLimitKey = `login:${ip}:${email}`;
+  const rateLimit = checkRateLimit(rateLimitKey, {
+    maxAttempts: 10,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    blockDurationMs: 15 * 60 * 1000, // block for 15 minutes
+  });
+
+  if (!rateLimit.allowed) {
+    const retryAfterSec = Math.ceil((rateLimit.retryAfterMs || 0) / 1000);
+    res.setHeader("Retry-After", retryAfterSec.toString());
+    return res.status(429).json({
+      message: "Terlalu banyak percobaan login. Silakan coba lagi nanti.",
+      retryAfterSeconds: retryAfterSec,
+    });
+  }
+
   try {
     const user = await db.user.findUnique({ where: { email } });
 
@@ -26,6 +45,9 @@ export default async function handler(
     if (!bcrypt.compareSync(password, user.password)) {
       return res.status(401).json({ message: "Email atau password salah" });
     }
+
+    // Login berhasil — reset rate limit
+    resetRateLimit(rateLimitKey);
 
     // checkOnly: hanya validasi credentials, tidak return token (untuk flow OTP)
     if (req.body.checkOnly) {

@@ -141,7 +141,7 @@ export default function SignInForm() {
                     <div>
                       <Label>{t.auth.passwordLabel} <span className="text-error-500">*</span></Label>
                       <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} placeholder={t.auth.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <Input type={showPassword ? "text" : "password"} placeholder={t.auth.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="off" />
                         <span onClick={() => setShowPassword(!showPassword)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2">
                           {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />}
                         </span>

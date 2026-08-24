@@ -34,6 +34,7 @@ export interface InputProps {
   error?: boolean;
   hint?: string;
   required?: boolean;
+  autoComplete?: string;
 }
 
 // Checkbox
