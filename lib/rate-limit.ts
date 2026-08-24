@@ -78,7 +78,7 @@ export function checkRateLimit(
   // Within window — increment
   entry.count += 1;
 
-  if (entry.count > options.maxAttempts) {
+  if (entry.count >= options.maxAttempts) {
     // Block the key
     entry.blockedUntil = now + options.blockDurationMs;
     rateLimitStore.set(key, entry);
