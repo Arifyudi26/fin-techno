@@ -25,6 +25,14 @@ const nextConfig: NextConfig = {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'",
+          },
+          {
+            key: "Access-Control-Expose-Headers",
+            value: "X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Content-Security-Policy",
+          },
         ],
       },
     ];
