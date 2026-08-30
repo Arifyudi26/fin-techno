@@ -3,23 +3,30 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { st } from "@lib/server-i18n";
+import { CATEGORY_TEMPLATES } from "@lib/categoryMatcher";
 
 // Called after POST — matches new category keywords against existing transactions.
 // Uses raw SQL ILIKE to push matching to DB instead of loading all rows into JS.
-async function autoAssignCategory(userId: string, catId: string, catName: string) {
+// If the category code matches a known recommendation template, use that
+// template's rich keyword list so auto-assign matches the recommendation count.
+async function autoAssignCategory(userId: string, catId: string, catName: string, catCode: string): Promise<number> {
   const db = prisma as any;
-  const keywords = catName
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((w: string) => w.length > 2);
-  if (keywords.length === 0) return;
+  const template = CATEGORY_TEMPLATES.find((t) => t.code === catCode);
+  const keywords = template
+    ? template.keywords.map((k) => k.trim()).filter((k) => k.length > 1)
+    : catName
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w: string) => w.length > 2);
+  if (keywords.length === 0) return 0;
 
   // Build ILIKE pattern for each keyword: '%keyword%'
   const patterns = keywords.map((k: string) => `%${k}%`);
   const likeClause = patterns.map((_: string, i: number) => `bt.description ILIKE $${i + 2}`).join(" OR ");
 
-  // Bank: insert matching rows directly via raw SQL — no JS loop
-  await prisma.$executeRawUnsafe(
+  // Bank: insert matching rows directly via raw SQL — no JS loop.
+  // $executeRawUnsafe returns the number of affected rows.
+  const bankAssigned = await prisma.$executeRawUnsafe(
     `INSERT INTO "BankTransactionCategory" ("transactionId", "categoryId")
      SELECT bt.id, $1
      FROM "BankTransaction" bt
@@ -34,7 +41,7 @@ async function autoAssignCategory(userId: string, catId: string, catName: string
 
   // Wallet: same pattern
   const likeClauseW = patterns.map((_: string, i: number) => `wt.description ILIKE $${i + 2}`).join(" OR ");
-  await db.$executeRawUnsafe(
+  const walletAssigned = await db.$executeRawUnsafe(
     `INSERT INTO "WalletTransactionCategory" ("transactionId", "categoryId")
      SELECT wt.id, $1
      FROM "WalletTransaction" wt
@@ -46,6 +53,8 @@ async function autoAssignCategory(userId: string, catId: string, catName: string
     ...patterns,
     userId,
   );
+
+  return Number(bankAssigned ?? 0) + Number(walletAssigned ?? 0);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -122,10 +131,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: { userId, name, code: codeUpper, description },
       });
 
-      // Fire-and-forget auto-assign — don't block the response
-      autoAssignCategory(userId, cat.id, cat.name).catch(console.error);
+      // Await auto-assign so the response carries the real transaction count.
+      // This runs as a single INSERT...SELECT per table (set-based, not a JS
+      // loop), so it stays fast even for thousands of transactions.
+      const transactionCount = await autoAssignCategory(userId, cat.id, cat.name, cat.code)
+        .catch((e) => { console.error("autoAssign error:", e); return 0; });
 
-      return res.status(201).json({ category: { ...cat, transactionCount: 0 } });
+      return res.status(201).json({ category: { ...cat, transactionCount } });
     } catch (e) {
       console.error(e);
       return res.status(500).json({ message: st(req, "serverError") });
