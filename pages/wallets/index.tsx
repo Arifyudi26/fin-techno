@@ -210,20 +210,20 @@ export default function WalletsPage() {
                     <p className="text-xs text-white/70">{w.phoneNumber}</p>
                   </div>
                 </div>
-                <Badge size="sm" color={w.isActive ? "success" : "light"}>{w.isActive ? "Aktif" : "Nonaktif"}</Badge>
+                <Badge size="sm" color={w.isActive ? "success" : "light"}>{w.isActive ? tr.statusActive : tr.statusInactive}</Badge>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Upload</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{tr.uploadCount}</p>
                     <p className="text-sm font-semibold text-gray-800 dark:text-white/90">{w.totalUploads}x</p>
                   </div>
                   <div className="text-center border-x border-gray-100 dark:border-gray-800">
-                    <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">Masuk</p>
+                    <p className="text-xs text-success-600 dark:text-success-400 mb-0.5">{tr.creditLabel}</p>
                     <p className="text-sm font-semibold text-success-600 dark:text-success-400">{(w.totalCredit / 1_000_000).toFixed(0)}jt</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">Keluar</p>
+                    <p className="text-xs text-error-600 dark:text-error-400 mb-0.5">{tr.debitLabel}</p>
                     <p className="text-sm font-semibold text-error-600 dark:text-error-400">{(w.totalDebit / 1_000_000).toFixed(0)}jt</p>
                   </div>
                 </div>
@@ -254,7 +254,7 @@ export default function WalletsPage() {
                   )}
                   <button
                     onClick={() => handleDelete(w)}
-                    title="Hapus dompet"
+                    title={tr.deleteTitle}
                     className="inline-flex items-center justify-center rounded-lg border border-error-200 dark:border-error-500/30 bg-error-50 dark:bg-error-500/10 px-2.5 py-2 text-error-500 hover:bg-error-100 dark:hover:bg-error-500/20 transition-colors"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">

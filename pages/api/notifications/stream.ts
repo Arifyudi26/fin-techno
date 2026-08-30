@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { st } from "@lib/server-i18n";
 
 type DecodedToken = JwtPayload & { id: string; role: string };
 
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     userId = verifyStreamToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   res.setHeader("Content-Type", "text/event-stream");

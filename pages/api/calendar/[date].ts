@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { dayRangeUTC } from "@lib/dateUtils";
+import { st } from "@lib/server-i18n";
 
 // GET /api/calendar/[date]  (date = YYYY-MM-DD)
 // Single-query approach using raw SQL with JOIN to avoid N+1 on categories.
@@ -27,11 +28,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const { date } = req.query;
   if (!date || typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+    return res.status(400).json({ message: st(req, "dateFormatInvalid") });
   }
 
   const { gte, lte } = dayRangeUTC(date);
@@ -110,6 +111,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(transactions);
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

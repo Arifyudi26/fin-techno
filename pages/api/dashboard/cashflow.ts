@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
@@ -10,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   try {
@@ -129,6 +130,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ cashFlow, netFlowTrend });
   } catch (error) {
     console.error("cashflow error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

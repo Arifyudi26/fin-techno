@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,7 +14,7 @@ export default async function handler(
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   try {
@@ -95,6 +96,6 @@ export default async function handler(
     return res.status(200).json([...bankWithBalance, ...walletWithBalance]);
   } catch (error) {
     console.error("accounts error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

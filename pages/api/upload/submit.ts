@@ -8,6 +8,7 @@ import { put } from "@vercel/blob";
 import path from "path";
 import { parseMultipart } from "@lib/multipartParser";
 import { isBniPdfPasswordProtected, verifyBniPdfPassword } from "@lib/upload/parsers/bni";
+import { st, msg } from "@lib/server-i18n";
 
 export const config = {
   api: { bodyParser: false },
@@ -19,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   try {
     const { fields, file } = await parseMultipart(req);
@@ -29,12 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const notes       = fields.notes ?? "";
     const pdfPassword = fields.pdfPassword ?? "";
 
-    if (!accountId) return res.status(400).json({ message: "accountId wajib diisi" });
-    if (!file)      return res.status(400).json({ message: "File tidak ditemukan" });
+    if (!accountId) return res.status(400).json({ message: st(req, "accountIdRequired") });
+    if (!file)      return res.status(400).json({ message: st(req, "fileNotFound") });
 
     const ext = path.extname(file.filename).toLowerCase().replace(".", "").toUpperCase();
     if (!["CSV", "XLSX", "XLS", "PDF"].includes(ext)) {
-      return res.status(400).json({ message: `Format ${ext} tidak didukung.` });
+      return res.status(400).json({ message: msg.unsupportedFormat(req, ext) });
     }
 
     const fileFormat = ext as FileFormat;
@@ -46,11 +47,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let providerName: string;
     if (sourceType === "BANK") {
       const acc = await prisma.bankAccount.findFirst({ where: { id: accountId, ownerId: userId } });
-      if (!acc) return res.status(404).json({ message: "Rekening tidak ditemukan" });
+      if (!acc) return res.status(404).json({ message: st(req, "accountNotFound") });
       providerName = acc.bankProvider;
     } else {
       const wallet = await db.digitalWallet.findFirst({ where: { id: accountId, ownerId: userId } });
-      if (!wallet) return res.status(404).json({ message: "Dompet tidak ditemukan" });
+      if (!wallet) return res.status(404).json({ message: st(req, "walletNotFound") });
       providerName = wallet.walletProvider;
     }
 
@@ -62,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (needsPassword) {
           return res.status(423).json({
             code: "PDF_PASSWORD_REQUIRED",
-            message: "File PDF BNI ini dilindungi password. Masukkan password untuk melanjutkan.",
+            message: st(req, "bniPdfPasswordProtected"),
           });
         }
       } else {
@@ -71,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!passwordOk) {
           return res.status(422).json({
             code: "PDF_PASSWORD_WRONG",
-            message: "Password PDF salah. Periksa kembali password e-Statement BNI Anda.",
+            message: st(req, "bniPdfPasswordWrong"),
           });
         }
       }
@@ -84,13 +85,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { bankAccountId: accountId, fileName: { contains: baseNameWithoutExt, mode: "insensitive" } },
         select: { id: true, fileName: true },
       });
-      if (existing) return res.status(409).json({ message: `File "${existing.fileName}" sudah pernah diupload.`, code: "DUPLICATE_FILENAME" });
+      if (existing) return res.status(409).json({ message: msg.duplicateFilename(req, existing.fileName), code: "DUPLICATE_FILENAME" });
     } else {
       const existing = await db.walletStatementUpload.findFirst({
         where: { walletId: accountId, fileName: { contains: baseNameWithoutExt, mode: "insensitive" } },
         select: { id: true, fileName: true },
       });
-      if (existing) return res.status(409).json({ message: `File "${existing.fileName}" sudah pernah diupload.`, code: "DUPLICATE_FILENAME" });
+      if (existing) return res.status(409).json({ message: msg.duplicateFilename(req, existing.fileName), code: "DUPLICATE_FILENAME" });
     }
 
     // Cek duplikat konten
@@ -99,13 +100,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { bankAccountId: accountId, fileUrl: { endsWith: fileHash } },
         select: { id: true, fileName: true },
       });
-      if (existing) return res.status(409).json({ message: `Konten identik dengan "${existing.fileName}".`, code: "DUPLICATE_CONTENT" });
+      if (existing) return res.status(409).json({ message: msg.duplicateContent(req, existing.fileName), code: "DUPLICATE_CONTENT" });
     } else {
       const existing = await db.walletStatementUpload.findFirst({
         where: { walletId: accountId, fileUrl: { endsWith: fileHash } },
         select: { id: true, fileName: true },
       });
-      if (existing) return res.status(409).json({ message: `Konten identik dengan "${existing.fileName}".`, code: "DUPLICATE_CONTENT" });
+      if (existing) return res.status(409).json({ message: msg.duplicateContent(req, existing.fileName), code: "DUPLICATE_CONTENT" });
     }
 
     // Upload ke Vercel Blob
@@ -177,11 +178,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(202).json({
       uploadId,
       status: "PROCESSING",
-      message: "File berhasil diupload dan sedang diproses di background.",
+      message: st(req, "fileUploaded"),
     });
 
   } catch (error: any) {
     console.error("[submit] error:", error);
-    return res.status(500).json({ message: "Internal server error: " + error.message });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

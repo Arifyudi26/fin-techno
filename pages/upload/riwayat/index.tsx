@@ -8,6 +8,7 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
 import { fmtDate } from "@/lib/utils";
 import { formatBytes, fmtIDR as formatIDR } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 interface UploadItem {
   id: string;
@@ -36,10 +37,6 @@ const statusColor = (s: string) => {
   if (s === "FAILED") return "error";
   return "info";
 };
-const statusLabel: Record<string, string> = {
-  SUCCESS: "Berhasil", PARTIAL: "Sebagian", FAILED: "Gagal", UPLOADING: "Uploading", PROCESSING: "Proses",
-};
-
 const fileFormatColor: Record<string, string> = {
   CSV: "bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400",
   XLSX: "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400",
@@ -50,6 +47,12 @@ const fileFormatColor: Record<string, string> = {
 type FilterType = "ALL" | "BANK" | "WALLET";
 
 export default function UploadRiwayat() {
+  const { t } = useI18n();
+  const tr = t.upload;
+  const statusLabel: Record<string, string> = {
+    SUCCESS: tr.statusSuccess, PARTIAL: tr.statusPartial, FAILED: tr.statusFailed,
+    UPLOADING: tr.statusUploading, PROCESSING: tr.statusProcessing,
+  };
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("ALL");
@@ -87,25 +90,25 @@ export default function UploadRiwayat() {
 
   return (
     <AppLayout>
-      <PageMeta title="Riwayat Upload | Fin-Techno" description="Riwayat Upload e-Statement rekening bank dan dompet digital" />
-      <PageBreadcrumb pageTitle="Riwayat Upload" />
+      <PageMeta title={`${tr.historyTitle} | Fin-Techno`} description={tr.historyDescription} />
+      <PageBreadcrumb pageTitle={tr.historyTitle} />
 
       {/* Summary */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Upload</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{tr.totalUpload}</p>
           <p className="text-2xl font-bold text-gray-800 dark:text-white/90">{loading ? "-" : uploads.length}</p>
         </div>
         <div className="rounded-2xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-1">Berhasil</p>
+          <p className="text-xs text-success-600 dark:text-success-400 mb-1">{tr.statusSuccess}</p>
           <p className="text-2xl font-bold text-success-700 dark:text-success-300">{loading ? "-" : successCount}</p>
         </div>
         <div className="rounded-2xl border border-warning-200 dark:border-warning-500/20 bg-warning-50 dark:bg-warning-500/10 p-4">
-          <p className="text-xs text-warning-600 dark:text-warning-400 mb-1">Sebagian</p>
+          <p className="text-xs text-warning-600 dark:text-warning-400 mb-1">{tr.statusPartial}</p>
           <p className="text-2xl font-bold text-warning-700 dark:text-warning-300">{loading ? "-" : partialCount}</p>
         </div>
         <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-1">Gagal</p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-1">{tr.statusFailed}</p>
           <p className="text-2xl font-bold text-error-700 dark:text-error-300">{loading ? "-" : failedCount}</p>
         </div>
       </div>
@@ -123,7 +126,7 @@ export default function UploadRiwayat() {
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
               }`}
             >
-              {f === "ALL" ? "Semua" : f === "BANK" ? "Bank" : "Dompet Digital"}
+              {f === "ALL" ? tr.filterAll : f === "BANK" ? tr.filterBank : tr.filterWallet}
             </button>
           ))}
         </div>
@@ -134,7 +137,7 @@ export default function UploadRiwayat() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Upload Baru
+          {tr.uploadNew}
         </Link>
       </div>
 
@@ -142,12 +145,12 @@ export default function UploadRiwayat() {
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
         {/* Table header */}
         <div className="hidden sm:grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-white/[0.02]">
-          <div className="col-span-4 text-xs font-medium text-gray-500 dark:text-gray-400">File & Sumber</div>
-          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400">Periode</div>
-          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">Pemasukan</div>
-          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">Pengeluaran</div>
-          <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 text-center">Status</div>
-          <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">Aksi</div>
+          <div className="col-span-4 text-xs font-medium text-gray-500 dark:text-gray-400">{tr.colFileSource}</div>
+          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400">{tr.colPeriod}</div>
+          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">{tr.colCredit}</div>
+          <div className="col-span-2 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">{tr.colDebit}</div>
+          <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 text-center">{tr.colStatus}</div>
+          <div className="col-span-1 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">{tr.colAction}</div>
         </div>
 
         {loading ? (
@@ -166,9 +169,9 @@ export default function UploadRiwayat() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm text-gray-400 dark:text-gray-500">Belum ada upload</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">{tr.emptyUpload}</p>
             <Link href="/upload" className="mt-3 inline-block text-sm text-brand-500 hover:text-brand-600">
-              Upload sekarang ?
+              {tr.uploadNowLink}
             </Link>
           </div>
         ) : (
@@ -184,7 +187,7 @@ export default function UploadRiwayat() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${u.sourceType === "BANK" ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"}`}>
-                          {u.sourceType === "BANK" ? "Bank" : "Dompet"}
+                          {u.sourceType === "BANK" ? tr.filterBank : tr.walletShort}
                         </span>
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${fileFormatColor[u.fileFormat] ?? "bg-gray-100 text-gray-600"}`}>
                           {u.fileFormat}
@@ -200,11 +203,11 @@ export default function UploadRiwayat() {
 
                   {/* Periode */}
                   <div className="sm:col-span-2 sm:flex sm:flex-col sm:justify-center">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(u.periodStart)} s/d</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(u.periodStart)} {tr.periodUntil}</p>
                     <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(u.periodEnd)}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {u.parsedRows}/{u.totalRows} baris
-                      {u.failedRows > 0 && <span className="text-error-500 ml-1">({u.failedRows} gagal)</span>}
+                      {u.parsedRows}/{u.totalRows} {tr.rows}
+                      {u.failedRows > 0 && <span className="text-error-500 ml-1">({u.failedRows} {tr.rowsFailed})</span>}
                     </p>
                   </div>
 
@@ -234,7 +237,7 @@ export default function UploadRiwayat() {
                     <Link
                       href={`/upload/riwayat/${u.id}?type=${u.sourceType.toLowerCase()}`}
                       className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:text-brand-400 dark:hover:bg-brand-500/10 transition-colors"
-                      title="Lihat Detail"
+                      title={tr.viewDetail}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -244,7 +247,7 @@ export default function UploadRiwayat() {
                     <button
                       onClick={() => setDeleteTarget(u)}
                       className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:text-error-400 dark:hover:bg-error-500/10 transition-colors"
-                      title="Hapus"
+                      title={tr.deleteAction}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -273,16 +276,16 @@ export default function UploadRiwayat() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Hapus Upload?</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tindakan ini tidak dapat dibatalkan</p>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{tr.deleteUploadConfirm}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{tr.cancelAction}</p>
               </div>
             </div>
             <div className="mb-5 rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
               <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">{deleteTarget.fileName}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {deleteTarget.provider} - {fmtDate(deleteTarget.periodStart)} s/d {fmtDate(deleteTarget.periodEnd)}
+                {deleteTarget.provider} - {fmtDate(deleteTarget.periodStart)} {tr.periodUntil} {fmtDate(deleteTarget.periodEnd)}
               </p>
-              <p className="text-xs text-error-500 mt-1">Semua transaksi terkait juga akan dihapus permanen.</p>
+              <p className="text-xs text-error-500 mt-1">{tr.deleteRelated}</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -290,7 +293,7 @@ export default function UploadRiwayat() {
                 disabled={deleting}
                 className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
-                Batal
+                {tr.cancelBtn}
               </button>
               <button
                 onClick={handleDelete}
@@ -303,9 +306,9 @@ export default function UploadRiwayat() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Menghapus...
+                    {tr.deletingBtn}
                   </>
-                ) : "Hapus"}
+                ) : tr.deleteBtn}
               </button>
             </div>
           </div>

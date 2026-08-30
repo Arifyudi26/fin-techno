@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,7 +14,7 @@ export default async function handler(
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   const { id, type } = req.query;
@@ -26,7 +27,7 @@ export default async function handler(
         const upload = await (prisma as any).walletStatementUpload.findFirst({
           where: { id: id as string, uploadedById: userId },
         });
-        if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+        if (!upload) return res.status(404).json({ message: st(req, "uploadNotFound") });
 
         if (upload.fileUrl) {
           try {
@@ -41,7 +42,7 @@ export default async function handler(
         const upload = await prisma.bankStatementUpload.findFirst({
           where: { id: id as string, uploadedById: userId },
         });
-        if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+        if (!upload) return res.status(404).json({ message: st(req, "uploadNotFound") });
 
         if (upload.fileUrl) {
           try {
@@ -57,10 +58,10 @@ export default async function handler(
         await prisma.bankStatementUpload.delete({ where: { id: id as string } });
       }
 
-      return res.status(200).json({ message: "Upload berhasil dihapus" });
+      return res.status(200).json({ message: st(req, "uploadDeleted") });
     } catch (error) {
       console.error("upload delete error:", error);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 
@@ -80,7 +81,7 @@ export default async function handler(
         },
       });
 
-      if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+      if (!upload) return res.status(404).json({ message: st(req, "uploadNotFound") });
 
       return res.status(200).json({
         id: upload.id,
@@ -131,7 +132,7 @@ export default async function handler(
       },
     });
 
-    if (!upload) return res.status(404).json({ message: "Upload tidak ditemukan" });
+    if (!upload) return res.status(404).json({ message: st(req, "uploadNotFound") });
 
     return res.status(200).json({
       id: upload.id,
@@ -168,6 +169,6 @@ export default async function handler(
     });
   } catch (error) {
     console.error("upload detail error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

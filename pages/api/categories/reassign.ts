@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { loadCategories, resolveCategoryIds } from "@lib/categoryMatcher";
+import { st, getLang } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -11,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   try {
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const categories = await loadCategories(userId);
 
     if (categories.length === 0) {
-      return res.status(200).json({ message: "Tidak ada kategori", assigned: 0 });
+      return res.status(200).json({ message: st(req, "noCategory"), assigned: 0 });
     }
 
     // Ambil semua transaksi bank milik user yang belum punya kategori
@@ -83,8 +84,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalTx = bankTx.length + walletTx.length;
     const unmatched = totalTx - assignedTxCount;
 
+    const summary = getLang(req) === "en"
+      ? `${assignedTxCount} of ${totalTx} transactions successfully assigned categories${unmatched > 0 ? `, ${unmatched} did not match any keyword` : ""}`
+      : `${assignedTxCount} dari ${totalTx} transaksi berhasil di-assign kategori${unmatched > 0 ? `, ${unmatched} tidak cocok keyword manapun` : ""}`;
+
     return res.status(200).json({
-      message: `${assignedTxCount} dari ${totalTx} transaksi berhasil di-assign kategori${unmatched > 0 ? `, ${unmatched} tidak cocok keyword manapun` : ""}`,
+      message: summary,
       assignedTxCount,
       totalTx,
       unmatched,
@@ -92,6 +97,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     console.error("reassign error:", error);
-    return res.status(500).json({ message: "Internal server error: " + error.message });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

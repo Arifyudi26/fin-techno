@@ -14,6 +14,12 @@ axiosGlobal.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Kirim preferensi bahasa ke server agar pesan API ikut diterjemahkan.
+    // Sinkron dengan STORAGE_KEY "app-lang" di lib/i18n.
+    if (typeof window !== "undefined") {
+      const lang = localStorage.getItem("app-lang");
+      config.headers["x-app-lang"] = lang === "en" ? "en" : "id";
+    }
     return config;
   },
   (error) => Promise.reject(error)

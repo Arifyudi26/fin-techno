@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { buildDateRangeTrend } from "@lib/trendBuilder";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,7 +15,7 @@ export default async function handler(
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   const db = prisma as any;
@@ -207,7 +208,7 @@ export default async function handler(
     });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }
 
