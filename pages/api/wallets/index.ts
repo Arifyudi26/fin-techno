@@ -2,11 +2,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const db = prisma as any;
 
@@ -52,14 +53,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ wallets: result });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 
   if (req.method === "POST") {
     const { walletProvider, phoneNumber, accountName } = req.body;
     if (!walletProvider || !phoneNumber || !accountName) {
-      return res.status(400).json({ message: "walletProvider, phoneNumber, accountName wajib diisi" });
+      return res.status(400).json({ message: st(req, "walletRequiredFields") });
     }
     try {
       const wallet = await db.digitalWallet.create({
@@ -68,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(201).json({ wallet });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 

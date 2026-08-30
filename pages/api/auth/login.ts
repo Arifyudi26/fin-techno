@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginRequestBody, LoginResponse } from "@/lib/types";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,7 +15,7 @@ export default async function handler(
   const { email, password }: LoginRequestBody = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({ message: st(req, "emailPasswordRequired") });
   }
 
   // Rate limiting: max 10 failed attempts per IP+email in 15 minutes
@@ -30,7 +31,7 @@ export default async function handler(
     const retryAfterSec = Math.ceil((rateLimit.retryAfterMs || 0) / 1000);
     res.setHeader("Retry-After", retryAfterSec.toString());
     return res.status(429).json({
-      message: "Terlalu banyak percobaan login. Silakan coba lagi nanti.",
+      message: st(req, "tooManyLogin"),
       retryAfterSeconds: retryAfterSec,
     });
   }
@@ -39,11 +40,11 @@ export default async function handler(
     const user = await db.user.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: "User tidak ditemukan" });
+      return res.status(404).json({ message: st(req, "userNotFound") });
     }
 
     if (!bcrypt.compareSync(password, user.password)) {
-      return res.status(401).json({ message: "Email atau password salah" });
+      return res.status(401).json({ message: st(req, "invalidCredentials") });
     }
 
     // Login berhasil — reset rate limit
@@ -51,7 +52,7 @@ export default async function handler(
 
     // checkOnly: hanya validasi credentials, tidak return token (untuk flow OTP)
     if (req.body.checkOnly) {
-      return res.status(200).json({ message: "credentials valid" });
+      return res.status(200).json({ message: st(req, "credentialsValid") });
     }
 
     const token = jwt.sign(
@@ -67,6 +68,6 @@ export default async function handler(
     res.status(200).json({ message: "success", data: data });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: st(req, "serverError") });
   }
 }

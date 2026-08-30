@@ -5,6 +5,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { verifyToken } from "@lib/auth";
 import { setWebhook } from "@lib/telegram";
+import { st } from "@lib/server-i18n";
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
@@ -13,15 +14,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     decoded = verifyToken(req);
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   if (decoded.role !== "admin") {
-    return res.status(403).json({ message: "Forbidden: admin only" });
+    return res.status(403).json({ message: st(req, "forbiddenAdminOnly") });
   }
 
   if (!process.env.TELEGRAM_BOT_TOKEN) {
-    return res.status(503).json({ message: "TELEGRAM_BOT_TOKEN belum dikonfigurasi di environment variables." });
+    return res.status(503).json({ message: st(req, "telegramBotTokenMissing") });
   }
 
   if (req.method === "GET") {
@@ -50,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!appUrl || appUrl.startsWith("http://localhost")) {
       return res.status(400).json({
-        message: "Webhook hanya bisa didaftarkan ke URL HTTPS production. Set NEXTAUTH_URL di env.",
+        message: st(req, "webhookHttpsOnly"),
       });
     }
 

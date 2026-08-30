@@ -2,16 +2,17 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const { dateFrom, dateTo, source = "ALL" } = req.query;
-  if (!dateFrom || !dateTo) return res.status(400).json({ message: "dateFrom dan dateTo wajib diisi" });
+  if (!dateFrom || !dateTo) return res.status(400).json({ message: st(req, "dateRangeRequired") });
 
   const start = new Date(dateFrom as string);
   const end = new Date(dateTo as string);
@@ -111,6 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

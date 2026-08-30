@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { wibToUtc } from "@lib/dateUtils";
+import { st } from "@lib/server-i18n";
 
 // GET /api/transactions
 // Uses $queryRawUnsafe with dynamic SQL + parameterized user values.
@@ -35,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const {
     type, category, search,
@@ -201,6 +202,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

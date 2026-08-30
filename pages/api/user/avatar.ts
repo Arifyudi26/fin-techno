@@ -3,6 +3,7 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { put } from "@vercel/blob";
 import { parseMultipart } from "@lib/multipartParser";
+import { st } from "@lib/server-i18n";
 
 export const config = {
   api: { bodyParser: false },
@@ -13,15 +14,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   try {
     const { file } = await parseMultipart(req, 5 * 1024 * 1024);
-    if (!file) return res.status(400).json({ message: "File tidak ditemukan" });
+    if (!file) return res.status(400).json({ message: st(req, "fileNotFound") });
 
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.mimeType)) {
-      return res.status(400).json({ message: "Format file tidak didukung. Gunakan JPG, PNG, atau WebP." });
+      return res.status(400).json({ message: st(req, "unsupportedImageFormat") });
     }
 
     const ext = file.filename.split(".").pop() ?? "jpg";
@@ -43,6 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ user: updated });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Gagal mengupload foto profil" });
+    return res.status(500).json({ message: st(req, "avatarUploadFailed") });
   }
 }

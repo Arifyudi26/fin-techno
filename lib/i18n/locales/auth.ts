@@ -63,6 +63,21 @@ export const auth = {
     failed: "Gagal",
     resendFailed: "Tidak bisa mengirim ulang OTP.",
     andOur: "dan",
+
+    // Change password page
+    changePasswordTitle: "Ganti Password",
+    changePasswordSubtitle: "Masukkan email dan password baru kamu.",
+    emailRegisteredPlaceholder: "Email terdaftar",
+    newPasswordLabel: "Password Baru",
+    confirmPasswordLabel: "Konfirmasi Password",
+    confirmPasswordPlaceholder: "Ulangi password baru",
+    sendOtpBtn: "Kirim OTP",
+    passwordMismatch: "Password tidak cocok",
+    passwordMismatchMsg: "Konfirmasi password tidak sesuai.",
+    emailNotFound: "Email tidak ditemukan.",
+    changePasswordSuccess: "Password Berhasil Diubah!",
+    changePasswordSuccessMsg: "Silakan login dengan password baru.",
+    signingIn: "Signing you in...",
   },
   en: {
     // OTP
@@ -128,5 +143,20 @@ export const auth = {
     failed: "Failed",
     resendFailed: "Unable to resend OTP.",
     andOur: "and our",
+
+    // Change password page
+    changePasswordTitle: "Change Password",
+    changePasswordSubtitle: "Enter your email and new password.",
+    emailRegisteredPlaceholder: "Registered email",
+    newPasswordLabel: "New Password",
+    confirmPasswordLabel: "Confirm Password",
+    confirmPasswordPlaceholder: "Repeat new password",
+    sendOtpBtn: "Send OTP",
+    passwordMismatch: "Passwords do not match",
+    passwordMismatchMsg: "Password confirmation does not match.",
+    emailNotFound: "Email not found.",
+    changePasswordSuccess: "Password Changed Successfully!",
+    changePasswordSuccessMsg: "Please log in with your new password.",
+    signingIn: "Signing you in...",
   },
 } as const;

@@ -1,11 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   // GET — fetch notifications (single query with unread count)
   if (req.method === "GET") {
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // POST — create notification
   if (req.method === "POST") {
     const { type, title, message, fileName } = req.body;
-    if (!type || !title || !message) return res.status(400).json({ message: "type, title, message wajib diisi" });
+    if (!type || !title || !message) return res.status(400).json({ message: st(req, "notificationRequiredFields") });
     const notif = await prisma.notification.create({
       data: { userId, type, title, message, fileName: fileName ?? null },
     });

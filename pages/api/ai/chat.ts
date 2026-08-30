@@ -4,6 +4,7 @@ import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fmtIDR as fmt } from "@lib/formatters";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -12,12 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     userId = verifyToken(req).id;
   } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: st(req, "unauthorized") });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ message: "GEMINI_API_KEY is not configured." });
+    return res.status(503).json({ message: st(req, "geminiNotConfigured") });
   }
 
   const { message, history, lang } = req.body as {
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   };
 
   if (!message?.trim()) {
-    return res.status(400).json({ message: "Message cannot be empty." });
+    return res.status(400).json({ message: st(req, "messageEmpty") });
   }
 
   try {
@@ -184,7 +185,7 @@ Tanggal hari ini: ${now.toLocaleDateString("id-ID", { day: "numeric", month: "lo
   } catch (error: any) {
     console.error("AI chat error:", error?.message || error);
     return res.status(500).json({
-      message: error?.message || "Failed to get AI response.",
+      message: error?.message || st(req, "serverError"),
     });
   }
 }

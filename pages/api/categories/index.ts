@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 // Called after POST — matches new category keywords against existing transactions.
 // Uses raw SQL ILIKE to push matching to DB instead of loading all rows into JS.
@@ -50,7 +51,7 @@ async function autoAssignCategory(userId: string, catId: string, catName: string
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   // GET /categories 
   if (req.method === "GET") {
@@ -95,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ categories });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 
@@ -103,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "POST") {
     const { name, code, description } = req.body;
     if (!name || !code)
-      return res.status(400).json({ message: "name dan code wajib diisi" });
+      return res.status(400).json({ message: st(req, "categoryRequiredFields") });
 
     const codeUpper = (code as string).toUpperCase().slice(0, 5);
     try {
@@ -113,9 +114,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ]);
 
       if (!userExists)
-        return res.status(401).json({ message: "User tidak ditemukan, silakan login ulang" });
+        return res.status(401).json({ message: st(req, "userNotFoundRelogin") });
       if (existing)
-        return res.status(409).json({ message: "Kode kategori sudah digunakan" });
+        return res.status(409).json({ message: st(req, "categoryCodeUsed") });
 
       const cat = await prisma.transactionCategory.create({
         data: { userId, name, code: codeUpper, description },
@@ -127,7 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(201).json({ category: { ...cat, transactionCount: 0 } });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 

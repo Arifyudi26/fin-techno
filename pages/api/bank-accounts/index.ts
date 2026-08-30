@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 import { BankProvider } from "@prisma/client";
 
 // Single raw SQL query replaces N×3 aggregate queries.
@@ -28,7 +29,7 @@ type AccountRow = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   // GET 
   if (req.method === "GET") {
@@ -100,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ accounts });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 
@@ -108,14 +109,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "POST") {
     const { bankProvider, accountNumber, accountName, description } = req.body;
     if (!bankProvider || !accountNumber || !accountName) {
-      return res.status(400).json({ message: "bankProvider, accountNumber, accountName wajib diisi" });
+      return res.status(400).json({ message: st(req, "missingRequiredFields") });
     }
     try {
       const existing = await prisma.bankAccount.findUnique({
         where: { accountNumber },
         select: { id: true },
       });
-      if (existing) return res.status(409).json({ message: "Nomor rekening sudah terdaftar" });
+      if (existing) return res.status(409).json({ message: st(req, "accountExists") });
 
       const account = await prisma.bankAccount.create({
         data: {
@@ -129,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(201).json({ account });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 

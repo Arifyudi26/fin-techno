@@ -1,16 +1,17 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const { id } = req.query as { id: string };
 
   const account = await prisma.bankAccount.findFirst({ where: { id, ownerId: userId } });
-  if (!account) return res.status(404).json({ message: "Rekening tidak ditemukan" });
+  if (!account) return res.status(404).json({ message: st(req, "accountNotFound") });
 
   // PUT — update
   if (req.method === "PUT") {
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ account: updated });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 
@@ -42,10 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 4. Hapus rekening
         await tx.bankAccount.delete({ where: { id } });
       });
-      return res.status(200).json({ message: "Rekening dan semua data terkait berhasil dihapus", softDeleted: false });
+      return res.status(200).json({ message: st(req, "accountDeleted"), softDeleted: false });
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: st(req, "serverError") });
     }
   }
 

@@ -1,0 +1,26 @@
+export const upload = {
+  id: {
+    fileUploaded: "File berhasil diupload dan sedang diproses di background.",
+    fileNotFound: "File tidak ditemukan",
+    uploadNotFound: "Upload tidak ditemukan",
+    uploadDeleted: "Upload berhasil dihapus",
+    missingUploadId: "uploadId tidak ada",
+    accountIdRequired: "accountId wajib diisi",
+    unsupportedFileFormat: "Format file tidak didukung. Gunakan JPG, PNG, atau WebP.",
+    bniPdfPasswordProtected: "File PDF BNI ini dilindungi password. Masukkan password untuk melanjutkan.",
+    bniPdfPasswordWrong: "Password PDF salah. Periksa kembali password e-Statement BNI Anda.",
+    processingCompleted: "Pemrosesan selesai",
+  },
+  en: {
+    fileUploaded: "File uploaded successfully and is being processed in the background.",
+    fileNotFound: "File not found",
+    uploadNotFound: "Upload not found",
+    uploadDeleted: "Upload deleted successfully",
+    missingUploadId: "Missing uploadId",
+    accountIdRequired: "accountId is required",
+    unsupportedFileFormat: "Unsupported file format. Use JPG, PNG, or WebP.",
+    bniPdfPasswordProtected: "This BNI PDF file is password protected. Enter the password to continue.",
+    bniPdfPasswordWrong: "Incorrect PDF password. Please double-check your BNI e-Statement password.",
+    processingCompleted: "Processing completed",
+  },
+} as const;

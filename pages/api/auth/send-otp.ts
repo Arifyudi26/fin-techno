@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import db from "@/lib/db";
 import { sendOtpEmail } from "@/lib/mailer";
 import { generateOtp } from "@/lib/auth";
+import { st } from "@lib/server-i18n";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -10,19 +11,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const validPurposes = ["login", "register", "change-password", "oauth"];
   if (!email || !purpose || !validPurposes.includes(purpose)) {
-    return res.status(400).json({ message: "Email dan purpose wajib diisi" });
+    return res.status(400).json({ message: st(req, "emailPurposeRequired") });
   }
 
   // Cek user untuk login & change-password
   if (purpose === "login" || purpose === "change-password") {
     const user = await db.user.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ message: "Email tidak ditemukan" });
+    if (!user) return res.status(404).json({ message: st(req, "emailNotFound") });
   }
 
   // Cek email belum terdaftar untuk register
   if (purpose === "register") {
     const existing = await db.user.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ message: "Email sudah terdaftar" });
+    if (existing) return res.status(409).json({ message: st(req, "emailRegistered") });
   }
 
   // Hapus OTP lama untuk email + purpose ini
@@ -35,9 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await sendOtpEmail(email, code, purpose);
-    return res.status(200).json({ message: "OTP berhasil dikirim" });
+    return res.status(200).json({ message: st(req, "otpSent") });
   } catch (err) {
     console.error("Send OTP error:", err);
-    return res.status(500).json({ message: "Gagal mengirim email OTP" });
+    return res.status(500).json({ message: st(req, "otpFailedSend") });
   }
 }

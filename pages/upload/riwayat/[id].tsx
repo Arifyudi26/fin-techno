@@ -11,6 +11,7 @@ import axiosGlobal from "@/services/AxiosGlobal";
 import { fmtDate } from "@/lib/utils";
 import ProviderIcon from "@components/icons/providers/ProviderIcon";
 import { formatBytes, fmtIDR as formatIDR } from "@lib/formatters";
+import { useI18n } from "@lib/i18n";
 
 interface UploadDetail {
   id: string;
@@ -51,13 +52,14 @@ const statusColor = (s: string) => {
   if (s === "FAILED" || s === "REJECTED") return "error";
   return "info";
 };
-const statusLabel: Record<string, string> = {
-  SUCCESS: "Berhasil", PARTIAL: "Sebagian", FAILED: "Gagal",
-  VERIFIED: "Verified", PENDING: "Pending", REJECTED: "Ditolak",
-};
-
 export default function UploadDetail() {
   const router = useRouter();
+  const { t } = useI18n();
+  const tr = t.upload;
+  const statusLabel: Record<string, string> = {
+    SUCCESS: tr.statusSuccess, PARTIAL: tr.statusPartial, FAILED: tr.statusFailed,
+    VERIFIED: tr.statusVerified, PENDING: tr.statusPending, REJECTED: tr.statusRejected,
+  };
   const { id, type } = router.query;
   const [upload, setUpload] = useState<UploadDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,15 +71,15 @@ export default function UploadDetail() {
     if (!id) return;
     axiosGlobal.get(`/upload/${id}?type=${type ?? "bank"}`)
       .then((res) => setUpload(res.data))
-      .catch(() => setError("Data upload tidak ditemukan"))
+      .catch(() => setError(tr.uploadDataNotFound))
       .finally(() => setLoading(false));
-  }, [id, type]);
+  }, [id, type, tr.uploadDataNotFound]);
 
   if (loading) {
     return (
       <AppLayout>
-        <PageMeta title="Detail Upload | Fin-Techno" description="" />
-        <PageBreadcrumb pageTitle="Detail Upload" />
+        <PageMeta title={`${tr.detailTitle} | Fin-Techno`} description="" />
+        <PageBreadcrumb pageTitle={tr.detailTitle} />
         <div className="space-y-4 animate-pulse">
           <div className="h-32 rounded-2xl bg-gray-100 dark:bg-gray-800" />
           <div className="grid grid-cols-6 gap-4">
@@ -92,12 +94,12 @@ export default function UploadDetail() {
   if (error || !upload) {
     return (
       <AppLayout>
-        <PageMeta title="Detail Upload | Fin-Techno" description="" />
-        <PageBreadcrumb pageTitle="Detail Upload" />
+        <PageMeta title={`${tr.detailTitle} | Fin-Techno`} description="" />
+        <PageBreadcrumb pageTitle={tr.detailTitle} />
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-12 text-center">
-          <p className="text-gray-500 dark:text-gray-400">{error ?? "Data tidak ditemukan"}</p>
+          <p className="text-gray-500 dark:text-gray-400">{error ?? tr.dataNotFound}</p>
           <Link href="/upload/riwayat" className="mt-4 inline-block text-sm text-brand-500 hover:text-brand-600">
-            ← Kembali ke Riwayat
+            ← {tr.backToHistory}
           </Link>
         </div>
       </AppLayout>
@@ -112,8 +114,8 @@ export default function UploadDetail() {
 
   return (
     <AppLayout>
-      <PageMeta title={`Detail Upload — ${upload.fileName} | Fin-Techno`} description="Detail informasi upload e-statement" />
-      <PageBreadcrumb pageTitle="Detail Upload" />
+      <PageMeta title={`${tr.detailTitle} — ${upload.fileName} | Fin-Techno`} description={tr.detailDescription} />
+      <PageBreadcrumb pageTitle={tr.detailTitle} />
 
       {/* Back */}
       <div className="mb-5">
@@ -121,7 +123,7 @@ export default function UploadDetail() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Kembali ke Riwayat
+          {tr.backToHistory}
         </Link>
       </div>
 
@@ -135,7 +137,7 @@ export default function UploadDetail() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${upload.sourceType === "BANK" ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"}`}>
-                  {upload.sourceType === "BANK" ? "Rekening Bank" : "Dompet Digital"}
+                  {upload.sourceType === "BANK" ? tr.bankLabel : tr.walletLabel}
                 </span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">{upload.provider}</span>
               </div>
@@ -147,7 +149,7 @@ export default function UploadDetail() {
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">{fmtDate(upload.uploadedAt)}</span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">oleh {upload.uploadedBy}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{tr.by} {upload.uploadedBy}</span>
               </div>
             </div>
           </div>
@@ -169,10 +171,10 @@ export default function UploadDetail() {
       {/* Stats grid */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Periode", value: `${fmtDate(upload.periodStart)}`, sub: `s/d ${fmtDate(upload.periodEnd)}` },
-          { label: "Total Baris", value: String(upload.totalRows), sub: `Sukses: ${successRate}%` },
-          { label: "Berhasil", value: String(upload.parsedRows), sub: "baris diproses", valueClass: "text-success-600 dark:text-success-400" },
-          { label: "Gagal", value: String(upload.failedRows), sub: "baris error", valueClass: upload.failedRows > 0 ? "text-error-600 dark:text-error-400" : "text-gray-400" },
+          { label: tr.colPeriod, value: `${fmtDate(upload.periodStart)}`, sub: `${tr.periodUntil} ${fmtDate(upload.periodEnd)}` },
+          { label: tr.metaTotalRows, value: String(upload.totalRows), sub: `${tr.metaSuccessRate}: ${successRate}%` },
+          { label: tr.metaSuccess, value: String(upload.parsedRows), sub: tr.metaSuccessSub, valueClass: "text-success-600 dark:text-success-400" },
+          { label: tr.metaFailed, value: String(upload.failedRows), sub: tr.metaFailedSub, valueClass: upload.failedRows > 0 ? "text-error-600 dark:text-error-400" : "text-gray-400" },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-4">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{s.label}</p>
@@ -181,11 +183,11 @@ export default function UploadDetail() {
           </div>
         ))}
         <div className="rounded-2xl border border-success-200 dark:border-success-500/20 bg-success-50 dark:bg-success-500/10 p-4">
-          <p className="text-xs text-success-600 dark:text-success-400 mb-1">Total Masuk</p>
+          <p className="text-xs text-success-600 dark:text-success-400 mb-1">{tr.metaTotalIn}</p>
           <p className="text-sm font-bold text-success-700 dark:text-success-300">{formatIDR(upload.totalCredit)}</p>
         </div>
         <div className="rounded-2xl border border-error-200 dark:border-error-500/20 bg-error-50 dark:bg-error-500/10 p-4">
-          <p className="text-xs text-error-600 dark:text-error-400 mb-1">Total Keluar</p>
+          <p className="text-xs text-error-600 dark:text-error-400 mb-1">{tr.metaTotalOut}</p>
           <p className="text-sm font-bold text-error-700 dark:text-error-300">{formatIDR(upload.totalDebit)}</p>
         </div>
       </div>
@@ -194,7 +196,7 @@ export default function UploadDetail() {
       <div className={`mb-6 rounded-xl border px-5 py-4 ${netFlow >= 0 ? "border-brand-200 bg-brand-50 dark:border-brand-500/20 dark:bg-brand-500/10" : "border-error-200 bg-error-50 dark:border-error-500/20 dark:bg-error-500/10"}`}>
         <div className="flex items-center justify-between">
           <p className={`text-sm font-medium ${netFlow >= 0 ? "text-brand-700 dark:text-brand-300" : "text-error-700 dark:text-error-300"}`}>
-            Net Flow Periode Ini
+            {tr.netFlowPeriod}
           </p>
           <p className={`text-lg font-bold ${netFlow >= 0 ? "text-brand-700 dark:text-brand-300" : "text-error-700 dark:text-error-300"}`}>
             {netFlow >= 0 ? "+" : ""}{formatIDR(netFlow)}
@@ -206,13 +208,13 @@ export default function UploadDetail() {
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Transaksi dari Upload Ini</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{txTotal} transaksi</p>
+            <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">{tr.txFromUpload}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{txTotal} {tr.txLabel.toLowerCase()}</p>
           </div>
         </div>
         {txTotal === 0 ? (
           <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
-            Belum ada transaksi yang berhasil diproses
+            {tr.noTxProcessed}
           </div>
         ) : (
           <>
@@ -220,13 +222,13 @@ export default function UploadDetail() {
             <Table>
               <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
                 <TableRow>
-                  <TableCell isHeader className="py-3 px-5 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Tanggal</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Keterangan</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Referensi</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Kategori</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Jumlah</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Saldo</TableCell>
-                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Status</TableCell>
+                  <TableCell isHeader className="py-3 px-5 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colDate}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colDescription}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colReference}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colCategory}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colAmount}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colBalance}</TableCell>
+                  <TableCell isHeader className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">{tr.colStatus}</TableCell>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">

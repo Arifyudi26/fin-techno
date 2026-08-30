@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@lib/db";
 import { verifyToken } from "@lib/auth";
 import { wibToUtc, utcToWibDateStr } from "@lib/dateUtils";
+import { st } from "@lib/server-i18n";
 
 // GET /api/calendar?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
 // Returns ONLY daily summaries (no transaction detail) — keeps payload small.
@@ -12,10 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let userId: string;
   try { userId = verifyToken(req).id; }
-  catch { return res.status(401).json({ message: "Unauthorized" }); }
+  catch { return res.status(401).json({ message: st(req, "unauthorized") }); }
 
   const { dateFrom, dateTo } = req.query;
-  if (!dateFrom || !dateTo) return res.status(400).json({ message: "dateFrom and dateTo required" });
+  if (!dateFrom || !dateTo) return res.status(400).json({ message: st(req, "dateRangeRequired") });
 
   const gte = wibToUtc(dateFrom as string);
   const lte = wibToUtc(dateTo as string, true);
@@ -62,6 +63,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(Object.values(map).sort((a, b) => a.date.localeCompare(b.date)));
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: st(req, "serverError") });
   }
 }

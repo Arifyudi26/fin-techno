@@ -310,7 +310,10 @@ const TxArrow = ({ type }: { type: "CREDIT" | "DEBIT" }) => (
   </svg>
 );
 
-const TxListItem = ({ tx, onClick }: { tx: TxDetail; onClick: (tx: TxDetail) => void }) => (
+const TxListItem = ({ tx, onClick }: { tx: TxDetail; onClick: (tx: TxDetail) => void }) => {
+  const { t } = useI18n();
+  const tr = t.calendar;
+  return (
   <button
     onClick={() => onClick(tx)}
     className="w-full flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-800 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-white/[0.03] active:bg-gray-100 dark:active:bg-white/[0.05] transition-colors text-left"
@@ -333,11 +336,12 @@ const TxListItem = ({ tx, onClick }: { tx: TxDetail; onClick: (tx: TxDetail) => 
         {tx.type === "CREDIT" ? "+" : "-"}{fmt(tx.amount)}
       </span>
       <Badge size="sm" color={tx.status === "VERIFIED" ? "success" : "warning"}>
-        {tx.status === "VERIFIED" ? "Verified" : "Pending"}
+        {tx.status === "VERIFIED" ? tr.statusVerified : tr.statusPending}
       </Badge>
     </div>
   </button>
-);
+  );
+};
 
 const TxDetailArrow = ({ type }: { type: "CREDIT" | "DEBIT" }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -350,7 +354,10 @@ const TxDetailArrow = ({ type }: { type: "CREDIT" | "DEBIT" }) => (
   </svg>
 );
 
-const TxDetail = ({ tx }: { tx: TxDetail }) => (
+const TxDetail = ({ tx }: { tx: TxDetail }) => {
+  const { t } = useI18n();
+  const tr = t.calendar;
+  return (
   <div>
     <div className="flex items-center gap-3 mb-5 pr-8">
       <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
@@ -365,20 +372,20 @@ const TxDetail = ({ tx }: { tx: TxDetail }) => (
           {tx.type === "CREDIT" ? "+" : "-"}{fmt(tx.amount)}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          {tx.type === "CREDIT" ? "Pemasukan" : "Pengeluaran"}
+          {tx.type === "CREDIT" ? tr.income : tr.expense}
         </p>
       </div>
     </div>
 
     <div className="space-y-2.5">
-      <DetailRow label="Keterangan" value={tx.description} />
-      <DetailRow label="Tanggal" value={fmtDateIndo(tx.datetime.split("T")[0])} />
-      <DetailRow label="Jam" value={fmtTime(tx.datetime)} />
-      <DetailRow label="Rekening" value={`${tx.accountName} (${tx.provider})`} />
-      <DetailRow label="Sumber" value={tx.source === "WALLET" ? "Dompet Digital" : "Bank"} />
+      <DetailRow label={tr.detailDescription} value={tx.description} />
+      <DetailRow label={tr.detailDate} value={fmtDateIndo(tx.datetime.split("T")[0])} />
+      <DetailRow label={tr.detailTime} value={fmtTime(tx.datetime)} />
+      <DetailRow label={tr.detailAccount} value={`${tx.accountName} (${tx.provider})`} />
+      <DetailRow label={tr.detailSource} value={tx.source === "WALLET" ? tr.sourceWallet : tr.sourceBank} />
       {tx.categories.length > 0 && (
         <div className="flex items-start justify-between gap-4">
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">Kategori</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0 pt-0.5">{tr.detailCategory}</span>
           <div className="flex flex-wrap gap-1 justify-end">
             {tx.categories.map((c, i) => (
               <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">
@@ -388,17 +395,18 @@ const TxDetail = ({ tx }: { tx: TxDetail }) => (
           </div>
         </div>
       )}
-      {tx.reference && <DetailRow label="Referensi" value={tx.reference} mono />}
-      {tx.balance != null && <DetailRow label="Saldo Akhir" value={fmt(tx.balance)} />}
+      {tx.reference && <DetailRow label={tr.detailReference} value={tx.reference} mono />}
+      {tx.balance != null && <DetailRow label={tr.detailBalance} value={fmt(tx.balance)} />}
       <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{tr.detailStatus}</span>
         <Badge size="sm" color={tx.status === "VERIFIED" ? "success" : "warning"}>
-          {tx.status === "VERIFIED" ? "Verified" : "Pending"}
+          {tx.status === "VERIFIED" ? tr.statusVerified : tr.statusPending}
         </Badge>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
