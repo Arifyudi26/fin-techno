@@ -7,6 +7,7 @@ import { ModalProvider } from "@lib/context/ModalContext";
 import { I18nProvider } from "@lib/i18n";
 import { useEffect, useState } from "react";
 import useAuthStore from "@/store/authStore";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   const [hydrated, setHydrated] = useState(false);
@@ -28,16 +29,19 @@ export default function MyApp({ Component, pageProps: { session, ...pageProps } 
   if (!hydrated) return null;
 
   return (
-    <SessionProvider session={session}>
-      <ThemeProvider>
-        <I18nProvider>
-            <NotificationProvider>
-              <ModalProvider>
-                <Component {...pageProps} />
-              </ModalProvider>
-            </NotificationProvider>
-        </I18nProvider>
-      </ThemeProvider>
-    </SessionProvider>
+    <>
+      <SessionProvider session={session}>
+        <ThemeProvider>
+          <I18nProvider>
+              <NotificationProvider>
+                <ModalProvider>
+                  <Component {...pageProps} />
+                </ModalProvider>
+              </NotificationProvider>
+          </I18nProvider>
+        </ThemeProvider>
+      </SessionProvider>
+      <SpeedInsights />
+    </>
   );
 }
